@@ -2,6 +2,7 @@ import csv
 import os
 from datetime import datetime
 from serial import Serial
+import time
 
 
 class Serial_Monitor:
@@ -78,7 +79,7 @@ class Serial_Monitor:
         self.check_saves()
         while running:
             received = str(self.connection.readline())
-            packet = received[2:][:-3]
+            packet = received[2:-3]
             with open(self.output_file, "a") as file:
                 file.write(datetime.now().strftime("%H:%M:%S") + " -> " + packet + '\n')
             # Verifying for header
@@ -87,9 +88,7 @@ class Serial_Monitor:
                     # Knowing which balloon
                     id_index = self.balloon_ids[i][1] + self.header_length
                     if packet[id_index] == self.balloon_ids[i][0]:
-                        print(packet)
                         payload = packet[len(self.header):].split()
-                        print(payload[0])
                         if len(payload[0]) == self.get_packet_length(i):
                             content, pin = self.disassemble_packet(i, packet)
                             if pin != self.balloon_pins[i]:
@@ -98,8 +97,7 @@ class Serial_Monitor:
 
     def disassemble_packet(self, i, packet):
         packet = packet[len(self.header):]
-        # separator = self.formats[i][0][1]
-        content = [datetime.now().strftime("%Y-%m-%d %H:%M:%S")]
+        content = [datetime.now().strftime("%Y-%m-%d %H:%M:%S"), int(time.time())]
         for j in range(len(self.formats[i])):
             if self.formats[i][j][0] == "pin":
                 index = self.formats[i][j][-1]
@@ -152,7 +150,7 @@ class Serial_Monitor:
         return content_format
 
     def format_header(self, i):
-        header = ["Reception Time"]
+        header = ["Reception Time", "UNIX"]
         for j in range(len(self.formats[i])):
             if self.formats[i][j][0] == "clock":
                 header.append("Internal Clock")

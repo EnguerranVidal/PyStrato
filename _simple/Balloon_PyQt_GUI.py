@@ -5,6 +5,7 @@ import signal
 import sys
 import time as t
 import datetime as dt
+from time import mktime
 import subprocess
 
 # ------------------- PyQt Modules -------------------- #
@@ -12,10 +13,12 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import pyqtSlot, QTimer, Qt
 import pyqtgraph as pg
+from pyqtgraph.dockarea import Dock, DockArea
 
 # ----------------- General Modules ------------------- #
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 ######################## CLASSES ########################
@@ -27,6 +30,8 @@ class Balloon_GUI(QMainWindow):
         self.pid = None
         self.serial = None
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.data_path = os.path.join(self.current_dir, "data")
+        self.backup_path = os.path.join(self.data_path, "backups")
         self.setGeometry(500, 500, 1000, 600)
         self.setWindowTitle('Balloon Ground Station')
         self.setWindowIcon(QIcon('icons\\logo.jpg'))
@@ -79,12 +84,6 @@ class Balloon_GUI(QMainWindow):
         self.stop_serialAct.setStatusTip('Stop Serial Listener')
         self.stop_serialAct.triggered.connect(self.stop_serial)
         self.toolsMenu.addAction(self.stop_serialAct)
-        # Opening Serial Monitor
-        openmonitorAct = QAction('&Open Serial Monitor', self)
-        openmonitorAct.setStatusTip('Open Serial Monitor')
-        openmonitorAct.triggered.connect(self.open_serial_monitor)
-        self.toolsMenu.addAction(openmonitorAct)
-        self.toolsMenu.addSeparator()
         # Port Menu
         self.portMenu = QMenu('&Port', self)
         self.toolsMenu.addMenu(self.portMenu)
@@ -118,15 +117,14 @@ class Balloon_GUI(QMainWindow):
         ##################  VARIABLES  ##################
         if not os.path.exists("output"):
             file = open("output", "w").close()
-        self.serial_window = SerialWindow(self)
-        self.serial_window.textedit.setDisabled(True)
-        self.serial_window.textedit.setReadOnly(True)
-        self.serial_monitor_timer = QTimer()
-        self.serial_monitor_timer.timeout.connect(self.check_subprocess)
-        self.output_lines = 0
-        self.serial_monitor_timer.start(100)
         self.table_widget = CentralWidget(self)
         self.setCentralWidget(self.table_widget)
+        self.table_widget.textedit.setDisabled(True)
+        self.table_widget.textedit.setReadOnly(True)
+        self.monitor_timer = QTimer()
+        self.monitor_timer.timeout.connect(self.check_subprocess)
+        self.output_lines = 0
+        self.monitor_timer.start(100)
         self.show()
 
     def center(self):
@@ -172,11 +170,13 @@ class Balloon_GUI(QMainWindow):
             self.archiveMenu.setDisabled(True)
         else:
             self.archiveMenu.clear()
+            archive_group = QActionGroup(self.portMenu)
             for i in range(len(file_names)):
-                archiveAct = QAction('&' + file_names[i], self)
+                archiveAct = QAction(file_names[i], self)
                 archiveAct.setStatusTip('Archive ' + file_names[i])
-                archiveAct.triggered.connect(lambda: self.archive_save(i))
                 self.archiveMenu.addAction(archiveAct)
+                archive_group.addAction(archiveAct)
+            archive_group.triggered.connect(self.archive_save)
 
     def check_tools_menu(self):
         self.portMenu.setTitle('&Port')
@@ -251,9 +251,27 @@ class Balloon_GUI(QMainWindow):
     def preferences(self):
         pass
 
-    @staticmethod
-    def archive_save(i):
-        print(i)
+    def archive_save(self, action):
+        message = "File : " + action.text() + "\nThis remove its data, continue?"
+        file_name = action.text()[:-4]
+        print(file_name)
+        msg = MessageBox()
+        msg.setWindowIcon(QIcon('icons\\logo.jpg'))
+        msg.setWindowTitle("Archiving File")
+        msg.setText(message)
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
+        msg.setStyleSheet("QLabel{min-width: 200px;}")
+        msg.exec_()
+        button = msg.clickedButton()
+        sb = msg.standardButton(button)
+        if sb == QMessageBox.Yes:
+            old_path = os.path.join(self.data_path, action.text())
+            new_path = os.path.join(self.backup_path, "backup_" + action.text())
+            i = 1
+            while os.path.exists(new_path):
+                new_path = os.path.join(self.backup_path, "backup_" + file_name + "(" + str(i) + ")" + ".csv")
+                i = i + 1
+            shutil.move(old_path, new_path)
 
     def select_port(self, action):
         self.portMenu.setTitle('&Port    ' + action.text())
@@ -271,9 +289,6 @@ class Balloon_GUI(QMainWindow):
             self.stop_serial()
             self.start_serial()
 
-    def open_serial_monitor(self):
-        self.serial_window.show()
-
     def start_serial(self):
         message = "Port : " + self.parameters["selected_port"] + "  Baud : " + \
                   self.parameters["selected_baud"] + "\nDo you wish to continue ?"
@@ -290,7 +305,7 @@ class Balloon_GUI(QMainWindow):
             if os.path.exists(os.path.join(self.current_dir, "Balloon_Serial.py")):
                 self.serial = subprocess.Popen([sys.executable, os.path.join(self.current_dir, "Balloon_Serial.py")])
                 self.pid = self.serial.pid
-                self.serial_window.textedit.setDisabled(False)
+                self.table_widget.textedit.setDisabled(False)
             else:
                 cancelling = MessageBox()
                 cancelling.setWindowIcon(QIcon('icons\\logo.jpg'))
@@ -305,24 +320,24 @@ class Balloon_GUI(QMainWindow):
             self.serial.kill()
             self.serial.terminate()
             t.sleep(0.5)
-            self.serial_window.textedit.setDisabled(True)
+            self.table_widget.textedit.setDisabled(True)
             self.serial = None
 
     def check_subprocess(self):
         self.load_parameters()
         if self.serial is not None and self.serial.poll() is not None:
             self.stop_serial()
-            self.serial_window.textedit.setDisabled(True)
+            self.table_widget.textedit.setDisabled(True)
         elif self.serial is not None and self.serial.poll() is None:
             with open(self.parameters["output_file"], "r") as file:
                 lines = file.readlines()
             if len(lines) != self.output_lines:
-                self.serial_window.textedit.append(lines[-1])
+                self.table_widget.textedit.append(lines[-1])
                 self.output_lines = len(lines)
             if bool(self.parameters["autoscroll"]):
-                self.serial_window.textedit.moveCursor(QTextCursor.End)
+                self.table_widget.textedit.moveCursor(QTextCursor.End)
             else:
-                self.serial_window.textedit.moveCursor(QTextCursor.Start)
+                self.table_widget.textedit.moveCursor(QTextCursor.Start)
         else:
             pass
 
@@ -345,13 +360,14 @@ class Balloon_GUI(QMainWindow):
             event.ignore()
 
 
-class SerialWindow(QWidget):
+class CentralWidget(QWidget):
     def __init__(self, parent=None):
-        super(SerialWindow, self).__init__()
-        self.resize(450, 350)
-        self.setWindowTitle('Serial Monitor')
-        self.setWindowIcon(QIcon('icons\\logo.jpg'))
-        # General Layout
+        super(QWidget, self).__init__(parent)
+        self.parameters = None
+        self.load_parameters()
+        self.resize(1000, 1000)
+        self.current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.data_path = os.path.join(self.current_dir, "data")
         self.layout = QGridLayout(self)
         self.setLayout(self.layout)
         # Loading parameters
@@ -410,74 +426,11 @@ class SerialWindow(QWidget):
     def clear_output(self):
         file = open("output", "w").close()
 
-
-class CentralWidget(QWidget):
-    def __init__(self, parent=None):
-        super(QWidget, self).__init__(parent)
-        print(self.parent)
-        self.layout = QVBoxLayout(self)
-        # Initialize tab screen
-        self.tabs = QTabWidget()
-        self.tabs.setStyleSheet('QTabBar { font-size: 12pt; font-family: Arial; }')
-        self.A_tab = QWidget()
-        self.B_tab = QWidget()
-        self.tabs.resize(300, 200)
-        # Add tabs
-        self.tabs.addTab(self.A_tab, "Balloon A")
-        self.tabs.addTab(self.B_tab, "Balloon B")
-        # Create first tab
-        self.A_tab.layout = QGridLayout(self)
-        self.A_tab.setLayout(self.A_tab.layout)
-        # Temperature, Pressure, Humidity
-        self.A_TPH_plots = pg.GraphicsLayoutWidget(show=True)
-        y = np.random.normal(size=100)
-        self.A_ex_T = self.A_TPH_plots.addPlot(title="T External", y=y, pen=(255, 0, 0))
-        self.A_TPH_plots.nextRow()
-        self.A_P = self.A_TPH_plots.addPlot(title="Pressure", y=y, pen=(255, 0, 0))
-        self.A_TPH_plots.nextRow()
-        self.A_H = self.A_TPH_plots.addPlot(title="Humidity Percentage", y=y, pen=(255, 0, 0))
-
-        # Random Gases
-        self.A_Gases_plots = pg.GraphicsLayoutWidget(show=True)
-        gases = ["CO", "O3", "CO2", "HCOH", "CH4", "NH3", "NO2", "H2", "C3H8", "C4H10", "C2H6OH"]
-        offset = np.random.normal(size=len(gases))
-        from matplotlib.pyplot import cm
-        color = cm.rainbow(np.linspace(0, 1, len(gases))) * 255
-        self.A_Gases = self.A_Gases_plots.addPlot(title="Trace Gases Levels")
-        for i in range(len(gases)):
-            y = np.random.normal(size=100)
-            self.A_Gases.plot(y + offset[i], pen=color[i][:-1], name=gases[i])
-
-        # Adding widgets
-        self.A_tab.layout.addWidget(self.A_TPH_plots, 1, 1, 1, 1)
-        self.A_tab.layout.addWidget(self.A_Gases_plots, 1, 2, 1, 2)
-        # Add tabs to widget
-        self.layout.addWidget(self.tabs)
-        self.setLayout(self.layout)
-
-    def select_data(self, i, column, start_date, finish_date=""):
-        date_format = "%Y-%m-%d %H:%M:%S"
-        today = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        if finish_date == "":
-            finish_date = today
-        try:
-            df = pd.read_csv(os.path.join(self.data_path, self.parameters["save_files"][i]))
-        except FileNotFoundError:  # creating a "false" datafile if the file is non existent
-            time = dt.datetime.strftime(today, date_format)
-            df = {"Reception Time": np.array([time]), column: np.array([0])}
-        df["Reception Time"] = pd.to_datetime(df["Reception Time"], format=date_format)
-        time_mask = (df["Reception Time"] > start_date) & (df["Reception Time"] < finish_date)
-        data = df.loc[time_mask]
-        zeros_mask = data[column] == 0.0
-        data = data.loc[zeros_mask]
-        return np.array(data["Reception Time"]), np.array(data[column])
-
     @pyqtSlot()
     def on_click(self):
         print("\n")
         for currentQTableWidgetItem in self.tableWidget.selectedItems():
             print(currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
-
 
 class MessageBox(QMessageBox):
     def __init__(self, parent=None):

@@ -23,18 +23,11 @@ def test_pyqt5():
     palette.setColor(QPalette.Link, QColor(42, 130, 218))
     palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
     palette.setColor(QPalette.HighlightedText, Qt.black)
-    #app.setPalette(palette)
+    app.setPalette(palette)
     ex = Balloon_GUI()
     sys.exit(app.exec_())
 
 
-def test_pyqtgraph():
-    import pyqtgraph.examples
-    pyqtgraph.examples.run()
-
-
 if __name__ == '__main__':
-    print(len("A2000006-0723+1954101046024001000000005545000000400172890083030387028160000000000154"))
     test_pyqt5()
-    #test_pyqtgraph()
 
