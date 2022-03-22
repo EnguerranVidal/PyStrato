@@ -1,24 +1,14 @@
 ######################## IMPORTS ########################
 import os
 import shutil
-import signal
 import sys
 import time as t
-import datetime as dt
-from time import mktime
 import subprocess
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import pyqtSlot, QTimer, Qt
-import pyqtgraph as pg
-from pyqtgraph.dockarea import Dock, DockArea
-
-# ----------------- General Modules ------------------- #
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 
 
 ######################## CLASSES ########################
@@ -431,6 +421,7 @@ class CentralWidget(QWidget):
         print("\n")
         for currentQTableWidgetItem in self.tableWidget.selectedItems():
             print(currentQTableWidgetItem.row(), currentQTableWidgetItem.column(), currentQTableWidgetItem.text())
+
 
 class MessageBox(QMessageBox):
     def __init__(self, parent=None):

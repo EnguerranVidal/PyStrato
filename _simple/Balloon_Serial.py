@@ -84,6 +84,7 @@ class Serial_Monitor:
                 file.write(datetime.now().strftime("%H:%M:%S") + " -> " + packet + '\n')
             # Verifying for header
             if packet[0:len(self.header)] == self.header:
+                self.check_saves()
                 for i in range(len(self.balloon_ids)):
                     # Knowing which balloon
                     id_index = self.balloon_ids[i][1] + self.header_length
