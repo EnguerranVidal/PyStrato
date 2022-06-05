@@ -3,16 +3,17 @@ def load(path):
     with open(path, "r") as file:
         lines = file.readlines()
     for i in range(len(lines)):
-        line = lines[i].split(';')
-        if line[0] == "available_bauds" or line[0] == "format_files" or line[0] == "save_files":
+        line = lines[i].split('=')
+        if line[0] == "AVAILABLE_BAUDS" or line[0] == "FORMAT_FILES" or line[0] == "SAVE_FILES":
             bauds = line[1].split(',')
             for j in range(len(bauds)):
                 bauds[j] = bauds[j].rstrip("\n")
             parameters[line[0]] = bauds
-        elif line[0] == "rssi" or line[0] == "autoscroll" or line[0] == "autoscale":
+        elif line[0] == "RSSI" or line[0] == "AUTOSCROLL" or line[0] == "AUTOSCALE":
             parameters[line[0]] = bool(int(line[1].rstrip("\n")))
         else:
             parameters[line[0]] = line[1].rstrip("\n")
+    return parameters
 
 
 def save(parameters, path):
@@ -20,10 +21,10 @@ def save(parameters, path):
         lines = file.readlines()
     with open(path, "w") as file:
         for i in range(len(lines)):
-            line = lines[i].split(';')
-            if line[0] == "available_bauds" or line[0] == "format_files" or line[0] == "save_files":
+            line = lines[i].split('=')
+            if line[0] == "AVAILABLE_BAUDS" or line[0] == "FORMAT_FILES" or line[0] == "SAVE_FILES":
                 file.write(lines[i])
-            elif line[0] == "rssi" or line[0] == "autoscroll" or line[0] == "autoscale":
-                file.write(line[0] + ';' + str(int(parameters[line[0]])) + '\n')
+            elif line[0] == "RSSI" or line[0] == "AUTOSCROLL" or line[0] == "AUTOSCALE":
+                file.write(line[0] + '=' + str(int(parameters[line[0]])) + '\n')
             else:
-                file.write(line[0] + ';' + str(parameters[line[0]]) + '\n')
+                file.write(line[0] + '=' + str(parameters[line[0]]) + '\n')

@@ -195,7 +195,7 @@ def load_parameters(filename):
 
 
 if __name__ == '__main__':
-    parameters = load_parameters("parameters")
+    parameters = load_parameters("settings")
     parameter_formats_files = parameters["format_files"]
     parameter_saving_files = parameters["save_files"]
     parameter_port = parameters["selected_port"]

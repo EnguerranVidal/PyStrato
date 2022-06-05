@@ -4,103 +4,189 @@ import shutil
 import sys
 import time as t
 import subprocess
+from functools import partial
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
+from PyQt5.QtCore import Qt, pyqtSlot, QTimer
 from PyQt5.QtGui import *
-from PyQt5.QtCore import QTimer, Qt
 
 # --------------------- Sources ----------------------- #
-from sources.common.widgets import CentralWidget, MessageBox
+from sources.common.widgets import *
 from sources.common.parameters import load, save
 
+
 ######################## CLASSES ########################
-
-
-class Balloon_GUI(QMainWindow):
+class PyGS(QMainWindow):
     def __init__(self, path):
         super().__init__()
-        ##################  PARAMETERS  ###################
-        self.pid = None
-        self.serial = None
         self.current_dir = path
         self.data_path = os.path.join(self.current_dir, "data")
         self.backup_path = os.path.join(self.data_path, "backups")
         self.setGeometry(500, 500, 1000, 600)
         self.setWindowTitle('Balloon Ground Station')
-        self.setWindowIcon(QIcon('icons\\PyGS.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.statusBar().showMessage('Ready')
         self.center()
-        self.parameters = {}
-        self.load_parameters()
-        ##################  MENUBAR  ##################
-        self.menubar = self.menuBar()
-        # FILE MENU
-        self.fileMenu = self.menubar.addMenu('&File')
-        self.fileMenu.aboutToShow.connect(self.check_file_menu)
-        # new format
-        new_formatAct = QAction('&New Format', self)
-        new_formatAct.setStatusTip('Create New Packet Format')
-        new_formatAct.triggered.connect(self.new_format)
-        self.fileMenu.addAction(new_formatAct)
-        # edit format
-        open_formatAct = QAction('&Open Format', self)
-        open_formatAct.setStatusTip('Edit Existing Packet Format')
-        open_formatAct.triggered.connect(self.open_format)
-        self.fileMenu.addAction(open_formatAct)
-        self.fileMenu.addSeparator()
-        # Archive Data
-        self.archiveMenu = QMenu('&Archive', self)
-        self.fileMenu.addMenu(self.archiveMenu)
-        self.fileMenu.addSeparator()
-        # exit action
-        exitAct = QAction(QIcon('exit.png'), '&Exit', self)
-        exitAct.setShortcut('Ctrl+Q')
-        exitAct.setStatusTip('Exit application')
-        exitAct.triggered.connect(self.close)
-        self.fileMenu.addAction(exitAct)
-        # EDIT MENU
-        self.editMenu = self.menubar.addMenu('&Edit')
-        # change header
-        change_headerAct = QAction('&Change Header', self)
-        change_headerAct.setStatusTip('Change Packets Header')
-        change_headerAct.triggered.connect(self.change_header)
-        self.editMenu.addAction(change_headerAct)
-        # VIEW MENU
-        self.viewMenu = self.menubar.addMenu('&View')
-        self.plotMenu = QMenu('&Plot', self)
-        self.viewMenu.addMenu(self.plotMenu)
+        self.settings = load("settings")
+
+        ##################  VARIABLES  ##################
+        if not os.path.exists('OUTPUT'):
+            file = open("output", "w").close()
+        self.serial = None
+        self.pid = None
+        self.available_ports = None
+        self.serialWindow = SerialWindow()
+        self.serialWindow.textedit.setDisabled(True)
+        self.serialWindow.textedit.setReadOnly(True)
+        self.serialMonitorTimer = QTimer()
+        self.serialMonitorTimer.timeout.connect(self.checkSubProcess)
+        self.output_lines = 0
+        self.serialMonitorTimer.start(100)
+        self.newFormatWindow = NewFormatWindow()
+
+        # Initialize Interface
+        self._generateUI()
+
+        # MenuBars and Actions
+        self._createActions()
+        self._createToolBars()
+        self._createMenuBar()
+
+        self.show()
+
+    def _generateUI(self):
+        self.dockPlotWindow = QCustomDockWidget("Plot Window", self)
+        self.plotTabWidget = QCustomTabWidget(self.dockPlotWindow)
+        self.dockPlotWindow.setWidget(self.plotTabWidget)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.dockPlotWindow)
+
+        self.dockFormatWindow = QCustomDockWidget("Format Editing", self)
+        self.formatTabWidget = QCustomTabWidget(self.dockPlotWindow)
+        self.dockFormatWindow.setWidget(self.formatTabWidget)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.dockFormatWindow)
+
+    def _createToolBars(self):
+        self.windowToolBar = QToolBar("Windows", self)
+        self.addToolBar(Qt.RightToolBarArea, self.windowToolBar)
+        self.windowToolBar.addAction(self.showFormatAct)
+        self.windowToolBar.addAction(self.showPlotAct)
+        self.windowToolBar.addAction(self.openMonitorAct)
+
+    def _createActions(self):
+        # New Format
+        self.newFormatAction = QAction('&New Format', self)
+        self.newFormatAction.setStatusTip('Create New Packet Format')
+        self.newFormatAction.setShortcut('Ctrl+N')
+        self.newFormatAction.triggered.connect(self.newFormatTab)
+        # Open Format
+        self.openFormatAction = QAction('&Open', self)
+        self.openFormatAction.setStatusTip('Open Packet Format')
+        self.openFormatAction.setShortcut('Ctrl+O')
+        self.openFormatAction.triggered.connect(self.openFormatTab)
+        # Save Format
+        self.saveFormatAction = QAction('&Save', self)
+        self.saveFormatAction.setStatusTip('Save Packet Format')
+        self.saveFormatAction.setShortcut('Ctrl+S')
+        self.saveFormatAction.triggered.connect(self.saveFormatTab)
+        # Save As Format
+        self.saveAsFormatAction = QAction('&Save As', self)
+        self.saveAsFormatAction.setStatusTip('Save Packet Format As...')
+        self.saveAsFormatAction.triggered.connect(self.saveAsFormatTab)
+        # Save All Formats
+        self.saveAllFormatAction = QAction('&Save All', self)
+        self.saveAllFormatAction.setStatusTip('Save All Packet Formats')
+        self.saveAllFormatAction.triggered.connect(self.saveAllFormatTab)
+        # Exit
+        self.exitAct = QAction(QIcon('exit.png'), '&Exit', self)
+        self.exitAct.setShortcut('Ctrl+Q')
+        self.exitAct.setStatusTip('Exit application')
+        self.exitAct.triggered.connect(self.close)
+        # Change Header
+        self.changeHeaderAct = QAction('&Change Header', self)
+        self.changeHeaderAct.setStatusTip('Change Packets Header')
+        self.changeHeaderAct.triggered.connect(self.changeHeader)
+        # Add Plot Tab
+        self.newPlotAction = QAction('&Add Plot tab', self)
+        self.newPlotAction.setStatusTip('Add New Graph Tab')
+        self.newPlotAction.triggered.connect(self.newPlotTab)
         # Toggle Autoscale
-        self.autoscaleAct = QAction('&Autoscale', self, checkable=True, checked=self.parameters["autoscale"])
-        self.autoscaleAct.setStatusTip("Toggle Plots' Autoscale")
-        self.autoscaleAct.triggered.connect(self.set_autoscale)
-        self.plotMenu.addAction(self.autoscaleAct)
-        # TOOLS MENU
-        self.toolsMenu = self.menubar.addMenu('&Tools')
-        # Run Serial Code
-        self.run_serialAct = QAction('&Run', self)
-        self.run_serialAct.setStatusTip('Run Serial Listener')
-        self.run_serialAct.triggered.connect(self.start_serial)
-        self.toolsMenu.addAction(self.run_serialAct)
-        # Stop Serial Code
-        self.stop_serialAct = QAction('&Stop', self)
-        self.stop_serialAct.setStatusTip('Stop Serial Listener')
-        self.stop_serialAct.triggered.connect(self.stop_serial)
-        self.toolsMenu.addAction(self.stop_serialAct)
+        self.autoscaleAct = QAction('&Autoscale', self, checkable=True, checked=self.settings["AUTOSCALE"])
+        self.autoscaleAct.setStatusTip("Toggle Graphs' Autoscale")
+        self.autoscaleAct.triggered.connect(self.setAutoscale)
+        # Run Serial
+        self.runSerialAct = QAction('&Run', self)
+        self.runSerialAct.setStatusTip('Run Serial Monitoring')
+        self.runSerialAct.triggered.connect(self.startSerial)
+        # Stop Serial
+        self.stopSerialAct = QAction('&Stop', self)
+        self.stopSerialAct.setStatusTip('Stop Serial Monitoring')
+        self.stopSerialAct.triggered.connect(self.stopSerial)
         # Opening Serial Monitor
-        openmonitorAct = QAction('&Open Serial Monitor', self)
-        openmonitorAct.setStatusTip('Open Serial Monitor')
-        openmonitorAct.triggered.connect(self.open_serial_monitor)
-        self.toolsMenu.addAction(openmonitorAct)
+        self.openMonitorAct = QAction('&Open Serial Monitor', self)
+        self.openMonitorAct.setIcon(QIcon('sources/icons/Monitor.png'))
+        self.openMonitorAct.setStatusTip('Open Serial Monitor')
+        self.openMonitorAct.triggered.connect(self.openSerialMonitor)
+        # Toggle RSSI Acquirement
+        self.rssiAct = QAction('&RSSI', self, checkable=True, checked=self.settings["RSSI"])
+        self.rssiAct.setStatusTip('Toggle RSSI Retrieval')
+        self.rssiAct.triggered.connect(self.setRssi)
+        # Visit GitHub Page
+        self.githubAct = QAction('&Visit GitHub', self)
+        self.githubAct.setStatusTip('Visit GitHub Page')
+        self.githubAct.triggered.connect(self.openGithub)
+        # Show Plot Window
+        self.showPlotAct = QAction(QIcon('sources/icons/Plot.png'), "&Open Plot", self)
+        self.showPlotAct.setStatusTip('Show Graph Window')
+        self.showPlotAct.triggered.connect(self.dockPlotWindow.show)
+        # Show Format Editing Window
+        self.showFormatAct = QAction(QIcon('sources/icons/File.png'), "&Open Format", self)
+        self.showFormatAct.setStatusTip('Show Format Editing Window')
+        self.showFormatAct.triggered.connect(self.dockFormatWindow.show)
+
+    def _createMenuBar(self):
+        self.menubar = self.menuBar()
+
+        ###  FILE MENU  ###
+        self.fileMenu = self.menubar.addMenu('&File')
+        self.fileMenu.addAction(self.newFormatAction)
+        self.fileMenu.addAction(self.openFormatAction)
+        self.recentMenu = QMenu('&Recent', self)
+        self.recentMenu.aboutToShow.connect(self.populateRecentMenu)
+        self.fileMenu.addMenu(self.recentMenu)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.saveFormatAction)
+        self.fileMenu.addAction(self.saveAsFormatAction)
+        self.fileMenu.addAction(self.saveAllFormatAction)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.exitAct)
+
+        ###  EDIT MENU  ###
+        self.editMenu = self.menubar.addMenu('&Edit')
+        self.editMenu.addAction(self.changeHeaderAct)
+
+        ###  WINDOW MENU  ###
+        self.windowMenu = self.menubar.addMenu('&Window')
+        self.windowMenu.addAction(self.newPlotAction)
+        self.showMenu = QMenu('&Show View', self)
+        # Toggle Window Views
+        self.showMenu.addAction(self.dockPlotWindow.toggleViewAction())
+        self.showMenu.addAction(self.dockFormatWindow.toggleViewAction())
+        self.windowMenu.addMenu(self.showMenu)
+        self.windowMenu.addSeparator()
+        self.windowMenu.addAction(self.autoscaleAct)
+
+        ###  TOOLS MENU  ###
+        self.toolsMenu = self.menubar.addMenu('&Tools')
+        self.toolsMenu.addAction(self.runSerialAct)
+        self.toolsMenu.addAction(self.stopSerialAct)
+        self.toolsMenu.addAction(self.openMonitorAct)
         self.toolsMenu.addSeparator()
-        # Port Menu
         self.portMenu = QMenu('&Port', self)
         self.toolsMenu.addMenu(self.portMenu)
-        self.available_ports = None
-        self.toolsMenu.aboutToShow.connect(self.check_tools_menu)
-        # Baud Menu
-        baud_rates = self.parameters["available_bauds"]
-        id_baud = baud_rates.index(str(self.parameters["selected_baud"]))
+        # Baud Group
+        baud_rates = self.settings["AVAILABLE_BAUDS"]
+        id_baud = baud_rates.index(str(self.settings["SELECTED_BAUD"]))
         self.baudMenu = QMenu('&Baud    ' + baud_rates[id_baud], self)
         baud_group = QActionGroup(self.baudMenu)
         for baud in baud_rates:
@@ -108,34 +194,15 @@ class Balloon_GUI(QMainWindow):
             self.baudMenu.addAction(action)
             baud_group.addAction(action)
         baud_group.setExclusive(True)
-        baud_group.triggered.connect(self.select_baud)
+        baud_group.triggered.connect(self.selectBaud)
         self.toolsMenu.addMenu(self.baudMenu)
-        # Rssi
-        self.rssiAct = QAction('&RSSI', self, checkable=True, checked=self.parameters["rssi"])
-        self.rssiAct.setStatusTip('Toggle RSSI Retrieval')
-        self.rssiAct.triggered.connect(self.set_rssi)
+        self.toolsMenu.addSeparator()
         self.toolsMenu.addAction(self.rssiAct)
-        # HELP MENU
-        self.helpMenu = self.menubar.addMenu('&Help')
-        # Visit github page
-        githubAct = QAction('&Visit Github', self)
-        githubAct.setStatusTip('Visit Github Page')
-        githubAct.triggered.connect(self.github_page)
-        self.helpMenu.addAction(githubAct)
+        self.toolsMenu.aboutToShow.connect(self.populateToolsMenu)
 
-        ##################  VARIABLES  ##################
-        if not os.path.exists("output"):
-            file = open("output", "w").close()
-        self.serial_window = SerialWindow(self)
-        self.serial_window.textedit.setDisabled(True)
-        self.serial_window.textedit.setReadOnly(True)
-        self.serial_monitor_timer = QTimer()
-        self.serial_monitor_timer.timeout.connect(self.check_subprocess)
-        self.output_lines = 0
-        self.serial_monitor_timer.start(100)
-        # self.table_widget = CentralWidget(parent=self, path=self.current_dir)
-        # self.setCentralWidget(self.table_widget)
-        self.show()
+        ###  HELP MENU  ###
+        self.helpMenu = self.menubar.addMenu('&Help')
+        self.helpMenu.addAction(self.githubAct)
 
     def center(self):
         qr = self.frameGeometry()
@@ -143,65 +210,123 @@ class Balloon_GUI(QMainWindow):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-    def load_parameters(self):
-        self.parameters = {}
-        with open("parameters", "r") as file:
-            lines = file.readlines()
-        for i in range(len(lines)):
-            line = lines[i].split(';')
-            if line[0] == "available_bauds" or line[0] == "format_files" or line[0] == "save_files":
-                bauds = line[1].split(',')
-                for j in range(len(bauds)):
-                    bauds[j] = bauds[j].rstrip("\n")
-                self.parameters[line[0]] = bauds
-            elif line[0] == "rssi" or line[0] == "autoscroll" or line[0] == "autoscale":
-                self.parameters[line[0]] = bool(int(line[1].rstrip("\n")))
+    def newFormatTab(self):
+        self.newFormatWindow = NewFormatWindow()
+        formatButtons = QWidget(self.newFormatWindow)
+        formatLayout = QHBoxLayout(formatButtons)
+        acceptButton = QPushButton('Accept', formatButtons)
+        acceptButton.clicked.connect(self.acceptNewFormatTab)
+        formatLayout.addWidget(acceptButton)
+        cancelButton = QPushButton('Cancel', formatButtons)
+        cancelButton.clicked.connect(self.cancelNewFormatTab)
+        formatLayout.addWidget(cancelButton)
+        formatButtons.setLayout(formatLayout)
+        self.newFormatWindow.layout.addWidget(formatButtons)
+        self.newFormatWindow.show()
+
+    def acceptNewFormatTab(self):
+        widget = FormatEditFrame(self)
+        name = self.newFormatWindow.nameEntry.text()
+        self.formatTabWidget.addTab(widget, name)
+        self.newFormatWindow.destroy()
+
+    def cancelNewFormatTab(self):
+        self.newFormatWindow.destroy()
+
+    def newPlotTab(self):
+        pass
+
+    def openFormatTab(self):
+        pass
+
+    def openRecentFile(self, filename):
+        pass
+
+    def saveFormatTab(self):
+        pass
+
+    def saveAsFormatTab(self):
+        name = QFileDialog.getSaveFileName(self, 'Save File')
+        with open(str(name), 'w') as file:
+            pass
+            # Add Format Tab Saving Method
+
+    def saveAllFormatTab(self):
+        pass
+
+    def changeHeader(self):
+        pass
+
+    def startSerial(self):
+        message = "Port : " + self.settings["SELECTED_PORT"] + "  Baud : "
+        message += self.settings["SELECTED_BAUD"] + "\nDo you wish to continue ?"
+        msg = MessageBox()
+        msg.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        msg.setWindowTitle("Running Warning")
+        msg.setText(message)
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
+        msg.setStyleSheet("QLabel{min-width: 200px;}")
+        msg.exec_()
+        button = msg.clickedButton()
+        sb = msg.standardButton(button)
+        if sb == QMessageBox.Yes:
+            serialPath = os.path.join(self.current_dir, "sources/SerialGS.py")
+            if os.path.exists(serialPath):
+                self.serial = subprocess.Popen([sys.executable, serialPath])
+                self.pid = self.serial.pid
+                self.serial_window.textedit.setDisabled(False)
             else:
-                self.parameters[line[0]] = line[1].rstrip("\n")
+                cancelling = MessageBox()
+                cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+                cancelling.setWindowTitle("Error")
+                cancelling.setText("Serial.py not found.")
+                cancelling.setStandardButtons(QMessageBox.Ok)
+                cancelling.setStyleSheet("QLabel{min-width: 200px;}")
+                cancelling.exec_()
 
-    def save_parameters(self):
-        with open("parameters", "r") as file:
-            lines = file.readlines()
-        with open("parameters", "w") as file:
-            for i in range(len(lines)):
-                line = lines[i].split(';')
-                if line[0] == "available_bauds" or line[0] == "format_files" or line[0] == "save_files":
-                    file.write(lines[i])
-                elif line[0] == "rssi" or line[0] == "autoscroll" or line[0] == "autoscale":
-                    file.write(line[0] + ';' + str(int(self.parameters[line[0]])) + '\n')
-                else:
-                    file.write(line[0] + ';' + str(self.parameters[line[0]]) + '\n')
+    def stopSerial(self):
+        if self.serial is not None:
+            self.serial.kill()
+            self.serial.terminate()
+            t.sleep(0.5)
+            self.serialWindow.textedit.setDisabled(True)
+            self.serial = None
 
-    def check_file_menu(self):
-        self.portMenu.setTitle('&Port')
-        directory = os.path.join(self.current_dir, "data")
-        file_names = [name for name in os.listdir(directory) if os.path.isfile(os.path.join(directory, name))]
-        if len(file_names) == 0:
-            self.archiveMenu.setDisabled(True)
+    def openSerialMonitor(self):
+        if self.serialWindow.isVisible():
+            pass
+            #### ADD METHOD TO GRAB ATTENTION
         else:
-            self.archiveMenu.clear()
-            archive_group = QActionGroup(self.portMenu)
-            for i in range(len(file_names)):
-                archiveAct = QAction(file_names[i], self)
-                archiveAct.setStatusTip('Archive ' + file_names[i])
-                self.archiveMenu.addAction(archiveAct)
-                archive_group.addAction(archiveAct)
-            archive_group.triggered.connect(self.archive_save)
+            self.serialWindow.show()
 
-    def check_tools_menu(self):
+    def setAutoscale(self, action):
+        self.settings["AUTOSCALE"] = action
+        save(self.settings, "settings")
+
+    def populateRecentMenu(self):
+        self.recentMenu.clear()
+        actions = []
+        filenames = [f"File-{n}" for n in range(5)]
+        for filename in filenames:
+            action = QAction(filename, self)
+            action.triggered.connect(partial(self.openRecentFile, filename))
+            actions.append(action)
+        self.recentMenu.addActions(actions)
+
+    def populateToolsMenu(self):
         self.portMenu.setTitle('&Port')
         self.portMenu.setDisabled(False)
         import serial.tools.list_ports
         self.available_ports = [comport.device for comport in serial.tools.list_ports.comports()]
         if len(self.available_ports) == 0:
-            self.stop_serialAct.setDisabled(True)
+            self.stopSerialAct.setDisabled(True)
             self.portMenu.setDisabled(True)
-            self.parameters["selected_port"] = ""
-            self.save_parameters()
+            self.settings["SELECTED_PORT"] = ""
+            save(self.settings, "settings")
         else:
             self.portMenu.clear()
             port_group = QActionGroup(self.portMenu)
-            selection = self.parameters["selected_port"]
+            selection = self.settings["SELECTED_PORT"]
             if selection in self.available_ports:
                 for port in self.available_ports:
                     action = QAction(port, self.portMenu, checkable=True, checked=port == selection)
@@ -214,237 +339,75 @@ class Balloon_GUI(QMainWindow):
                     self.portMenu.addAction(action)
                     port_group.addAction(action)
                 self.portMenu.setTitle('&Port    ' + self.available_ports[0])
-                self.parameters["selected_port"] = self.available_ports[0]
-                self.save_parameters()
+                self.settings["SELECTED_PORT"] = self.available_ports[0]
+                save(self.settings, "settings")
             port_group.setExclusive(True)
-            port_group.triggered.connect(self.select_port)
+            port_group.triggered.connect(self.selectPort)
         if self.serial is None:
-            self.stop_serialAct.setDisabled(True)
-            self.run_serialAct.setDisabled(False)
+            self.stopSerialAct.setDisabled(True)
+            self.runSerialAct.setDisabled(False)
         else:
-            self.stop_serialAct.setDisabled(False)
-            self.run_serialAct.setDisabled(True)
+            self.stopSerialAct.setDisabled(False)
+            self.runSerialAct.setDisabled(True)
 
-    def select_baud(self, action):
+    def selectBaud(self, action):
         self.baudMenu.setTitle('&Baud    ' + action.text())
-        self.parameters["selected_baud"] = action.text()
-        self.save_parameters()
+        self.settings["SELECTED_BAUD"] = action.text()
+        save(self.settings, "settings")
         # Restart Serial Connection if on
         if self.serial is not None:
-            self.stop_serial()
-            self.start_serial()
+            self.stopSerial()
+            self.startSerial()
 
-    def change_header(self):
-        header_dialog = QInputDialog(self)
-        header_dialog.setInputMode(QInputDialog.TextInput)
-        header_dialog.setWindowTitle("Changing Header")
-        header_dialog.setLabelText("Current  Header -> " + self.parameters["header"])
-        header_dialog.resize(500, 100)
-        okPressed = header_dialog.exec_()
-        text = header_dialog.textValue()
-        if okPressed and text != "":
-            self.parameters["header"] = text
-            self.save_parameters()
-        elif okPressed and text == "":
-            print("bruh")
-
-    def new_format(self):
-        pass
-
-    def open_format(self):
-        f_name = QFileDialog.getOpenFileName(self, "Open Format File", os.path.join(self.current_dir,
-                                                                                    "../formats"))
-        print(f_name[0])
-
-    def save_format(self):
-        pass
-
-    def preferences(self):
-        pass
-
-    def archive_save(self, action):
-        message = "File : " + action.text() + "\nThis remove its data, continue?"
-        file_name = action.text()[:-4]
-        print(file_name)
-        msg = MessageBox()
-        msg.setWindowIcon(QIcon('icons\\PyGS.jpg'))
-        msg.setWindowTitle("Archiving File")
-        msg.setText(message)
-        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
-        msg.setStyleSheet("QLabel{min-width: 200px;}")
-        msg.exec_()
-        button = msg.clickedButton()
-        sb = msg.standardButton(button)
-        if sb == QMessageBox.Yes:
-            old_path = os.path.join(self.data_path, action.text())
-            new_path = os.path.join(self.backup_path, "backup_" + action.text())
-            i = 1
-            while os.path.exists(new_path):
-                new_path = os.path.join(self.backup_path, "backup_" + file_name + "(" + str(i) + ")" + ".csv")
-                i = i + 1
-            shutil.move(old_path, new_path)
-
-    def select_port(self, action):
+    def selectPort(self, action):
         self.portMenu.setTitle('&Port    ' + action.text())
-        self.parameters["selected_port"] = action.text()
-        self.save_parameters()
+        self.settings["SELECTED_PORT"] = action.text()
+        save(self.settings, "settings")
         # Stop Serial Connection if on
         if self.serial is not None:
-            self.stop_serial()
+            self.stopSerial()
 
-    def set_rssi(self, action):
-        self.parameters["rssi"] = action
-        self.save_parameters()
+    def setRssi(self, action):
+        self.settings["RSSI"] = action
+        save(self.settings, "settings")
         # Restart Serial Connection if on
         if self.serial is not None:
-            self.stop_serial()
-            self.start_serial()
+            self.stopSerial()
+            self.startSerial()
 
-    def set_autoscale(self, action):
-        self.parameters["autoscale"] = action
-        self.save_parameters()
-
-    def open_serial_monitor(self):
-        self.serial_window.show()
-
-    def start_serial(self):
-        message = "Port : " + self.parameters["selected_port"] + "  Baud : " + \
-                  self.parameters["selected_baud"] + "\nDo you wish to continue ?"
-        msg = MessageBox()
-        msg.setWindowIcon(QIcon('icons\\PyGS.jpg'))
-        msg.setWindowTitle("Running Warning")
-        msg.setText(message)
-        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
-        msg.setStyleSheet("QLabel{min-width: 200px;}")
-        msg.exec_()
-        button = msg.clickedButton()
-        sb = msg.standardButton(button)
-        if sb == QMessageBox.Yes:
-            if os.path.exists(os.path.join(self.current_dir, "SerialGS.py")):
-                self.serial = subprocess.Popen([sys.executable, os.path.join(self.current_dir,
-                                                                             "SerialGS.py")])
-                self.pid = self.serial.pid
-                self.serial_window.textedit.setDisabled(False)
-            else:
-                cancelling = MessageBox()
-                cancelling.setWindowIcon(QIcon('icons\\PyGS.jpg'))
-                cancelling.setWindowTitle("Error")
-                cancelling.setText("Serial.py not found.")
-                cancelling.setStandardButtons(QMessageBox.Ok)
-                cancelling.setStyleSheet("QLabel{min-width: 200px;}")
-                cancelling.exec_()
-
-    def stop_serial(self):
-        if self.serial is not None:
-            self.serial.kill()
-            self.serial.terminate()
-            t.sleep(0.5)
-            self.serial_window.textedit.setDisabled(True)
-            self.serial = None
-
-    def check_subprocess(self):
-        self.load_parameters()
+    def checkSubProcess(self):
+        self.settings = load("settings")
         if self.serial is not None and self.serial.poll() is not None:
-            self.stop_serial()
-            self.serial_window.textedit.setDisabled(True)
+            self.stopSerial()
+            self.serialWindow.textedit.setDisabled(True)
         elif self.serial is not None and self.serial.poll() is None:
-            with open(self.parameters["output_file"], "r") as file:
+            with open(self.settings["output_file"], "r") as file:
                 lines = file.readlines()
             if len(lines) != self.output_lines:
-                self.serial_window.textedit.append(lines[-1])
+                self.serialWindow.textedit.append(lines[-1])
                 self.output_lines = len(lines)
-            if bool(self.parameters["autoscroll"]):
-                self.serial_window.textedit.moveCursor(QTextCursor.End)
+            if bool(self.settings["AUTOSCROLL"]):
+                self.serialWindow.textedit.moveCursor(QTextCursor.End)
         else:
             pass
 
     @staticmethod
-    def github_page():
+    def openGithub():
         import webbrowser
-        webbrowser.open("https://github.com/EnguerranVidal/WeatherBalloon-GroundStation")
+        webbrowser.open("https://github.com/EnguerranVidal/PyGS")
 
     def closeEvent(self, event):
         reply = QMessageBox.question(self, 'Message', "Are you sure to quit?", QMessageBox.Yes |
                                      QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             # Stopping Serial Connection
-            self.stop_serial()
+            self.stopSerial()
             # Removing Serial Output File
             os.remove("output")
             for window in QApplication.topLevelWidgets():
                 window.close()
+            # Stopping Timers
+            self.serialMonitorTimer.stop()
             event.accept()
-
         else:
             event.ignore()
-
-
-class SerialWindow(QWidget):
-    def __init__(self, parent=None):
-        super(SerialWindow, self).__init__()
-        self.resize(450, 350)
-        self.setWindowTitle('Serial Monitor')
-        self.setWindowIcon(QIcon('icons\\PyGS.jpg'))
-        # General Layout
-        self.layout = QGridLayout(self)
-        self.setLayout(self.layout)
-        # Loading parameters
-        self.parameters = {}
-        self.load_parameters()
-        # Text edit box
-        self.textedit = QTextEdit(self)
-        self.textedit.setText('Run Serial listening to display incoming info ...')
-        self.textedit.setStyleSheet('font-size:15px')
-        self.textedit.setLineWrapMode(QTextEdit.FixedPixelWidth)
-        self.textedit.setLineWrapColumnOrWidth(1000)
-        self.layout.addWidget(self.textedit, 1, 1, 1, 2)
-        # Autoscroll Che-box
-        self.autoscroll_box = QCheckBox("Autoscroll")
-        self.autoscroll_box.setChecked(bool(self.parameters["autoscroll"]))
-        self.autoscroll_box.stateChanged.connect(self.change_autoscroll)
-        self.layout.addWidget(self.autoscroll_box, 2, 1)
-        # Clearing Output Button
-        self.clearButton = QPushButton("Clear Output")
-        self.clearButton.clicked.connect(self.clear_output)
-        self.layout.addWidget(self.clearButton, 2, 2)
-
-    def load_parameters(self):
-        self.parameters = {}
-        with open("parameters", "r") as file:
-            lines = file.readlines()
-        for i in range(len(lines)):
-            line = lines[i].split(';')
-            if line[0] == "available_bauds" or line[0] == "format_files" or line[0] == "save_files":
-                bauds = line[1].split(',')
-                for j in range(len(bauds)):
-                    bauds[j] = bauds[j].rstrip("\n")
-                self.parameters[line[0]] = bauds
-            elif line[0] == "rssi" or line[0] == "autoscroll" or line[0] == "autoscale":
-                self.parameters[line[0]] = bool(int(line[1].rstrip("\n")))
-            else:
-                self.parameters[line[0]] = line[1].rstrip("\n")
-
-    def save_parameters(self):
-        with open("../parameters", "r") as file:
-            lines = file.readlines()
-        with open("../parameters", "w") as file:
-            for i in range(len(lines)):
-                line = lines[i].split(';')
-                if line[0] == "available_bauds" or line[0] == "format_files" or line[0] == "save_files":
-                    file.write(lines[i])
-                elif line[0] == "rssi" or line[0] == "autoscroll" or line[0] == "autoscale":
-                    file.write(line[0] + ';' + str(int(self.parameters[line[0]])) + '\n')
-                else:
-                    file.write(line[0] + ';' + str(self.parameters[line[0]]) + '\n')
-
-    def change_autoscroll(self):
-        self.parameters["autoscroll"] = int(not bool(self.parameters["autoscroll"]))
-        self.save_parameters()
-        self.autoscroll_box.setChecked(bool(self.parameters["autoscroll"]))
-
-    @staticmethod
-    def clear_output(self):
-        file = open("output", "w").close()
-        self.textedit.setText("")
-
-
