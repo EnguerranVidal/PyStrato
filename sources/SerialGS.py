@@ -4,6 +4,9 @@ from datetime import datetime
 from serial import Serial
 import time
 
+# --------------------- Sources ----------------------- #
+from sources.common.parameters import load_settings, save_settings
+
 
 class Serial_Monitor:
     def __init__(self, port, baud_rate, data_files=None, format_files=None, header="",
@@ -147,6 +150,7 @@ class Serial_Monitor:
                 content_format[i][4] = int(content_format[i][4])
             if content_format[i][0] == "pin":
                 content_format[i][1] = int(content_format[i][1])
+        print(content_format)
         return content_format
 
     def format_header(self, i):
@@ -176,33 +180,15 @@ class Serial_Monitor:
             csv_writer.writerow(content)
 
 
-def load_parameters(filename):
-    dict_parameters = {}
-    with open(filename, "r") as file:
-        lines = file.readlines()
-    for i in range(len(lines)):
-        line = lines[i].split(';')
-        if line[0] == "available_bauds" or line[0] == "format_files" or line[0] == "save_files":
-            bauds = line[1].split(',')
-            for j in range(len(bauds)):
-                bauds[j] = bauds[j].rstrip("\n")
-            dict_parameters[line[0]] = bauds
-        elif line[0] == "rssi" or line[0] == "autoscroll":
-            dict_parameters[line[0]] = bool(int(line[1].rstrip("\n")))
-        else:
-            dict_parameters[line[0]] = line[1].rstrip("\n")
-    return dict_parameters
-
-
 if __name__ == '__main__':
-    parameters = load_parameters("settings")
-    parameter_formats_files = parameters["format_files"]
-    parameter_saving_files = parameters["save_files"]
-    parameter_port = parameters["selected_port"]
-    parameter_baud_rate = int(parameters["selected_baud"])
-    parameter_rssi = parameters["rssi"]
-    parameter_header = parameters["header"]
-    parameter_output = parameters["output_file"]
+    parameters = load_settings("../settings")
+    parameter_formats_files = parameters["FORMAT_FILES"]
+    parameter_saving_files = parameters["SAVE_FILES"]
+    parameter_port = parameters["SELECTED_PORT"]
+    parameter_baud_rate = int(parameters["SELECTED_BAUD"])
+    parameter_rssi = parameters["RSSI"]
+    parameter_header = parameters["HEADER"]
+    parameter_output = parameters["OUTPUT_FILE"]
     ser = Serial_Monitor(parameter_port, parameter_baud_rate, header=parameter_header, output=parameter_output,
                          format_files=parameter_formats_files, data_files=parameter_saving_files, rssi=parameter_rssi)
     ser.start_tracking()

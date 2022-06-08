@@ -6,6 +6,7 @@ import time as t
 import subprocess
 from functools import partial
 import sip
+import numpy as np
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
@@ -16,7 +17,7 @@ from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.widgets.RemoteGraphicsView
 
 # --------------------- Sources ----------------------- #
-from sources.common.parameters import load, save
+from sources.common.parameters import load_settings, save_settings
 
 ######################## CLASSES ########################
 
@@ -32,7 +33,7 @@ class SerialWindow(QWidget):
         self.setLayout(self.layout)
         # Loading settings
         self.settings = {}
-        self.settings = load("settings")
+        self.settings = load_settings("settings")
         # Text edit box
         self.textedit = QTextEdit(self)
         self.textedit.setText('Run Serial listening to display incoming info ...')
@@ -52,7 +53,7 @@ class SerialWindow(QWidget):
 
     def changeAutoscroll(self):
         self.parameters["AUTOSCROLL"] = int(not bool(self.settings["AUTOSCROLL"]))
-        save(self.parameters, "settings")
+        save_settings(self.parameters, "settings")
         self.autoscroll_box.setChecked(bool(self.settings["AUTOSCROLL"]))
 
     @staticmethod
@@ -99,9 +100,64 @@ class QCustomTabWidget(QTabWidget):
         self.removeTab(currentIndex)
 
 
-class FormatEditFrame(QFrame):
-    def __init__(self, parent=None):
-        super(QFrame, self).__init__(parent)
+class FormatEditWidget(QWidget):
+    def __init__(self, parent=None, path=None, formatFile=None):
+        super(QWidget, self).__init__(parent)
+        self.formatFile = os.path.join('formats', formatFile)
+        self.current_dir = path
+        self.settings = {}
+        self.settings = load_settings("settings")
+        if os.path.exists(self.formatFile):
+            self.saved = True
+        else:
+            self.saved = False
+        ####### WIDGETS #######
+
+        # Balloon Identifier
+        self.balloonIdWidget = QWidget(self)
+        self.balloonIdWidget.move(10, 10)
+        self.balloonIdLayout = QHBoxLayout(self.balloonIdWidget)
+        self.balloonIdBox = QCheckBox("Balloon Identifier?", self.balloonIdWidget)
+        self.balloonIdBox.stateChanged.connect(self.balloonIdBoxChanged)
+        self.balloonIdEdit = QLineEdit(self.balloonIdWidget)
+        self.balloonIdLayout.addWidget(self.balloonIdBox)
+        self.balloonIdLayout.addWidget(self.balloonIdEdit)
+        self.balloonIdWidget.setLayout(self.balloonIdLayout)
+
+        # Packet Identifier
+        self.packetIdWidget = QWidget(self)
+        self.packetIdWidget.move(10, 40)
+        self.packetIdLayout = QHBoxLayout(self.packetIdWidget)
+        self.packetIdBox = QCheckBox("Packet Identifier?", self)
+        self.packetIdBox.stateChanged.connect(self.packetIdBoxChanged)
+        self.packetIdSpinBox = QSpinBox(self)
+        self.packetIdSpinBox.setValue(1)
+        self.packetIdSpinBox.setMinimum(1)
+        self.packetIdSpinBox.valueChanged.connect(self.spinBoxChanged)
+        self.packetIdSpinBox.setFocusPolicy(Qt.NoFocus)
+        self.packetIdLabel = QLabel(self)
+        self.packetIdLabel.setText('ex : NA')
+        self.packetIdLayout.addWidget(self.packetIdBox)
+        self.packetIdLayout.addWidget(self.packetIdSpinBox)
+        self.packetIdLayout.addWidget(self.packetIdLabel)
+        self.packetIdWidget.setLayout(self.packetIdLayout)
+
+        # Header
+        self.headerWidget = QWidget(self)
+        self.headerWidget.move(10, 70)
+        self.headerLayout = QHBoxLayout(self.headerWidget)
+        self.headerBox = QCheckBox("Header?", self)
+        self.headerLabel = QLabel(self)
+        self.headerLabel.setText(self.settings['HEADER'])
+        self.headerLayout.addWidget(self.headerBox)
+        self.headerLayout.addWidget(self.headerLabel)
+        self.headerWidget.setLayout(self.headerLayout)
+
+    def saveFormat(self, save_path=None):
+        pass
+
+    def loadFormat(self):
+        pass
 
     @staticmethod
     def removeWidget(widget, layout):
@@ -112,6 +168,53 @@ class FormatEditFrame(QFrame):
 
     def addValueEntry(self):
         pass
+
+    def balloonIdBoxChanged(self):
+        if self.balloonIdBox.isChecked():
+            self.balloonIdEdit.setDisabled(False)
+        else:
+            self.balloonIdEdit.setDisabled(True)
+
+    def packetIdBoxChanged(self):
+        if self.packetIdBox.isChecked():
+            self.packetIdSpinBox.setDisabled(False)
+        else:
+            self.packetIdSpinBox.setDisabled(True)
+
+    def spinBoxChanged(self):
+        n = self.packetIdSpinBox.value()
+        random = np.random.randint(0, int(n * '9'))
+        self.packetIdLabel.setText('ex: ' + str(random))
+
+
+class GraphWidget(QWidget):
+    def __init__(self, parent=None):
+        super(QWidget, self).__init__(parent)
+
+
+class NewGraphWindow(QWidget):
+    def __init__(self):
+        super(QWidget, self).__init__()
+        self.setWindowTitle('Create New Format')
+        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.resize(400, 100)
+        # General Layout
+        self.layout = QVBoxLayout(self)
+        # Loading settings
+        self.settings = {}
+        self.settings = load_settings("settings")
+        #######  NAME FRAME  #######
+        self.nameFrame = QWidget()
+        self.nameLayout = QHBoxLayout(self)
+        self.nameLabel = QLabel(self)
+        self.nameLabel.setText('Format Name:   ')
+        self.nameEntry = QLineEdit(self)
+        self.nameEntry.resize(1000, 40)
+        self.nameLayout.addWidget(self.nameLabel)
+        self.nameLayout.addWidget(self.nameEntry)
+        self.nameFrame.setLayout(self.nameLayout)
+        self.layout.addWidget(self.nameFrame)
+        self.setLayout(self.layout)
 
 
 class NewFormatWindow(QWidget):
@@ -124,7 +227,7 @@ class NewFormatWindow(QWidget):
         self.layout = QVBoxLayout(self)
         # Loading settings
         self.settings = {}
-        self.settings = load("settings")
+        self.settings = load_settings("settings")
         #######  NAME FRAME  #######
         self.nameFrame = QWidget()
         self.nameLayout = QHBoxLayout(self)
@@ -142,7 +245,7 @@ class NewFormatWindow(QWidget):
         self.dataLabel = QLabel(self)
         self.dataLabel.setText('Data File Name:   ')
         self.dataFileLabel = QLabel(self)
-        self.dataFileLabel.setText('example.csv')
+        self.dataFileLabel.setText('Example.csv')
         self.dataLayout.addWidget(self.dataLabel)
         self.dataLayout.addWidget(self.dataFileLabel)
         self.dataFrame.setLayout(self.dataLayout)
@@ -152,7 +255,7 @@ class NewFormatWindow(QWidget):
         self.formatLabel = QLabel(self)
         self.formatLabel.setText('Format File Name: ')
         self.formatFileLabel = QLabel(self)
-        self.formatFileLabel.setText('example.txt')
+        self.formatFileLabel.setText('Example.config')
         self.formatLayout.addWidget(self.formatLabel)
         self.formatLayout.addWidget(self.formatFileLabel)
         self.formatFrame.setLayout(self.formatLayout)
@@ -165,9 +268,9 @@ class NewFormatWindow(QWidget):
     def editLabels(self):
         name = self.nameEntry.text()
         if len(name) == 0:
-            name = 'example'
-        self.dataFileLabel.setText('data_' + name + '.csv')
-        self.formatFileLabel.setText('format_' + name + '.txt')
+            name = 'Example'
+        self.dataFileLabel.setText('Data' + name + '.csv')
+        self.formatFileLabel.setText('Format' + name + '.config')
 
 
 class ValuesTreeWidget(QTreeWidget):

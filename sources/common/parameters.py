@@ -1,4 +1,4 @@
-def load(path):
+def load_settings(path):
     parameters = {}
     with open(path, "r") as file:
         lines = file.readlines()
@@ -16,7 +16,7 @@ def load(path):
     return parameters
 
 
-def save(parameters, path):
+def save_settings(parameters, path):
     with open(path, "r") as file:
         lines = file.readlines()
     with open(path, "w") as file:

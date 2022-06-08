@@ -13,7 +13,7 @@ from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
 from sources.common.widgets import *
-from sources.common.parameters import load, save
+from sources.common.parameters import load_settings, save_settings
 
 
 ######################## CLASSES ########################
@@ -28,7 +28,7 @@ class PyGS(QMainWindow):
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.statusBar().showMessage('Ready')
         self.center()
-        self.settings = load("settings")
+        self.settings = load_settings("settings")
 
         ##################  VARIABLES  ##################
         if not os.path.exists('OUTPUT'):
@@ -36,14 +36,15 @@ class PyGS(QMainWindow):
         self.serial = None
         self.pid = None
         self.available_ports = None
-        self.serialWindow = SerialWindow()
-        self.serialWindow.textedit.setDisabled(True)
-        self.serialWindow.textedit.setReadOnly(True)
+        self.formatTabList = []
+        self.graphsTabList = []
+        self.serialWindow = None
         self.serialMonitorTimer = QTimer()
         self.serialMonitorTimer.timeout.connect(self.checkSubProcess)
         self.output_lines = 0
         self.serialMonitorTimer.start(100)
         self.newFormatWindow = NewFormatWindow()
+        self.newGraphWindow = NewGraphWindow()
 
         # Initialize Interface
         self._generateUI()
@@ -212,29 +213,31 @@ class PyGS(QMainWindow):
 
     def newFormatTab(self):
         self.newFormatWindow = NewFormatWindow()
-        formatButtons = QWidget(self.newFormatWindow)
-        formatLayout = QHBoxLayout(formatButtons)
-        acceptButton = QPushButton('Accept', formatButtons)
+        acceptButton = QPushButton('Accept', self.newFormatWindow)
         acceptButton.clicked.connect(self.acceptNewFormatTab)
-        formatLayout.addWidget(acceptButton)
-        cancelButton = QPushButton('Cancel', formatButtons)
-        cancelButton.clicked.connect(self.cancelNewFormatTab)
-        formatLayout.addWidget(cancelButton)
-        formatButtons.setLayout(formatLayout)
-        self.newFormatWindow.layout.addWidget(formatButtons)
+        self.newFormatWindow.layout.addWidget(acceptButton)
         self.newFormatWindow.show()
 
     def acceptNewFormatTab(self):
-        widget = FormatEditFrame(self)
         name = self.newFormatWindow.nameEntry.text()
+        configFile = self.newFormatWindow.formatFileLabel.text()
+        widget = FormatEditWidget(self, self.current_dir, formatFile=configFile)
+        self.formatTabList.append(widget)
         self.formatTabWidget.addTab(widget, name)
-        self.newFormatWindow.destroy()
-
-    def cancelNewFormatTab(self):
-        self.newFormatWindow.destroy()
+        self.newFormatWindow.close()
 
     def newPlotTab(self):
-        pass
+        self.newGraphWindow = NewGraphWindow()
+        acceptButton = QPushButton('Create', self.newGraphWindow)
+        acceptButton.clicked.connect(self.createNewPlotTab)
+        self.newGraphWindow.layout.addWidget(acceptButton)
+        self.newGraphWindow.show()
+
+    def createNewPlotTab(self):
+        widget = GraphWidget(self)
+        name = self.newGraphWindow.nameEntry.text()
+        self.formatTabWidget.addTab(widget, name)
+        self.newGraphWindow.close()
 
     def openFormatTab(self):
         pass
@@ -246,8 +249,9 @@ class PyGS(QMainWindow):
         pass
 
     def saveAsFormatTab(self):
-        name = QFileDialog.getSaveFileName(self, 'Save File')
-        with open(str(name), 'w') as file:
+        # Create Lines
+        path = QFileDialog.getSaveFileName(self, 'Save File')
+        with open(path, 'w') as file:
             pass
             # Add Format Tab Saving Method
 
@@ -293,6 +297,10 @@ class PyGS(QMainWindow):
             self.serial = None
 
     def openSerialMonitor(self):
+        if self.serialWindow is None:
+            self.serialWindow = SerialWindow()
+            self.serialWindow.textedit.setDisabled(True)
+            self.serialWindow.textedit.setReadOnly(True)
         if self.serialWindow.isVisible():
             pass
             #### ADD METHOD TO GRAB ATTENTION
@@ -301,7 +309,7 @@ class PyGS(QMainWindow):
 
     def setAutoscale(self, action):
         self.settings["AUTOSCALE"] = action
-        save(self.settings, "settings")
+        save_settings(self.settings, "settings")
 
     def populateRecentMenu(self):
         self.recentMenu.clear()
@@ -322,7 +330,7 @@ class PyGS(QMainWindow):
             self.stopSerialAct.setDisabled(True)
             self.portMenu.setDisabled(True)
             self.settings["SELECTED_PORT"] = ""
-            save(self.settings, "settings")
+            save_settings(self.settings, "settings")
         else:
             self.portMenu.clear()
             port_group = QActionGroup(self.portMenu)
@@ -340,7 +348,7 @@ class PyGS(QMainWindow):
                     port_group.addAction(action)
                 self.portMenu.setTitle('&Port    ' + self.available_ports[0])
                 self.settings["SELECTED_PORT"] = self.available_ports[0]
-                save(self.settings, "settings")
+                save_settings(self.settings, "settings")
             port_group.setExclusive(True)
             port_group.triggered.connect(self.selectPort)
         if self.serial is None:
@@ -353,7 +361,7 @@ class PyGS(QMainWindow):
     def selectBaud(self, action):
         self.baudMenu.setTitle('&Baud    ' + action.text())
         self.settings["SELECTED_BAUD"] = action.text()
-        save(self.settings, "settings")
+        save_settings(self.settings, "settings")
         # Restart Serial Connection if on
         if self.serial is not None:
             self.stopSerial()
@@ -362,21 +370,21 @@ class PyGS(QMainWindow):
     def selectPort(self, action):
         self.portMenu.setTitle('&Port    ' + action.text())
         self.settings["SELECTED_PORT"] = action.text()
-        save(self.settings, "settings")
+        save_settings(self.settings, "settings")
         # Stop Serial Connection if on
         if self.serial is not None:
             self.stopSerial()
 
     def setRssi(self, action):
         self.settings["RSSI"] = action
-        save(self.settings, "settings")
+        save_settings(self.settings, "settings")
         # Restart Serial Connection if on
         if self.serial is not None:
             self.stopSerial()
             self.startSerial()
 
     def checkSubProcess(self):
-        self.settings = load("settings")
+        self.settings = load_settings("settings")
         if self.serial is not None and self.serial.poll() is not None:
             self.stopSerial()
             self.serialWindow.textedit.setDisabled(True)
@@ -407,6 +415,7 @@ class PyGS(QMainWindow):
             for window in QApplication.topLevelWidgets():
                 window.close()
             # Stopping Timers
+            t.sleep(0.5)
             self.serialMonitorTimer.stop()
             event.accept()
         else:
