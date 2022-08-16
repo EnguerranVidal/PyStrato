@@ -13,6 +13,7 @@ from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
 from sources.common.widgets import *
+from sources.common.PacketWidgets import *
 from sources.common.parameters import load_settings, save_settings
 
 
@@ -20,6 +21,8 @@ from sources.common.parameters import load_settings, save_settings
 class PyGS(QMainWindow):
     def __init__(self, path):
         super().__init__()
+        self.packetDockModifier = None
+        self.packetDockMenu = None
         self.current_dir = path
         self.data_path = os.path.join(self.current_dir, "data")
         self.backup_path = os.path.join(self.data_path, "backups")
@@ -36,36 +39,44 @@ class PyGS(QMainWindow):
         self.serial = None
         self.pid = None
         self.available_ports = None
-        self.formatTabList = []
+        self.packetTabList = []
         self.graphsTabList = []
         self.serialWindow = None
+
         self.serialMonitorTimer = QTimer()
         self.serialMonitorTimer.timeout.connect(self.checkSubProcess)
         self.output_lines = 0
         self.serialMonitorTimer.start(100)
         self.newFormatWindow = NewFormatWindow()
         self.newGraphWindow = NewGraphWindow()
+        self.changeHeaderWindow = HeaderChangeWindow()
 
         # Initialize Interface
         self._generateUI()
 
         # MenuBars and Actions
         self._createActions()
-        self._createToolBars()
+        # self._createToolBars()
         self._createMenuBar()
 
         self.show()
 
     def _generateUI(self):
-        self.dockPlotWindow = QCustomDockWidget("Plot Window", self)
-        self.plotTabWidget = QCustomTabWidget(self.dockPlotWindow)
-        self.dockPlotWindow.setWidget(self.plotTabWidget)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.dockPlotWindow)
+        self.generalTabWidget = QTabWidget(self)
+        self.generalTabWidget.setTabBar(QTabBar(self.generalTabWidget))
+        self.generalTabWidget.setTabPosition(self.generalTabWidget.West)
 
-        self.dockFormatWindow = QCustomDockWidget("Format Editing", self)
-        self.formatTabWidget = QCustomTabWidget(self.dockPlotWindow)
-        self.dockFormatWindow.setWidget(self.formatTabWidget)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.dockFormatWindow)
+        self.packetTabWidget = PacketTabWidget()
+        self.graphTabWidget = QMainWindow(self)
+        self.graphWidgetsList = []
+
+        self.generalTabWidget.addTab(self.graphTabWidget, 'Graphs')
+        self.generalTabWidget.addTab(self.packetTabWidget, 'Packets')
+
+        # Packet Tab Widget -----------------------------------------
+
+
+        self.setCentralWidget(self.generalTabWidget)
 
     def _createToolBars(self):
         self.windowToolBar = QToolBar("Windows", self)
@@ -106,7 +117,7 @@ class PyGS(QMainWindow):
         # Change Header
         self.changeHeaderAct = QAction('&Change Header', self)
         self.changeHeaderAct.setStatusTip('Change Packets Header')
-        self.changeHeaderAct.triggered.connect(self.changeHeader)
+        self.changeHeaderAct.triggered.connect(self.openChangeHeader)
         # Add Plot Tab
         self.newPlotAction = QAction('&Add Plot tab', self)
         self.newPlotAction.setStatusTip('Add New Graph Tab')
@@ -136,14 +147,6 @@ class PyGS(QMainWindow):
         self.githubAct = QAction('&Visit GitHub', self)
         self.githubAct.setStatusTip('Visit GitHub Page')
         self.githubAct.triggered.connect(self.openGithub)
-        # Show Plot Window
-        self.showPlotAct = QAction(QIcon('sources/icons/Plot.png'), "&Open Plot", self)
-        self.showPlotAct.setStatusTip('Show Graph Window')
-        self.showPlotAct.triggered.connect(self.dockPlotWindow.show)
-        # Show Format Editing Window
-        self.showFormatAct = QAction(QIcon('sources/icons/File.png'), "&Open Format", self)
-        self.showFormatAct.setStatusTip('Show Format Editing Window')
-        self.showFormatAct.triggered.connect(self.dockFormatWindow.show)
 
     def _createMenuBar(self):
         self.menubar = self.menuBar()
@@ -169,11 +172,6 @@ class PyGS(QMainWindow):
         ###  WINDOW MENU  ###
         self.windowMenu = self.menubar.addMenu('&Window')
         self.windowMenu.addAction(self.newPlotAction)
-        self.showMenu = QMenu('&Show View', self)
-        # Toggle Window Views
-        self.showMenu.addAction(self.dockPlotWindow.toggleViewAction())
-        self.showMenu.addAction(self.dockFormatWindow.toggleViewAction())
-        self.windowMenu.addMenu(self.showMenu)
         self.windowMenu.addSeparator()
         self.windowMenu.addAction(self.autoscaleAct)
 
@@ -213,30 +211,29 @@ class PyGS(QMainWindow):
 
     def newFormatTab(self):
         self.newFormatWindow = NewFormatWindow()
-        acceptButton = QPushButton('Accept', self.newFormatWindow)
-        acceptButton.clicked.connect(self.acceptNewFormatTab)
-        self.newFormatWindow.layout.addWidget(acceptButton)
+        self.newFormatWindow.buttons.accepted.connect(self.acceptNewFormatTab)
+        self.newFormatWindow.buttons.rejected.connect(self.newFormatWindow.close)
         self.newFormatWindow.show()
 
     def acceptNewFormatTab(self):
-        name = self.newFormatWindow.nameEntry.text()
-        configFile = self.newFormatWindow.formatFileLabel.text()
-        widget = FormatEditWidget(self, self.current_dir, formatFile=configFile)
-        self.formatTabList.append(widget)
-        self.formatTabWidget.addTab(widget, name)
+        name = self.newFormatWindow.nameEdit.text()
+        configFile = self.newFormatWindow.formatEdit.text()
+
+        # ADD NEW PACKET
+
         self.newFormatWindow.close()
 
     def newPlotTab(self):
         self.newGraphWindow = NewGraphWindow()
-        acceptButton = QPushButton('Create', self.newGraphWindow)
-        acceptButton.clicked.connect(self.createNewPlotTab)
-        self.newGraphWindow.layout.addWidget(acceptButton)
+        self.newGraphWindow.buttons.accepted.connect(self.createNewPlotTab)
+        self.newGraphWindow.buttons.rejected.connect(self.newGraphWindow.close)
         self.newGraphWindow.show()
 
     def createNewPlotTab(self):
-        widget = GraphWidget(self)
-        name = self.newGraphWindow.nameEntry.text()
-        self.formatTabWidget.addTab(widget, name)
+        name = self.newGraphWindow.nameEdit.text()
+        widget = QWidget(self)
+        self.graphWidgetsList.append(widget)
+        self.graphTabWidget.addDockWidget(Qt.LeftDockWidgetArea, self.graphWidgetsList[-1])
         self.newGraphWindow.close()
 
     def openFormatTab(self):
@@ -258,7 +255,14 @@ class PyGS(QMainWindow):
     def saveAllFormatTab(self):
         pass
 
-    def changeHeader(self):
+    def openChangeHeader(self):
+        self.changeHeaderWindow = HeaderChangeWindow()
+        acceptButton = QPushButton('Create', self.changeHeaderWindow)
+        acceptButton.clicked.connect(self.acceptChangeHeader)
+        self.changeHeaderWindow.layout.addWidget(acceptButton)
+        self.changeHeaderWindow.show()
+
+    def acceptChangeHeader(self):
         pass
 
     def startSerial(self):
@@ -398,6 +402,14 @@ class PyGS(QMainWindow):
                 self.serialWindow.textedit.moveCursor(QTextCursor.End)
         else:
             pass
+
+    def currentGeneralTab(self, *args):
+        pass
+
+    def whatTab(self):
+        currentIndex = self.tabWidget.currentIndex()
+        currentWidget = self.tabWidget.currentWidget()
+        print(currentIndex)
 
     @staticmethod
     def openGithub():
