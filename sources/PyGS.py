@@ -27,7 +27,7 @@ class PyGS(QMainWindow):
         self.data_path = os.path.join(self.current_dir, "data")
         self.backup_path = os.path.join(self.data_path, "backups")
         self.setGeometry(500, 500, 1000, 600)
-        self.setWindowTitle('Balloon Ground Station')
+        self.setWindowTitle('Weather Balloon Ground Station')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.statusBar().showMessage('Ready')
         self.center()
@@ -66,16 +66,14 @@ class PyGS(QMainWindow):
         self.generalTabWidget.setTabBar(QTabBar(self.generalTabWidget))
         self.generalTabWidget.setTabPosition(self.generalTabWidget.West)
 
-        self.packetTabWidget = PacketTabWidget()
+        # Packet Tab Widget -----------------------------------------
+        self.packetTabWidget = PacketTabWidget(self.current_dir)
         self.graphTabWidget = QMainWindow(self)
         self.graphWidgetsList = []
 
+        # Adding Tabs to Main Widget -------------------------------
         self.generalTabWidget.addTab(self.graphTabWidget, 'Graphs')
         self.generalTabWidget.addTab(self.packetTabWidget, 'Packets')
-
-        # Packet Tab Widget -----------------------------------------
-
-
         self.setCentralWidget(self.generalTabWidget)
 
     def _createToolBars(self):
@@ -218,9 +216,8 @@ class PyGS(QMainWindow):
     def acceptNewFormatTab(self):
         name = self.newFormatWindow.nameEdit.text()
         configFile = self.newFormatWindow.formatEdit.text()
-
-        # ADD NEW PACKET
-
+        saveFile = self.newFormatWindow.dataEdit.text()
+        self.packetTabWidget.newFormat(name, configFile, saveFile)
         self.newFormatWindow.close()
 
     def newPlotTab(self):
@@ -237,23 +234,22 @@ class PyGS(QMainWindow):
         self.newGraphWindow.close()
 
     def openFormatTab(self):
-        pass
+        path = QFileDialog.getOpenFileName(self, 'Open Packet Format')
+        self.packetTabWidget.openFormat(path[0])
 
     def openRecentFile(self, filename):
         pass
 
     def saveFormatTab(self):
-        pass
+        self.packetTabWidget.saveFormat()
 
     def saveAsFormatTab(self):
         # Create Lines
-        path = QFileDialog.getSaveFileName(self, 'Save File')
-        with open(path, 'w') as file:
-            pass
-            # Add Format Tab Saving Method
+        path[0] = QFileDialog.getSaveFileName(self, 'Save File')
+        self.packetTabWidget.saveFormat(path[0])
 
     def saveAllFormatTab(self):
-        pass
+        self.packetTabWidget.saveAllFormats()
 
     def openChangeHeader(self):
         self.changeHeaderWindow = HeaderChangeWindow()
