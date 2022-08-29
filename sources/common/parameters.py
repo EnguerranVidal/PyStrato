@@ -32,7 +32,7 @@ def save_settings(parameters, path):
 
 def save_format(packetFormat, path):
     step = 0
-    lines = []
+    lines = ['NAME' + ':' + packetFormat['NAME'] + '\n']
     if packetFormat['ID'] is not None:
         lines.append('ID:' + packetFormat['ID'] + ':' + str(0) + '\n')
         step += len(packetFormat['ID'])
@@ -47,7 +47,8 @@ def save_format(packetFormat, path):
         data = packetFormat[names[i]]
         addendum = data['SIGN'] + ':' + data['TOTAL'] + ':' + data['FLOAT'] + ':' + data['UNIT']
         lines.append('VALUE:' + names[i] + ':' + addendum + ':' + str(step) + '\n')
-        step += int(data['SIGN']) + int(data['SIGN'])
+        step += int(data['SIGN']) + int(data['TOTAL'])
+    lines[-1].rstrip('\n')
     with open(path, 'r') as file:
         for i in lines:
             file.write(i)
@@ -59,6 +60,7 @@ def load_format(path):
         lines = file.readlines()
     ID, PIN, CLOCK, FILE, DATA = None, None, None, '', {}
     # Getting Format Name
+    lines[0] = lines[0].rstrip('\n')
     firstLine = lines[0].split(':')
     name = firstLine[1]
     for i in range(1, len(lines)):

@@ -8,12 +8,13 @@ from functools import partial
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSlot, QTimer
+from PyQt5.QtCore import Qt, pyqtSlot, QTimer, QDateTime
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.widgets import *
-from sources.common.PacketWidgets import *
+from sources.common.widgets import NewGraphWindow, NewFormatWindow, SerialWindow, MessageBox, HeaderChangeWindow
+from sources.common.PacketWidgets import PacketMenu, PacketTabWidget, PacketCentralWidget
+from sources.common.GraphWidgets import GraphTabWidget, GraphDockArea
 from sources.common.parameters import load_settings, save_settings
 
 
@@ -21,17 +22,23 @@ from sources.common.parameters import load_settings, save_settings
 class PyGS(QMainWindow):
     def __init__(self, path):
         super().__init__()
-        self.packetDockModifier = None
-        self.packetDockMenu = None
         self.current_dir = path
         self.data_path = os.path.join(self.current_dir, "data")
         self.backup_path = os.path.join(self.data_path, "backups")
+
+        # Main Window Settings
         self.setGeometry(500, 500, 1000, 600)
         self.setWindowTitle('Weather Balloon Ground Station')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
-        self.statusBar().showMessage('Ready')
-        self.center()
+
+        # Date&Time in StatusBar
+        self.datetime = QDateTime.currentDateTime()
+        self.statusBar().showMessage(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
+        self.statusDateTimer = QTimer()
+        self.statusDateTimer.timeout.connect(self.updateStatusDate)
+        self.statusDateTimer.start(100)
         self.settings = load_settings("settings")
+        self.center()
 
         ##################  VARIABLES  ##################
         if not os.path.exists('OUTPUT'):
@@ -45,7 +52,7 @@ class PyGS(QMainWindow):
 
         self.serialMonitorTimer = QTimer()
         self.serialMonitorTimer.timeout.connect(self.checkSubProcess)
-        self.output_lines = 0
+        self.outputLines = 0
         self.serialMonitorTimer.start(100)
         self.newFormatWindow = NewFormatWindow()
         self.newGraphWindow = NewGraphWindow()
@@ -68,11 +75,11 @@ class PyGS(QMainWindow):
 
         # Packet Tab Widget -----------------------------------------
         self.packetTabWidget = PacketTabWidget(self.current_dir)
-        self.graphTabWidget = QMainWindow(self)
+        self.graphsTabWidget = GraphTabWidget(self.current_dir)
         self.graphWidgetsList = []
 
         # Adding Tabs to Main Widget -------------------------------
-        self.generalTabWidget.addTab(self.graphTabWidget, 'Graphs')
+        self.generalTabWidget.addTab(self.graphsTabWidget, 'Graphs')
         self.generalTabWidget.addTab(self.packetTabWidget, 'Packets')
         self.setCentralWidget(self.generalTabWidget)
 
@@ -228,9 +235,7 @@ class PyGS(QMainWindow):
 
     def createNewPlotTab(self):
         name = self.newGraphWindow.nameEdit.text()
-        widget = QWidget(self)
-        self.graphWidgetsList.append(widget)
-        self.graphTabWidget.addDockWidget(Qt.LeftDockWidgetArea, self.graphWidgetsList[-1])
+        self.graphsTabWidget.addDockTab(name)
         self.newGraphWindow.close()
 
     def openFormatTab(self):
@@ -391,9 +396,9 @@ class PyGS(QMainWindow):
         elif self.serial is not None and self.serial.poll() is None:
             with open(self.settings["output_file"], "r") as file:
                 lines = file.readlines()
-            if len(lines) != self.output_lines:
+            if len(lines) != self.outputLines:
                 self.serialWindow.textedit.append(lines[-1])
-                self.output_lines = len(lines)
+                self.outputLines = len(lines)
             if bool(self.settings["AUTOSCROLL"]):
                 self.serialWindow.textedit.moveCursor(QTextCursor.End)
         else:
@@ -406,6 +411,9 @@ class PyGS(QMainWindow):
         currentIndex = self.tabWidget.currentIndex()
         currentWidget = self.tabWidget.currentWidget()
         print(currentIndex)
+
+    def updateStatusDate(self):
+        self.statusBar().showMessage(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
 
     @staticmethod
     def openGithub():

@@ -87,8 +87,8 @@ class QCustomDockWidget(QDockWidget):
 
 
 class QCustomTabWidget(QTabWidget):
-    def __init__(self, parent=None):
-        super(QCustomTabWidget, self).__init__(parent)
+    def __init__(self):
+        super(QCustomTabWidget, self).__init__()
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.closeTab)
         # for i in range(1, 10):  # add tabs here
