@@ -10,7 +10,7 @@ import numpy as np
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSlot, QTimer, QEvent
+from PyQt5.QtCore import Qt, pyqtSlot, QTimer, QEvent, QModelIndex
 from PyQt5.QtGui import *
 import pyqtgraph as pg
 from pyqtgraph.dockarea import Dock, DockArea
@@ -34,6 +34,13 @@ class GraphTabWidget(QMainWindow):
         self.graphCentralWindow = QCustomTabWidget()
         self.setCentralWidget(self.graphCentralWindow)
 
+        # Left Menu Widget ---------------------------------------------
+        self.valuesLeftWidget = QDockWidget('Data Values')
+        self.valuesMenu = GraphSelectionWidget(self.current_dir)
+        self.valuesLeftWidget.setWidget(self.valuesMenu)
+        self.valuesLeftWidget.setAllowedAreas(Qt.LeftDockWidgetArea)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.valuesLeftWidget)
+
     def addDockTab(self, name):
         self.openedTabs.append(GraphDockArea(self.current_dir))
         self.graphCentralWindow.addTab(self.openedTabs[-1], name)
@@ -45,3 +52,56 @@ class GraphDockArea(QMainWindow):
         self.current_dir = path
         self.area = DockArea()
         self.setCentralWidget(self.area)
+        self.dockPlots = []
+
+    def addDock(self, name, size=(500, 200), closable=True):
+        self.dockPlots.append(CustomDock(name, size, closable))
+        self.area.addDock(self.dockPlots[-1], 'right')
+
+
+class CustomDock(Dock):
+    def __init__(self, *args):
+        super(Dock, self).__init__(*args)
+        self.setAcceptDrops(True)
+        self.trackedValues = []
+
+    def dragEnterEvent(self, event):
+        print(event.mimeData().text())
+        if event.mimeData().hasFormat('application/x-qabstractitemmodeldatalist'):
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if isinstance(event.source(), GraphListWidget):
+            model = QStandardItemModel()
+            model.dropMimeData(event.mimeData(), Qt.CopyAction, 0, 0, QModelIndex())
+            item = model.item(0, 0)
+            self.setText(item.text())
+            print(type(event.source()))
+            parent = event.source()
+
+
+class GraphListWidget(QListWidget):
+    def __init__(self, path):
+        super(QListWidget, self).__init__()
+        self.selectedFormat = None
+
+
+class GraphSelectionWidget(QWidget):
+    def __init__(self, path):
+        super(QWidget, self).__init__()
+        self.current_dir = path
+        # Open Files ComboBox
+        self.trackedComboBox = QComboBox()
+        # Data Values ListBox
+        self.valuesListWidget = GraphListWidget(self.current_dir)
+        self.valuesListWidget.setDragDropMode(QAbstractItemView.InternalMove)
+
+        layout = QFormLayout()
+        layout.addRow(self.trackedComboBox)
+        layout.addRow(self.valuesListWidget)
+        layout.setVerticalSpacing(0)
+        self.setLayout(layout)
+
+

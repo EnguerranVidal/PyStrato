@@ -174,15 +174,6 @@ class PacketMenu(QWidget):
         super(QWidget, self).__init__()
         # Open Files ComboBox
         self.openComboBox = QComboBox()
-        # Search Bar
-        self.searchWidget = QWidget()
-        self.searchButton = QPushButton('search')
-        self.searchLineEdit = QLineEdit()
-        self.searchLineEdit.setPlaceholderText("Search in browser")
-        searchLayout = QHBoxLayout()
-        searchLayout.addWidget(self.searchLineEdit)
-        searchLayout.addWidget(self.searchButton)
-        self.searchWidget.setLayout(searchLayout)
         # Data Values ListBox
         self.valuesListWidget = QListWidget()
         self.listedValues = []
@@ -192,7 +183,6 @@ class PacketMenu(QWidget):
 
         layout = QFormLayout()
         layout.addRow(self.openComboBox)
-        layout.addRow(self.searchWidget)
         layout.addRow(self.valuesListWidget)
         layout.addRow(self.nbLabel)
         layout.setVerticalSpacing(0)

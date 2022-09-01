@@ -1,3 +1,7 @@
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
+
+
 def load_settings(path):
     parameters = {}
     with open(path, "r") as file:

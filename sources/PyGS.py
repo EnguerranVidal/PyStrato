@@ -30,15 +30,18 @@ class PyGS(QMainWindow):
         self.setGeometry(500, 500, 1000, 600)
         self.setWindowTitle('Weather Balloon Ground Station')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.settings = load_settings("settings")
+        self.center()
 
         # Date&Time in StatusBar
         self.datetime = QDateTime.currentDateTime()
-        self.statusBar().showMessage(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
+        self.dateLabel = QLabel(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
+        self.dateLabel.setStyleSheet('border: 0;')
+        self.statusBar().addPermanentWidget(self.dateLabel)
+        self.statusBar().showMessage('Ready')
         self.statusDateTimer = QTimer()
         self.statusDateTimer.timeout.connect(self.updateStatusDate)
         self.statusDateTimer.start(100)
-        self.settings = load_settings("settings")
-        self.center()
 
         ##################  VARIABLES  ##################
         if not os.path.exists('OUTPUT'):
@@ -413,7 +416,8 @@ class PyGS(QMainWindow):
         print(currentIndex)
 
     def updateStatusDate(self):
-        self.statusBar().showMessage(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
+        self.datetime = QDateTime.currentDateTime()
+        self.dateLabel.setText(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
 
     @staticmethod
     def openGithub():
