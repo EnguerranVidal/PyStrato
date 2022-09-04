@@ -10,7 +10,7 @@ import numpy as np
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSlot, QTimer
+from PyQt5.QtCore import Qt, pyqtSlot, QTimer, QModelIndex
 from PyQt5.QtGui import *
 import pyqtgraph as pg
 from pyqtgraph.dockarea import Dock, DockArea
@@ -165,17 +165,68 @@ class HeaderChangeWindow(QWidget):
         self.setLayout(self.dlgLayout)
 
 
-class ValuesTreeWidget(QTreeWidget):
-    def __init__(self, parent=None):
-        super(QTreeWidget, self).__init__(parent)
-        headerItem = QTreeWidgetItem()
-        item = QTreeWidgetItem()
-        for i in range(3):
-            parent = QTreeWidgetItem(self)
-            parent.setText(0, "Parent {}".format(i))
-            parent.setFlags(parent.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-            for x in range(5):
-                child = QTreeWidgetItem(parent)
-                child.setFlags(child.flags() | Qt.ItemIsUserCheckable)
-                child.setText(0, "Child {}".format(x))
-                child.setCheckState(0, Qt.Unchecked)
+class TrackedBalloonsWindow(QWidget):
+    def __init__(self, path, parent=None):
+        super().__init__(parent)
+        self.current_dir = path
+        self.format_path = os.path.join(self.current_dir, "formats")
+        self.setWindowTitle('Tracked Balloons')
+        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.settings = load_settings("settings")
+
+        # Selected Balloon List
+        self.selectedList = BalloonsListWidget(self.current_dir)
+        self.selectedLabel = QLabel('Tracked Formats')
+
+        # Trackable Balloons List
+        self.availableList = BalloonsListWidget(self.current_dir)
+        self.availableLabel = QLabel('Available Formats')
+
+        layout = QGridLayout()
+        layout.addWidget(self.selectedLabel, 0, 0)
+        layout.addWidget(self.selectedList, 1, 0)
+        layout.addWidget(self.availableLabel, 0, 1)
+        layout.addWidget(self.availableList, 1, 1)
+        self.setLayout(layout)
+
+        self.populateFormats()
+
+    def populateFormats(self):
+        path = self.format_path
+        trackedFormats = self.settings['FORMAT_FILES']
+        availableFormats = [file for file in os.listdir(path) if os.path.isfile(os.path.join(path, file))]
+        # Verify Present Formats and Change Settings
+        for i in trackedFormats:
+            if i not in availableFormats:
+                trackedFormats.remove(i)
+        self.settings['FORMAT_FILES'] = trackedFormats
+        save_settings(self.settings, 'settings')
+        for i in trackedFormats:
+            if i in availableFormats:
+                availableFormats.remove(i)
+        # Fill both lists
+        for i in trackedFormats:
+            self.selectedList.addItem(i)
+        for i in availableFormats:
+            self.availableList.addItem(i)
+
+    def formatName(self, file):
+        pass
+
+
+class BalloonsListWidget(QListWidget):
+    def __init__(self, path):
+        super(QListWidget, self).__init__()
+        self.current_dir = path
+        self.setAcceptDrops(True)
+        self.setDragEnabled(True)
+        self.setDragDropOverwriteMode(False)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setDefaultDropAction(Qt.MoveAction)
+
+    def dropEvent(self, event):
+        source = event.source()
+        items = source.selectedItems()
+        for i in items:
+            source.takeItem(source.indexFromItem(i).row())
+            self.addItem(i)

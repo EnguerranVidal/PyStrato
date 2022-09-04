@@ -12,7 +12,7 @@ from PyQt5.QtCore import Qt, pyqtSlot, QTimer, QDateTime
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.widgets import NewGraphWindow, NewFormatWindow, SerialWindow, MessageBox, HeaderChangeWindow
+from sources.common.Widgets import *
 from sources.common.PacketWidgets import PacketMenu, PacketTabWidget, PacketCentralWidget
 from sources.common.GraphWidgets import GraphTabWidget, GraphDockArea
 from sources.common.parameters import load_settings, save_settings
@@ -23,6 +23,7 @@ class PyGS(QMainWindow):
     def __init__(self, path):
         super().__init__()
         self.current_dir = path
+        self.format_path = os.path.join(self.current_dir, "formats")
         self.data_path = os.path.join(self.current_dir, "data")
         self.backup_path = os.path.join(self.data_path, "backups")
 
@@ -57,11 +58,13 @@ class PyGS(QMainWindow):
         self.serialMonitorTimer.timeout.connect(self.checkSubProcess)
         self.outputLines = 0
         self.serialMonitorTimer.start(100)
-        self.newFormatWindow = NewFormatWindow()
-        self.newGraphWindow = NewGraphWindow()
-        self.changeHeaderWindow = HeaderChangeWindow()
+        self.newFormatWindow = None
+        self.newGraphWindow = None
+        self.changeHeaderWindow = None
+        self.trackedFormatsWindow = None
 
-        # Initialize Interface
+        # Initialize Interface and Environment
+        self._checkEnvironment()
         self._generateUI()
 
         # MenuBars and Actions
@@ -117,6 +120,14 @@ class PyGS(QMainWindow):
         self.saveAllFormatAction = QAction('&Save All', self)
         self.saveAllFormatAction.setStatusTip('Save All Packet Formats')
         self.saveAllFormatAction.triggered.connect(self.saveAllFormatTab)
+        # Import Format
+        self.importFormatAction = QAction('&Import Format', self)
+        self.importFormatAction.setStatusTip('Import Format')
+        self.importFormatAction.triggered.connect(self.importFormat)
+        # Tracked Formats
+        self.trackedFormatAction = QAction('&Tracked Formats', self)
+        self.trackedFormatAction.setStatusTip('Open Tracked Formats Selection Window')
+        self.trackedFormatAction.triggered.connect(self.openTrackedFormats)
         # Exit
         self.exitAct = QAction(QIcon('exit.png'), '&Exit', self)
         self.exitAct.setShortcut('Ctrl+Q')
@@ -171,6 +182,11 @@ class PyGS(QMainWindow):
         self.fileMenu.addAction(self.saveAsFormatAction)
         self.fileMenu.addAction(self.saveAllFormatAction)
         self.fileMenu.addSeparator()
+        self.manageFormatsMenu = QMenu('&Manage Formats', self)
+        self.manageFormatsMenu.addAction(self.importFormatAction)
+        self.manageFormatsMenu.addAction(self.trackedFormatAction)
+        self.fileMenu.addMenu(self.manageFormatsMenu)
+        self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.exitAct)
 
         ###  EDIT MENU  ###
@@ -210,6 +226,14 @@ class PyGS(QMainWindow):
         ###  HELP MENU  ###
         self.helpMenu = self.menubar.addMenu('&Help')
         self.helpMenu.addAction(self.githubAct)
+
+    def _checkEnvironment(self):
+        if not os.path.exists(self.format_path):
+            os.mkdir(self.format_path)
+        if not os.path.exists(self.data_path):
+            os.mkdir(self.data_path)
+        if not os.path.exists(self.backup_path):
+            os.mkdir(self.backup_path)
 
     def center(self):
         qr = self.frameGeometry()
@@ -258,6 +282,13 @@ class PyGS(QMainWindow):
 
     def saveAllFormatTab(self):
         self.packetTabWidget.saveAllFormats()
+
+    def openTrackedFormats(self):
+        self.trackedFormatsWindow = TrackedBalloonsWindow(self.current_dir)
+        self.trackedFormatsWindow.show()
+
+    def importFormat(self):
+        pass
 
     def openChangeHeader(self):
         self.changeHeaderWindow = HeaderChangeWindow()

@@ -20,7 +20,7 @@ from qtwidgets import Toggle, AnimatedToggle
 
 # --------------------- Sources ----------------------- #
 from sources.common.parameters import load_settings, save_settings, load_format, save_format
-from sources.common.widgets import QCustomTabWidget
+from sources.common.Widgets import QCustomTabWidget
 
 
 ######################## CLASSES ########################
@@ -54,14 +54,18 @@ class GraphDockArea(QMainWindow):
         self.setCentralWidget(self.area)
         self.dockPlots = []
 
+        self.addDock('farm')
+        self.addDock('cow')
+
     def addDock(self, name, size=(500, 200), closable=True):
-        self.dockPlots.append(CustomDock(name, size, closable))
+        dock = CustomDock(name, size, closable)
+        self.dockPlots.append(dock)
         self.area.addDock(self.dockPlots[-1], 'right')
 
 
 class CustomDock(Dock):
-    def __init__(self, *args):
-        super(Dock, self).__init__(*args)
+    def __init__(self, name, size, closable):
+        Dock.__init__(self, name, size=size, closable=closable)
         self.setAcceptDrops(True)
         self.trackedValues = []
 
@@ -104,4 +108,14 @@ class GraphSelectionWidget(QWidget):
         layout.setVerticalSpacing(0)
         self.setLayout(layout)
 
+    def loadSelectedFormat(self, name):
+        pass
+
+    def comboBoxChanged(self):
+        # Removing Old Values
+        self.valuesListWidget.clear()
+        # Loading New Values
+        name = self.packetMenu.openComboBox.currentText()
+        self.loadSelected(name)
+        values = list(self.formats[name]['DATA'].keys())
 

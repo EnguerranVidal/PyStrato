@@ -28,6 +28,7 @@ class PacketTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
         self.current_dir = path
+        self.formats = {}
         # Central Widget -----------------------------------------------
         self.packetCentralWidget = PacketCentralWidget()
         self.setCentralWidget(self.packetCentralWidget)
@@ -47,8 +48,6 @@ class PacketTabWidget(QMainWindow):
         self.packetMenu.valuesListWidget.model().rowsMoved.connect(self.itemListDragDrop)
         self.packetCentralWidget.bottomWidget.totalSlider.valueChanged.connect(self.totalChanged)
         self.packetCentralWidget.bottomWidget.floatSlider.valueChanged.connect(self.floatChanged)
-
-        self.formats = {}
 
     def totalChanged(self, value):
         name = self.packetMenu.openComboBox.currentText()
