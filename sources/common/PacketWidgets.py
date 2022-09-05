@@ -28,6 +28,7 @@ class PacketTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
         self.current_dir = path
+        self.format_path = os.path.join(self.current_dir, "formats")
         self.formats = {}
         # Central Widget -----------------------------------------------
         self.packetCentralWidget = PacketCentralWidget()
@@ -97,7 +98,7 @@ class PacketTabWidget(QMainWindow):
             self.packetCentralWidget.bottomWidget.nameEdit.setText(nameValue)
 
     def newFormat(self, name, configPath, savePath):
-        configPath = os.path.join()
+        configPath = os.path.join(self.format_path, configPath)
         # Opening Packet Format File
         with open(configPath, 'w') as file:
             file.write('NAME:' + name + '\n')

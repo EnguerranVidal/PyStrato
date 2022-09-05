@@ -17,7 +17,7 @@ from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.widgets.RemoteGraphicsView
 
 # --------------------- Sources ----------------------- #
-from sources.common.parameters import load_settings, save_settings
+from sources.common.parameters import load_settings, save_settings, load_format
 
 
 ######################## CLASSES ########################
@@ -173,45 +173,65 @@ class TrackedBalloonsWindow(QWidget):
         self.setWindowTitle('Tracked Balloons')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.settings = load_settings("settings")
-
         # Selected Balloon List
         self.selectedList = BalloonsListWidget(self.current_dir)
         self.selectedLabel = QLabel('Tracked Formats')
-
         # Trackable Balloons List
         self.availableList = BalloonsListWidget(self.current_dir)
         self.availableLabel = QLabel('Available Formats')
+        # General Layout
+        layout = QVBoxLayout()
+        self.editorWidget = QWidget()
+        editorLayout = QGridLayout()
+        editorLayout.addWidget(self.selectedLabel, 0, 0)
+        editorLayout.addWidget(self.selectedList, 1, 0)
+        editorLayout.addWidget(self.availableLabel, 0, 1)
+        editorLayout.addWidget(self.availableList, 1, 1)
+        self.editorWidget.setLayout(editorLayout)
+        layout.addWidget(self.editorWidget)
 
-        layout = QGridLayout()
-        layout.addWidget(self.selectedLabel, 0, 0)
-        layout.addWidget(self.selectedList, 1, 0)
-        layout.addWidget(self.availableLabel, 0, 1)
-        layout.addWidget(self.availableList, 1, 1)
+        self.buttons = QDialogButtonBox()
+        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self.buttons.button(QDialogButtonBox.Ok).setText("Accept")
+        layout.addWidget(self.buttons)
         self.setLayout(layout)
 
+        # Populating Names and Lists
+        self.names = {}
         self.populateFormats()
 
     def populateFormats(self):
         path = self.format_path
         trackedFormats = self.settings['FORMAT_FILES']
         availableFormats = [file for file in os.listdir(path) if os.path.isfile(os.path.join(path, file))]
+        # Get NAMES for later uses
+        for i in availableFormats:
+            self.names[self.formatName(i)] = i
         # Verify Present Formats and Change Settings
-        for i in trackedFormats:
-            if i not in availableFormats:
-                trackedFormats.remove(i)
-        self.settings['FORMAT_FILES'] = trackedFormats
-        save_settings(self.settings, 'settings')
+        # for i in trackedFormats:
+            # if i not in availableFormats:
+                # trackedFormats.remove(i)
+        # self.settings['FORMAT_FILES'] = trackedFormats
+        # save_settings(self.settings, 'settings')
         for i in trackedFormats:
             if i in availableFormats:
                 availableFormats.remove(i)
         # Fill both lists
         for i in trackedFormats:
-            self.selectedList.addItem(i)
+            self.selectedList.addItem(self.formatName(i))
         for i in availableFormats:
-            self.availableList.addItem(i)
+            self.availableList.addItem(self.formatName(i))
 
     def formatName(self, file):
-        pass
+        balloon = load_format(os.path.join(self.format_path, file))
+        return balloon[0]
+
+    def getListedValues(self):
+        trackedFormats = []
+        for i in range(self.selectedList.count()):
+            item = self.selectedList.item(i)
+            trackedFormats.append(self.names[item.text()])
+        return trackedFormats
 
 
 class BalloonsListWidget(QListWidget):

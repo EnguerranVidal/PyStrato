@@ -8,7 +8,7 @@ def load_settings(path):
         lines = file.readlines()
     for i in range(len(lines)):
         line = lines[i].split('=')
-        if line[0] == "AVAILABLE_BAUDS" or line[0] == "FORMAT_FILES" or line[0] == "SAVE_FILES":
+        if line[0] == "AVAILABLE_BAUDS" or line[0] == "FORMAT_FILES":
             bauds = line[1].split(',')
             for j in range(len(bauds)):
                 bauds[j] = bauds[j].rstrip("\n")
@@ -26,12 +26,13 @@ def save_settings(parameters, path):
     with open(path, "w") as file:
         for i in range(len(lines)):
             line = lines[i].split('=')
-            if line[0] == "AVAILABLE_BAUDS" or line[0] == "FORMAT_FILES" or line[0] == "SAVE_FILES":
-                file.write(lines[i])
-            elif line[0] == "RSSI" or line[0] == "AUTOSCROLL" or line[0] == "AUTOSCALE":
-                file.write(line[0] + '=' + str(int(parameters[line[0]])) + '\n')
+            setting = line[0]
+            if setting == "AVAILABLE_BAUDS" or setting == "FORMAT_FILES":
+                file.write(setting + '=' + ','.join(parameters[setting]) + '\n')
+            elif setting == "RSSI" or setting == "AUTOSCROLL" or setting == "AUTOSCALE":
+                file.write(setting + '=' + str(int(parameters[setting])) + '\n')
             else:
-                file.write(line[0] + '=' + str(parameters[line[0]]) + '\n')
+                file.write(setting + '=' + str(parameters[setting]) + '\n')
 
 
 def save_format(packetFormat, path):

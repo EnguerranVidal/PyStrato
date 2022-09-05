@@ -285,7 +285,15 @@ class PyGS(QMainWindow):
 
     def openTrackedFormats(self):
         self.trackedFormatsWindow = TrackedBalloonsWindow(self.current_dir)
+        self.trackedFormatsWindow.buttons.accepted.connect(self.editTrackedFormats)
+        self.trackedFormatsWindow.buttons.rejected.connect(self.trackedFormatsWindow.close)
         self.trackedFormatsWindow.show()
+
+    def editTrackedFormats(self):
+        trackedFormats = self.trackedFormatsWindow.getListedValues()
+        self.settings['FORMAT_FILES'] = trackedFormats
+        save_settings(self.settings, 'settings')
+        self.trackedFormatsWindow.destroy()
 
     def importFormat(self):
         pass
