@@ -1,5 +1,4 @@
-from PyQt5 import QtCore
-from PyQt5.QtCore import Qt
+import os
 
 
 def load_settings(path):
@@ -81,3 +80,26 @@ def load_format(path):
         elif line[0] == 'CLOCK':
             CLOCK = line[1]
     return name, {'ID': ID, 'PIN': PIN, 'CLOCK': CLOCK, 'PATH': path, 'FILE': FILE, 'DATA': DATA}
+
+
+def check_format(path):
+    keywords = ['NAME', 'ID', 'PIN', 'CLOCK', 'FILE', 'VALUE']
+    filename, file_extension = os.path.splitext(path)
+    namePresent, filePresent = False, False
+    if file_extension == '.config':
+        with open(path, 'r') as file:
+            lines = file.readlines()
+        for i in range(len(lines)):
+            line = lines[i].split(':')
+            if len(lines[i]) != 0 and line[0] not in keywords:
+                return False
+            if line[0] == 'NAME':
+                namePresent = True
+            if line[0] == 'FILE':
+                filePresent = True
+        if filePresent and namePresent:
+            return True
+        else:
+            return False
+    else:
+        return False

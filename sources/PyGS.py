@@ -15,7 +15,7 @@ from PyQt5.QtGui import *
 from sources.common.Widgets import *
 from sources.common.PacketWidgets import PacketMenu, PacketTabWidget, PacketCentralWidget
 from sources.common.GraphWidgets import GraphTabWidget, GraphDockArea
-from sources.common.parameters import load_settings, save_settings
+from sources.common.parameters import load_settings, save_settings, check_format
 
 
 ######################## CLASSES ########################
@@ -277,7 +277,7 @@ class PyGS(QMainWindow):
 
     def saveAsFormatTab(self):
         # Create Lines
-        path[0] = QFileDialog.getSaveFileName(self, 'Save File')
+        path = QFileDialog.getSaveFileName(self, 'Save File')
         self.packetTabWidget.saveFormat(path[0])
 
     def saveAllFormatTab(self):
@@ -293,10 +293,21 @@ class PyGS(QMainWindow):
         trackedFormats = self.trackedFormatsWindow.getListedValues()
         self.settings['FORMAT_FILES'] = trackedFormats
         save_settings(self.settings, 'settings')
-        self.trackedFormatsWindow.destroy()
+        self.trackedFormatsWindow.close()
 
     def importFormat(self):
-        pass
+        path = QFileDialog.getOpenFileName(self, 'Import Packet Format')
+        # Verifying if chosen file is a format
+        if check_format(path[0]):
+            # Finally copy the file into our format repository
+            shutil.copy2(path[0], self.format_path)
+        else:
+            cancelling = MessageBox()
+            cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+            cancelling.setWindowTitle("Error")
+            cancelling.setText("This file does not satisfy the required format.")
+            cancelling.setStandardButtons(QMessageBox.Ok)
+            cancelling.exec_()
 
     def openChangeHeader(self):
         self.changeHeaderWindow = HeaderChangeWindow()
@@ -471,6 +482,7 @@ class PyGS(QMainWindow):
             self.stopSerial()
             # Removing Serial Output File
             os.remove("output")
+            # Closing All Sub Windows
             for window in QApplication.topLevelWidgets():
                 window.close()
             # Stopping Timers
