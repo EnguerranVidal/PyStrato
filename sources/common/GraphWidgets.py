@@ -49,7 +49,7 @@ class GraphTabWidget(QMainWindow):
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.updateGraphs)
-        self.timer.start(0)
+        self.timer.start(100)
 
     def addDockTab(self, name):
         self.openedTabs.append(GraphDockArea(self.current_dir))
@@ -98,8 +98,8 @@ class GraphDockArea(QMainWindow):
         self.area = DockArea()
         self.setCentralWidget(self.area)
         self.dockPlots = []
-        self.addDock('farm')
-        self.addDock('cow')
+        self.addDock('Plot 1')
+        self.addDock('Plot 2')
 
     def addDock(self, name, size=(500, 200), closable=True):
         dock = DockGraph(name, size, closable)

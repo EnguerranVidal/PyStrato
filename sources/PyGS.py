@@ -2,7 +2,7 @@
 import os
 import shutil
 import sys
-import time as t
+import time
 import subprocess
 from functools import partial
 
@@ -26,24 +26,28 @@ class PyGS(QMainWindow):
         self.format_path = os.path.join(self.current_dir, "formats")
         self.data_path = os.path.join(self.current_dir, "data")
         self.backup_path = os.path.join(self.data_path, "backups")
-
         # Main Window Settings
         self.setGeometry(500, 500, 1000, 600)
         self.setWindowTitle('Weather Balloon Ground Station')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.settings = load_settings("settings")
         self.center()
-
         # Date&Time in StatusBar
         self.datetime = QDateTime.currentDateTime()
         self.dateLabel = QLabel(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
         self.dateLabel.setStyleSheet('border: 0;')
         self.statusBar().addPermanentWidget(self.dateLabel)
+        # FPS in StatusBar
+        self.lastUpdate = time.perf_counter()
+        self.avgFps = 0.0
+        self.fpsLabel = QLabel('Fps : ---')
+        self.fpsLabel.setStyleSheet('border: 0;')
+        self.statusBar().addPermanentWidget(self.fpsLabel)
+        # Status Bar Message and Timer
         self.statusBar().showMessage('Ready')
         self.statusDateTimer = QTimer()
-        self.statusDateTimer.timeout.connect(self.updateStatusDate)
-        self.statusDateTimer.start(100)
-        
+        self.statusDateTimer.timeout.connect(self.updateStatus)
+        self.statusDateTimer.start(0)
 
         ##################  VARIABLES  ##################
         if not os.path.exists('OUTPUT'):
@@ -466,9 +470,14 @@ class PyGS(QMainWindow):
         currentWidget = self.tabWidget.currentWidget()
         print(currentIndex)
 
-    def updateStatusDate(self):
+    def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()
         self.dateLabel.setText(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
+        now = time.perf_counter()
+        fps = 1.0 / (now - self.lastUpdate)
+        self.lastUpdate = now
+        self.avgFps = self.avgFps * 0.8 + fps * 0.2
+        self.fpsLabel.setText('Fps : %0.2f ' % self.avgFps)
 
     @staticmethod
     def openGithub():
