@@ -47,6 +47,10 @@ class GraphTabWidget(QMainWindow):
 
         self.fillComboBox()
 
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.updateGraphs)
+        self.timer.start(0)
+
     def addDockTab(self, name):
         self.openedTabs.append(GraphDockArea(self.current_dir))
         self.graphCentralWindow.addTab(self.openedTabs[-1], name)
@@ -76,6 +80,16 @@ class GraphTabWidget(QMainWindow):
         for name in names:
             self.valuesMenu.trackedComboBox.addItem(name)
 
+    def updateGraphs(self, *args):
+        currentIndex = self.graphCentralWindow.currentIndex()
+        if currentIndex != -1:
+            self.openedTabs[currentIndex].updatePlots(*args)
+
+    def closeRemoteGraphicsView(self, *args):
+        for tab in self.openedTabs:
+            for dock in tab.dockPlots:
+                dock.plottingView.close()
+
 
 class GraphDockArea(QMainWindow):
     def __init__(self, path):
@@ -84,21 +98,30 @@ class GraphDockArea(QMainWindow):
         self.area = DockArea()
         self.setCentralWidget(self.area)
         self.dockPlots = []
-
         self.addDock('farm')
         self.addDock('cow')
 
     def addDock(self, name, size=(500, 200), closable=True):
-        dock = CustomDock(name, size, closable)
+        dock = DockGraph(name, size, closable)
         self.dockPlots.append(dock)
         self.area.addDock(self.dockPlots[-1], 'right')
 
+    def updatePlots(self):
+        for dock in self.dockPlots:
+            dock.update()
 
-class CustomDock(Dock):
+
+class DockGraph(Dock):
     def __init__(self, name, size, closable):
         Dock.__init__(self, name, size=size, closable=closable)
         self.setAcceptDrops(True)
         self.trackedValues = []
+        self.plottingView = pg.widgets.RemoteGraphicsView.RemoteGraphicsView()
+        self.plottingView.pg.setConfigOptions(antialias=True)
+        self.addWidget(self.plottingView)
+        self.plotItem = self.plottingView.pg.PlotItem()
+        # self.plotItem._setProxyOptions(deferGetattr=True)
+        self.plottingView.setCentralItem(self.plotItem)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat('application/x-qabstractitemmodeldatalist'):
@@ -113,7 +136,11 @@ class CustomDock(Dock):
             item = model.item(0, 0)
             parent = event.source()
             self.trackedValues.append([item.text(), parent.selectedFormat])
-            print(self.trackedValues)
+
+    def update(self):
+        data = np.random.normal(size=(10000, 50)).sum(axis=1)
+        data += 5 * np.sin(np.linspace(0, 10, data.shape[0]))
+        self.plotItem.plot(data, clear=True, _callSync='off')
 
 
 class GraphListWidget(QListWidget):

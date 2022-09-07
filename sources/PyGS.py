@@ -43,6 +43,7 @@ class PyGS(QMainWindow):
         self.statusDateTimer = QTimer()
         self.statusDateTimer.timeout.connect(self.updateStatusDate)
         self.statusDateTimer.start(100)
+        
 
         ##################  VARIABLES  ##################
         if not os.path.exists('OUTPUT'):
