@@ -41,8 +41,6 @@ class PacketTabWidget(QMainWindow):
         self.packetLeftWidget.setAllowedAreas(Qt.LeftDockWidgetArea)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.packetLeftWidget)
 
-        # Right Menu Widget -------------------------------------------
-
         # Setting Connects ---------------------------------------------
         self.packetMenu.openComboBox.currentIndexChanged.connect(self.comboBoxChanged)
         self.packetMenu.valuesListWidget.clicked.connect(self.itemListSelected)

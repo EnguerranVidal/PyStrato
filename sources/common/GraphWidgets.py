@@ -29,21 +29,52 @@ class GraphTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
         self.current_dir = path
+        self.format_path = os.path.join(self.current_dir, "formats")
+        self.formats = {}
+        self.settings = {}
         self.openedTabs = []
         # Central Widget -----------------------------------------------
         self.graphCentralWindow = QCustomTabWidget()
         self.setCentralWidget(self.graphCentralWindow)
-
         # Left Menu Widget ---------------------------------------------
         self.valuesLeftWidget = QDockWidget('Data Values')
         self.valuesMenu = GraphSelectionWidget(self.current_dir)
         self.valuesLeftWidget.setWidget(self.valuesMenu)
         self.valuesLeftWidget.setAllowedAreas(Qt.LeftDockWidgetArea)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.valuesLeftWidget)
+        # Connects ---------------------------------------------
+        self.valuesMenu.trackedComboBox.currentIndexChanged.connect(self.comboBoxChanged)
+
+        self.fillComboBox()
 
     def addDockTab(self, name):
         self.openedTabs.append(GraphDockArea(self.current_dir))
         self.graphCentralWindow.addTab(self.openedTabs[-1], name)
+
+    def comboBoxChanged(self):
+        # Removing Old Values
+        self.valuesMenu.valuesListWidget.clear()
+        # Loading New Values
+        name = self.valuesMenu.trackedComboBox.currentText()
+        self.valuesMenu.valuesListWidget.selectedFormat = name
+        values = list(self.formats[name]['DATA'].keys())
+        for value in values:
+            item = QListWidgetItem(value)
+            self.valuesMenu.valuesListWidget.addItem(item)
+
+    def fillComboBox(self):
+        self.settings = load_settings('settings')
+        files = self.settings['FORMAT_FILES']
+        self.formats = {}
+        for file in files:
+            path = os.path.join(self.format_path, file)
+            name, formatLine = load_format(path)
+            # Getting Format Into ComboBox
+            self.formats[name] = formatLine
+        self.valuesMenu.trackedComboBox.clear()
+        names = list(self.formats.keys())
+        for name in names:
+            self.valuesMenu.trackedComboBox.addItem(name)
 
 
 class GraphDockArea(QMainWindow):
@@ -70,7 +101,6 @@ class CustomDock(Dock):
         self.trackedValues = []
 
     def dragEnterEvent(self, event):
-        print(event.mimeData().text())
         if event.mimeData().hasFormat('application/x-qabstractitemmodeldatalist'):
             event.accept()
         else:
@@ -81,15 +111,17 @@ class CustomDock(Dock):
             model = QStandardItemModel()
             model.dropMimeData(event.mimeData(), Qt.CopyAction, 0, 0, QModelIndex())
             item = model.item(0, 0)
-            self.setText(item.text())
-            print(type(event.source()))
             parent = event.source()
+            self.trackedValues.append([item.text(), parent.selectedFormat])
+            print(self.trackedValues)
 
 
 class GraphListWidget(QListWidget):
-    def __init__(self, path):
+    def __init__(self):
         super(QListWidget, self).__init__()
         self.selectedFormat = None
+        self.setDragEnabled(True)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
 
 class GraphSelectionWidget(QWidget):
@@ -99,7 +131,7 @@ class GraphSelectionWidget(QWidget):
         # Open Files ComboBox
         self.trackedComboBox = QComboBox()
         # Data Values ListBox
-        self.valuesListWidget = GraphListWidget(self.current_dir)
+        self.valuesListWidget = GraphListWidget()
         self.valuesListWidget.setDragDropMode(QAbstractItemView.InternalMove)
 
         layout = QFormLayout()
@@ -107,15 +139,3 @@ class GraphSelectionWidget(QWidget):
         layout.addRow(self.valuesListWidget)
         layout.setVerticalSpacing(0)
         self.setLayout(layout)
-
-    def loadSelectedFormat(self, name):
-        pass
-
-    def comboBoxChanged(self):
-        # Removing Old Values
-        self.valuesListWidget.clear()
-        # Loading New Values
-        name = self.packetMenu.openComboBox.currentText()
-        self.loadSelected(name)
-        values = list(self.formats[name]['DATA'].keys())
-

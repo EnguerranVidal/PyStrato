@@ -66,7 +66,6 @@ class PyGS(QMainWindow):
         # Initialize Interface and Environment
         self._checkEnvironment()
         self._generateUI()
-
         # MenuBars and Actions
         self._createActions()
         # self._createToolBars()
@@ -294,6 +293,7 @@ class PyGS(QMainWindow):
         self.settings['FORMAT_FILES'] = trackedFormats
         save_settings(self.settings, 'settings')
         self.trackedFormatsWindow.close()
+        self.graphsTabWidget.fillComboBox()
 
     def importFormat(self):
         path = QFileDialog.getOpenFileName(self, 'Import Packet Format')
