@@ -341,7 +341,7 @@ class PyGS(QMainWindow):
             if os.path.exists(serialPath):
                 self.serial = subprocess.Popen([sys.executable, serialPath])
                 self.pid = self.serial.pid
-                self.serial_window.textedit.setDisabled(False)
+                self.serialWindow.textedit.setDisabled(False)
             else:
                 cancelling = MessageBox()
                 cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
@@ -452,7 +452,7 @@ class PyGS(QMainWindow):
             self.stopSerial()
             self.serialWindow.textedit.setDisabled(True)
         elif self.serial is not None and self.serial.poll() is None:
-            with open(self.settings["output_file"], "r") as file:
+            with open(self.settings["OUTPUT_FILE"], "r") as file:
                 lines = file.readlines()
             if len(lines) != self.outputLines:
                 self.serialWindow.textedit.append(lines[-1])

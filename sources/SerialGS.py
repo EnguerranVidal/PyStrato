@@ -5,40 +5,40 @@ from serial import Serial
 import time
 
 # --------------------- Sources ----------------------- #
-from sources.common.parameters import load_settings, save_settings
+from sources.common.parameters import load_settings
 
 
-class Serial_Monitor:
-    def __init__(self, port, baud_rate, data_files=None, format_files=None, header="",
-                 data_path="", format_path="", rssi=True, output=None):
+class SerialMonitor:
+    def __init__(self, port, baud_rate, dataFiles=None, formatFiles=None, header="",
+                 dataPath="", formatPath="", rssi=True, output=None):
         #### VARIABLES ####
-        self.balloon_pins = []
+        self.balloonPins = []
         self.rssi = rssi
 
         #### FORMATS ####
         # -------------- Initialization
-        if format_files is None:
-            self.format_files = []
-        self.format_files = format_files
-        if format_path == "":
-            format_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../formats")
-        self.format_path = format_path
+        if formatFiles is None:
+            self.formatFiles = []
+        self.formatFiles = formatFiles
+        if formatPath == "":
+            formatPath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../formats")
+        self.formatPath = formatPath
         # -------------- Loading Formats
         self.formats = []
-        for i in range(len(self.format_files)):
-            self.formats.append(self.load_format(self.format_files[i]))
+        for i in range(len(self.formatFiles)):
+            self.formats.append(self.loadFormat(self.formatFiles[i]))
 
         #### SAVES ####
         if output is None:
             output = "output"
-        self.output_file = output
-        if data_files is None:
-            data_files = []
-        self.data_files = data_files
-        if data_path == "":
-            data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../data")
-        self.data_path = data_path
-        self.check_saves()
+        self.outputFile = output
+        if dataFiles is None:
+            dataFiles = []
+        self.dataFiles = dataFiles
+        if dataPath == "":
+            dataPath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../data")
+        self.dataPath = dataPath
+        self.checkSaves()
 
         #### STARTING SERIAL CONNECTION ####
         self.header = str(header)
@@ -46,75 +46,75 @@ class Serial_Monitor:
         self.port = port
         self.baud_rate = baud_rate
         self.connection = Serial(port, baud_rate)
-        with open(self.output_file, "a") as file:
+        with open(self.outputFile, "a") as file:
             file.write("Connected to port " + port + " with baud rate of " + str(baud_rate) + "." + "\n")
 
         #### LOADING IDs ####
-        self.balloon_ids = []
+        self.balloonIds = []
         for i in range(len(self.formats)):
             for j in range(len(self.formats[i])):
                 if self.formats[i][j][0] == "id":
-                    self.balloon_ids.append([self.formats[i][j][1], self.formats[i][j][2]])
+                    self.balloonIds.append([self.formats[i][j][1], self.formats[i][j][2]])
 
-    def check_saves(self):
+    def checkSaves(self):
         # --- Creating data directory if non-existent
-        if not os.path.exists(self.data_path):
-            os.mkdir(self.data_path)
-        backup_path = os.path.join(self.data_path, "backups")
-        if not os.path.exists(backup_path):
-            os.mkdir(backup_path)
+        if not os.path.exists(self.dataPath):
+            os.mkdir(self.dataPath)
+        backupPath = os.path.join(self.dataPath, "backups")
+        if not os.path.exists(backupPath):
+            os.mkdir(backupPath)
         # --- Creating files if non-existent
-        for i in range(len(self.data_files)):
-            save_filename = self.data_files[i]
-            if not os.path.exists(os.path.join(self.data_path, save_filename)):
-                with open(self.output_file, "a") as file:
-                    file.write("Creating the " + save_filename + " file ..." + "\n")
-                with open(os.path.join(self.data_path, save_filename), "w", newline='') as file:
+        for i in range(len(self.dataFiles)):
+            saveFilename = self.dataFiles[i]
+            if not os.path.exists(os.path.join(self.dataPath, saveFilename)):
+                with open(self.outputFile, "a") as file:
+                    file.write("Creating the " + saveFilename + " file ..." + "\n")
+                with open(os.path.join(self.dataPath, saveFilename), "w", newline='') as file:
                     csv_writer = csv.writer(file)
-                    header = self.format_header(i)
+                    header = self.formatHeader(i)
                     csv_writer.writerow(header)
 
-    def start_tracking(self):
+    def startTracking(self):
         running = True
-        self.balloon_pins = []
-        for i in range(len(self.balloon_ids)):
-            self.balloon_pins.append('none')
-        self.check_saves()
+        self.balloonPins = []
+        for i in range(len(self.balloonIds)):
+            self.balloonPins.append('none')
+        self.checkSaves()
         while running:
             received = str(self.connection.readline())
             packet = received[2:][:-3]
-            with open(self.output_file, "a") as file:
+            with open(self.outputFile, "a") as file:
                 file.write(datetime.now().strftime("%H:%M:%S") + " -> " + packet + '\n')
             # Verifying for header
             if packet[0:len(self.header)] == self.header:
-                for i in range(len(self.balloon_ids)):
+                for i in range(len(self.balloonIds)):
                     # Knowing which balloon
-                    id_index = self.balloon_ids[i][1] + self.header_length
-                    if packet[id_index] == self.balloon_ids[i][0]:
+                    id_index = self.balloonIds[i][1] + self.header_length
+                    if packet[id_index] == self.balloonIds[i][0]:
                         payload = packet[len(self.header):].split()
-                        if len(payload[0]) == self.get_packet_length(i):
-                            content, pin = self.disassemble_packet(i, packet)
-                            if pin != self.balloon_pins[i]:
-                                self.save_CSV(i, content)
-                                self.balloon_pins[i] = pin
+                        if len(payload[0]) == self.getPacketLength(i):
+                            content, pin = self.disassemblePacket(i, packet)
+                            if pin != self.balloonPins[i]:
+                                self.saveCSV(i, content)
+                                self.balloonPins[i] = pin
 
-    def disassemble_packet(self, i, packet):
+    def disassemblePacket(self, i, packet):
         packet = packet[len(self.header):]
         content = [datetime.now().strftime("%Y-%m-%d %H:%M:%S"), int(time.time())]
         for j in range(len(self.formats[i])):
-            if self.formats[i][j][0] == "pin":
+            if self.formats[i][j][0] == "PIN":
                 index = self.formats[i][j][-1]
                 pin = int(packet[index:index + self.formats[i][j][1]])
-            if self.formats[i][j][0] == "clock":
+            if self.formats[i][j][0] == "CLOCK":
                 index = self.formats[i][j][-1]
                 content.append(packet[index:index + len(self.formats[i][j][1])])
-            if self.formats[i][j][0] == "value":
+            if self.formats[i][j][0] == "VALUE":
                 index = self.formats[i][j][-1]
                 sign = self.formats[i][j][2]
                 digits = self.formats[i][j][3]
                 decimals = self.formats[i][j][4]
                 value = packet[index:index + sign + digits]
-                if self.verify_message_data(str(value), sign):
+                if self.verifyMessageData(str(value), sign):
                     content.append(int(value) / 10 ** decimals)
                 else:
                     content.append('')
@@ -125,70 +125,71 @@ class Serial_Monitor:
             content.append('')
         return content, pin
 
-    def get_format_id(self, i):
+    def getFormatId(self, i):
         for j in range(len(self.formats[i])):
-            if self.formats[i][j][0] == "id":
+            if self.formats[i][j][0] == "ID":
                 return self.formats[i][j][1]
 
-    def get_packet_length(self, i):
+    def getPacketLength(self, i):
         line = self.formats[i][-1]
         return line[-1] + line[3] + line[2]
 
-    def load_format(self, filename):
-        path = os.path.join(self.format_path, filename)
+    def loadFormat(self, filename):
+        path = os.path.join(self.formatPath, filename)
         with open(path, "r") as file:
-            content_format = file.readlines()
-        for i in range(len(content_format)):
-            content_format[i] = content_format[i].split(":")
-            for j in range(len(content_format[i])):
-                content_format[i][j] = content_format[i][j].rstrip("\n")
-            if i != 0:
-                content_format[i][-1] = int(content_format[i][-1])
-            if content_format[i][0] == "value":
-                content_format[i][2] = int(content_format[i][2])
-                content_format[i][3] = int(content_format[i][3])
-                content_format[i][4] = int(content_format[i][4])
-            if content_format[i][0] == "pin":
-                content_format[i][1] = int(content_format[i][1])
-        print(content_format)
-        return content_format
+            contentFormat = file.readlines()
+        for i in range(len(contentFormat)):
+            contentFormat[i] = contentFormat[i].split(":")
+            for j in range(len(contentFormat[i])):
+                contentFormat[i][j] = contentFormat[i][j].rstrip("\n")
+            if i > 1:
+                contentFormat[i][-1] = int(contentFormat[i][-1])
+            if contentFormat[i][0] == "VALUE":
+                contentFormat[i][2] = int(contentFormat[i][2])
+                contentFormat[i][3] = int(contentFormat[i][3])
+                contentFormat[i][4] = int(contentFormat[i][4])
+            if contentFormat[i][0] == "PIN":
+                contentFormat[i][1] = int(contentFormat[i][1])
+        print(contentFormat)
+        return contentFormat
 
-    def format_header(self, i):
+    def formatHeader(self, i):
         header = ["Reception Time", "UNIX"]
         for j in range(len(self.formats[i])):
-            if self.formats[i][j][0] == "clock":
+            if self.formats[i][j][0] == "CLOCK":
                 header.append("Internal Clock")
-            if self.formats[i][j][0] == "value":
+            if self.formats[i][j][0] == "VALUE":
                 title = self.formats[i][j][1].replace('_', ' ')
                 header.append(title)
         header.append("RSSI")
         return header
 
     @staticmethod
-    def verify_message_data(string, sign):
+    def verifyMessageData(string, sign):
         if not string[sign:].replace('.', '', 1).isdigit():
             return False
         else:
             return True
 
-    def save_CSV(self, i, content):
+    def saveCSV(self, i, content):
         for j in range(len(content)):
             content[j] = str(content[j])
-        save_filename = self.data_files[i]
-        with open(os.path.join(self.data_path, save_filename), "a", newline='') as file:
-            csv_writer = csv.writer(file)
-            csv_writer.writerow(content)
+        saveFilename = self.dataFiles[i]
+        with open(os.path.join(self.dataPath, saveFilename), "a", newline='') as file:
+            csvWriter = csv.writer(file)
+            csvWriter.writerow(content)
 
 
 if __name__ == '__main__':
-    parameters = load_settings("../settings")
+    parameters = load_settings(os.path.join('..', "settings"))
     parameter_formats_files = parameters["FORMAT_FILES"]
-    parameter_saving_files = parameters["SAVE_FILES"]
+    parameter_saving_files = ['KeresData.csv', 'SparcData.csv']
     parameter_port = parameters["SELECTED_PORT"]
     parameter_baud_rate = int(parameters["SELECTED_BAUD"])
     parameter_rssi = parameters["RSSI"]
     parameter_header = parameters["HEADER"]
     parameter_output = parameters["OUTPUT_FILE"]
-    ser = Serial_Monitor(parameter_port, parameter_baud_rate, header=parameter_header, output=parameter_output,
-                         format_files=parameter_formats_files, data_files=parameter_saving_files, rssi=parameter_rssi)
-    ser.start_tracking()
+    ser = SerialMonitor(parameter_port, parameter_baud_rate, dataFiles=parameter_saving_files,
+                        formatFiles=parameter_formats_files, header=parameter_header, rssi=parameter_rssi,
+                        output=parameter_output)
+    ser.startTracking()

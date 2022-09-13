@@ -136,6 +136,9 @@ class DockGraph(Dock):
             item = model.item(0, 0)
             parent = event.source()
             self.trackedValues.append([item.text(), parent.selectedFormat])
+        self.dropArea = None
+        self.overlay.setDropArea(self.dropArea)
+        self.update()
 
     def update(self):
         data = np.random.normal(size=(10000, 50)).sum(axis=1)
