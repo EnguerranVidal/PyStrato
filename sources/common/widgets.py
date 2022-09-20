@@ -117,6 +117,23 @@ class NewGraphWindow(QWidget):
         self.setLayout(self.dlgLayout)
 
 
+class NewPlotWindow(QWidget):
+    def __init__(self, parent=None, *args):
+        super().__init__(parent, *args)
+        self.setWindowTitle('Add New Plot Instance')
+        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.resize(400, 100)
+        self.dlgLayout = QVBoxLayout()
+        self.formLayout = QFormLayout()
+        self.nameEdit = QLineEdit()
+        self.formLayout.addRow('Name:', self.nameEdit)
+        self.dlgLayout.addLayout(self.formLayout)
+        self.buttons = QDialogButtonBox()
+        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self.dlgLayout.addWidget(self.buttons)
+        self.setLayout(self.dlgLayout)
+
+
 class NewFormatWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -169,7 +186,7 @@ class TrackedBalloonsWindow(QWidget):
     def __init__(self, path, parent=None):
         super().__init__(parent)
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "formats")
+        self.format_path = os.path.join(self.current_dir, "balloonFormats")
         self.setWindowTitle('Tracked Balloons')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.settings = load_settings("settings")

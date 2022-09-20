@@ -142,8 +142,8 @@ class DockGraph(Dock):
 
     def update(self):
         data = np.random.normal(size=(10000, 50)).sum(axis=1)
-        data += 5 * np.sin(np.linspace(0, 10, data.shape[0]))
-        self.plotItem.plot(data, clear=True, _callSync='off')
+        data1 = data + 5 * np.sin(np.linspace(0, 10, data.shape[0]))
+        self.plotItem.plot(data1, clear=True, pen=(255, 0, 0), _callSync='off')
 
 
 class GraphListWidget(QListWidget):

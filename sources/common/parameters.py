@@ -1,4 +1,6 @@
 import os
+import csv
+import pandas as pd
 
 
 def load_settings(path):
@@ -76,7 +78,7 @@ def load_format(path):
         elif line[0] == 'PIN':
             PIN = line[1]
         elif line[0] == 'FILE':
-            FILE = line[1]
+            FILE = line[1].rstrip('\n')
         elif line[0] == 'CLOCK':
             CLOCK = line[1]
     return name, {'ID': ID, 'PIN': PIN, 'CLOCK': CLOCK, 'PATH': path, 'FILE': FILE, 'DATA': DATA}
@@ -103,3 +105,9 @@ def check_format(path):
             return False
     else:
         return False
+
+
+def csvRowCount(path, newLine=''):
+    with open(os.path.join(path), "r", newline=newLine) as file:
+        csvReader = csv.reader(file)
+        return sum(1 for row in csvReader)

@@ -156,7 +156,7 @@ class PacketTabWidget(QMainWindow):
         if True in changes:
             messageBox = QMessageBox()
             title = "Close Format"
-            message = "WARNING !\n\nIf you quit without saving, any changes made to the formats" \
+            message = "WARNING !\n\nIf you quit without saving, any changes made to the balloonFormats" \
                       "will be lost.\n\nSave format before quitting?"
             reply = messageBox.question(self, title, message, messageBox.Yes | messageBox.No |
                                         messageBox.Cancel, messageBox.Cancel)

@@ -57,7 +57,7 @@ class PyGS(QMainWindow):
         self.available_ports = None
         self.packetTabList = []
         self.graphsTabList = []
-        self.serialWindow = None
+        self.serialWindow = SerialWindow()
 
         self.serialMonitorTimer = QTimer()
         self.serialMonitorTimer.timeout.connect(self.checkSubProcess)
@@ -65,6 +65,7 @@ class PyGS(QMainWindow):
         self.serialMonitorTimer.start(100)
         self.newFormatWindow = None
         self.newGraphWindow = None
+        self.newPlotWindow = None
         self.changeHeaderWindow = None
         self.trackedFormatsWindow = None
 
@@ -142,9 +143,13 @@ class PyGS(QMainWindow):
         self.changeHeaderAct.setStatusTip('Change Packets Header')
         self.changeHeaderAct.triggered.connect(self.openChangeHeader)
         # Add Plot Tab
-        self.newPlotAction = QAction('&Add Plot tab', self)
-        self.newPlotAction.setStatusTip('Add New Graph Tab')
-        self.newPlotAction.triggered.connect(self.newPlotTab)
+        self.newGraphAction = QAction('&Add Graph Tab', self)
+        self.newGraphAction.setStatusTip('Add New Graph Tab')
+        self.newGraphAction.triggered.connect(self.newGraphTab)
+        # Add Graph Tab
+        self.newPlotAction = QAction('&Add Plot', self)
+        self.newPlotAction.setStatusTip('Add New Plot')
+        self.newPlotAction.triggered.connect(self.newPlot)
         # Toggle Autoscale
         self.autoscaleAct = QAction('&Autoscale', self, checkable=True, checked=self.settings["AUTOSCALE"])
         self.autoscaleAct.setStatusTip("Toggle Graphs' Autoscale")
@@ -199,7 +204,10 @@ class PyGS(QMainWindow):
 
         ###  WINDOW MENU  ###
         self.windowMenu = self.menubar.addMenu('&Window')
-        self.windowMenu.addAction(self.newPlotAction)
+        self.manageGraphsMenu = QMenu('&Manage Graphs', self)
+        self.manageGraphsMenu.addAction(self.newGraphAction)
+        self.manageGraphsMenu.addAction(self.newPlotAction)
+        self.windowMenu.addMenu(self.manageGraphsMenu)
         self.windowMenu.addSeparator()
         self.windowMenu.addAction(self.autoscaleAct)
 
@@ -258,13 +266,34 @@ class PyGS(QMainWindow):
         self.packetTabWidget.newFormat(name, configFile, saveFile)
         self.newFormatWindow.close()
 
-    def newPlotTab(self):
+    def newGraphTab(self):
         self.newGraphWindow = NewGraphWindow()
-        self.newGraphWindow.buttons.accepted.connect(self.createNewPlotTab)
+        self.newGraphWindow.buttons.accepted.connect(self.createNewGraphTab)
         self.newGraphWindow.buttons.rejected.connect(self.newGraphWindow.close)
         self.newGraphWindow.show()
 
-    def createNewPlotTab(self):
+    def newPlot(self):
+        if len(self.graphsTabWidget.openedTabs) > 0:
+            self.newPlotWindow = NewPlotWindow()
+            self.newPlotWindow.buttons.accepted.connect(self.createNewPlot)
+            self.newPlotWindow.buttons.rejected.connect(self.newPlotWindow.close)
+            self.newPlotWindow.show()
+        else:
+            cancelling = MessageBox()
+            cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+            cancelling.setWindowTitle("Error")
+            cancelling.setText("No Graph tabs are \n set to add a plot too.")
+            cancelling.setStandardButtons(QMessageBox.Ok)
+            cancelling.setStyleSheet("QLabel{min-width: 200px;}")
+            cancelling.exec_()
+
+    def createNewPlot(self):
+        currentIndex = self.graphsTabWidget.graphCentralWindow.currentIndex()
+        name = self.newPlotWindow.nameEdit.text()
+        self.graphsTabWidget.openedTabs[currentIndex].addDock(name)
+        self.newPlotWindow.close()
+
+    def createNewGraphTab(self):
         name = self.newGraphWindow.nameEdit.text()
         self.graphsTabWidget.addDockTab(name)
         self.newGraphWindow.close()
