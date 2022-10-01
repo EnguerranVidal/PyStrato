@@ -98,8 +98,6 @@ class GraphDockArea(QMainWindow):
         self.area = DockArea()
         self.setCentralWidget(self.area)
         self.dockPlots = []
-        self.addDock('Plot 1')
-        self.addDock('Plot 2')
 
     def addDock(self, name, size=(500, 200), closable=True):
         dock = DockGraph(name, size, closable)

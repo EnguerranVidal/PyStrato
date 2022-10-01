@@ -1,20 +1,13 @@
 ######################## IMPORTS ########################
-import os
-import shutil
-import sys
 import time
-import subprocess
-from functools import partial
 
 # ------------------- PyQt Modules -------------------- #
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSlot, QTimer, QDateTime
-from PyQt5.QtGui import *
+from PyQt5.QtCore import QDateTime
 
 # --------------------- Sources ----------------------- #
 from sources.common.Widgets import *
-from sources.common.PacketWidgets import PacketMenu, PacketTabWidget, PacketCentralWidget
-from sources.common.GraphWidgets import GraphTabWidget, GraphDockArea
+from sources.common.PacketWidgets import PacketTabWidget
+from sources.common.GraphWidgets import GraphTabWidget
 from sources.common.parameters import load_settings, save_settings, check_format
 
 
@@ -68,6 +61,10 @@ class PyGS(QMainWindow):
         self.newPlotWindow = None
         self.changeHeaderWindow = None
         self.trackedFormatsWindow = None
+
+        # Start Data Capture Thread
+        # self.dataCaptureThread = DataCaptureThread()
+        # self.dataCaptureThread.start()
 
         # Initialize Interface and Environment
         self._checkEnvironment()
@@ -347,7 +344,7 @@ class PyGS(QMainWindow):
         self.changeHeaderWindow = HeaderChangeWindow()
         acceptButton = QPushButton('Create', self.changeHeaderWindow)
         acceptButton.clicked.connect(self.acceptChangeHeader)
-        self.changeHeaderWindow.layout.addWidget(acceptButton)
+        self.changeHeaderWindow.dlgLayout.addWidget(acceptButton)
         self.changeHeaderWindow.show()
 
     def acceptChangeHeader(self):
@@ -527,6 +524,7 @@ class PyGS(QMainWindow):
             # Stopping Timers
             t.sleep(0.5)
             self.serialMonitorTimer.stop()
+            self.dataCaptureThread.terminate()
             event.accept()
         else:
             event.ignore()
