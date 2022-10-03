@@ -53,12 +53,12 @@ class SerialWindow(QWidget):
         self.layout.addWidget(self.clearButton, 2, 2)
 
     def changeAutoscroll(self):
-        self.parameters["AUTOSCROLL"] = int(not bool(self.settings["AUTOSCROLL"]))
-        save_settings(self.parameters, "settings")
+        self.settings["AUTOSCROLL"] = int(not bool(self.settings["AUTOSCROLL"]))
+        save_settings(self.settings, "settings")
         self.autoscroll_box.setChecked(bool(self.settings["AUTOSCROLL"]))
 
     def clearOutput(self):
-        file = open("output", "w").close()
+        open("output", "w").close()
         self.textedit.setText("")
 
 
@@ -224,12 +224,6 @@ class TrackedBalloonsWindow(QWidget):
         # Get NAMES for later uses
         for i in availableFormats:
             self.names[self.formatName(i)] = i
-        # Verify Present Formats and Change Settings
-        # for i in trackedFormats:
-            # if i not in availableFormats:
-                # trackedFormats.remove(i)
-        # self.settings['FORMAT_FILES'] = trackedFormats
-        # save_settings(self.settings, 'settings')
         for i in trackedFormats:
             if i in availableFormats:
                 availableFormats.remove(i)

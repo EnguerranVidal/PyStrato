@@ -481,10 +481,18 @@ class PyGS(QMainWindow):
             with open(self.settings["OUTPUT_FILE"], "r") as file:
                 lines = file.readlines()
             if len(lines) != self.outputLines:
-                self.serialWindow.textedit.append(lines[-1])
+                needScrolling = False
+                value = self.serialWindow.textedit.verticalScrollBar().maximum()
+                if self.serialWindow.textedit.verticalScrollBar().value() == value:
+                    needScrolling = True
+                if len(lines) == 0:
+                    self.serialWindow.textedit.setText('')
+                else:
+                    self.serialWindow.textedit.append(lines[-1])
                 self.outputLines = len(lines)
-            if bool(self.settings["AUTOSCROLL"]):
-                self.serialWindow.textedit.moveCursor(QTextCursor.End)
+                if bool(self.settings["AUTOSCROLL"]) and needScrolling:
+                    value = self.serialWindow.textedit.verticalScrollBar().maximum()
+                    self.serialWindow.textedit.verticalScrollBar().setValue(value)
         else:
             pass
 
@@ -524,7 +532,7 @@ class PyGS(QMainWindow):
             # Stopping Timers
             t.sleep(0.5)
             self.serialMonitorTimer.stop()
-            self.dataCaptureThread.terminate()
+            # self.dataCaptureThread.terminate()
             event.accept()
         else:
             event.ignore()

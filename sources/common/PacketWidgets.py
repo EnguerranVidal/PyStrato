@@ -115,12 +115,13 @@ class PacketTabWidget(QMainWindow):
 
     def saveFormat(self, path=None):
         name = self.packetMenu.openComboBox.currentText()
-        formatLine = self.formats[name]
-        if path is None:
-            path = formatLine['PATH']
-        else:
-            self.formats[name]['PATH'] = path
-        save_format(formatLine, path)
+        if len(name) != 0:
+            formatLine = self.formats[name]
+            if path is None:
+                path = formatLine['PATH']
+            else:
+                self.formats[name]['PATH'] = path
+            save_format(formatLine, path)
 
     def saveAllFormats(self):
         n = self.packetMenu.openComboBox.count()

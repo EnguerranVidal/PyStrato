@@ -37,23 +37,18 @@ def save_settings(parameters, path):
 
 
 def save_format(packetFormat, path):
-    step = 0
     lines = ['NAME' + ':' + packetFormat['NAME'] + '\n']
     if packetFormat['ID'] is not None:
-        lines.append('ID:' + packetFormat['ID'] + ':' + str(0) + '\n')
-        step += len(packetFormat['ID'])
+        lines.append('ID:' + packetFormat['ID'] + '\n')
     elif packetFormat['PIN'] is not None:
-        lines.append('PIN:' + packetFormat['PIN'] + ':' + str(step) + '\n')
-        step += len(packetFormat['PIN'])
+        lines.append('PIN:' + packetFormat['PIN']  + '\n')
     elif packetFormat['CLOCK'] is not None:
-        lines.append('CLOCK:' + packetFormat['CLOCK'] + ':' + str(step) + '\n')
-        step += len(packetFormat['CLOCK'])
+        lines.append('CLOCK:' + packetFormat['CLOCK'] + ':' + '\n')
     names = list(packetFormat['DATA'].keys())
     for i in range(len(names)):
         data = packetFormat[names[i]]
         addendum = data['SIGN'] + ':' + data['TOTAL'] + ':' + data['FLOAT'] + ':' + data['UNIT']
-        lines.append('VALUE:' + names[i] + ':' + addendum + ':' + str(step) + '\n')
-        step += int(data['SIGN']) + int(data['TOTAL'])
+        lines.append('VALUE:' + names[i] + ':' + addendum + '\n')
     lines[-1].rstrip('\n')
     with open(path, 'r') as file:
         for i in lines:
@@ -72,11 +67,11 @@ def load_format(path):
     for i in range(1, len(lines)):
         line = lines[i].split(':')
         if line[0] == 'VALUE':
-            DATA[line[1]] = {'SIGN': line[2], 'TOTAL': line[3], 'FLOAT': line[4], 'UNIT': line[5]}
+            DATA[line[1]] = {'SIGN': line[2], 'TOTAL': line[3], 'FLOAT': line[4], 'UNIT': line[5].rstrip('\n')}
         elif line[0] == 'ID':
-            ID = line[1]
+            ID = line[1].rstrip('\n')
         elif line[0] == 'PIN':
-            PIN = line[1]
+            PIN = line[1].rstrip('\n')
         elif line[0] == 'FILE':
             FILE = line[1].rstrip('\n')
         elif line[0] == 'CLOCK':
