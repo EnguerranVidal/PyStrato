@@ -68,6 +68,7 @@ class SerialMonitor:
                         if len(payload[0]) == self.getPacketLength(i):
                             content, pin = self.disassemblePacket(i, packet)
                             if pin != self.balloonPins[i]:
+                                print(content)
                                 self.saveCSV(i, content)
                                 self.balloonPins[i] = pin
 
@@ -83,8 +84,8 @@ class SerialMonitor:
                 pin = int(packet[index:index + int(balloonFormat['PIN'])])
                 index += int(balloonFormat['PIN'])
             if mainKeys[j] == 'CLOCK':
-                content.append(packet[index:index + len(balloonFormat['CLOCK'])])
-                index += len(balloonFormat['CLOCK'])
+                content.append(packet[index:index + len(balloonFormat['CLOCK'].rstrip('\n'))])
+                index += len(balloonFormat['CLOCK'].rstrip('\n'))
             if mainKeys[j] == 'DATA':
                 valueKeys = list(balloonFormat['DATA'].keys())
                 for k in range(len(valueKeys)):
@@ -110,7 +111,7 @@ class SerialMonitor:
         balloonFormat = self.balloonFormats[name]
         count = len(balloonFormat['ID']) + int(balloonFormat['PIN'])
         if balloonFormat['CLOCK'] is not None:
-            count += len(balloonFormat['CLOCK'])
+            count += len(balloonFormat['CLOCK'].rstrip('\n'))
         values = [balloonFormat['DATA'][value] for value in list(balloonFormat['DATA'].keys())]
         for value in values:
             count += int(value['SIGN']) + int(value['TOTAL'])

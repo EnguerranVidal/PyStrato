@@ -80,10 +80,10 @@ class GraphTabWidget(QMainWindow):
         for name in names:
             self.valuesMenu.trackedComboBox.addItem(name)
 
-    def updateGraphs(self, *args):
+    def updateGraphs(self, content):
         currentIndex = self.graphCentralWindow.currentIndex()
         if currentIndex != -1:
-            self.openedTabs[currentIndex].updatePlots(*args)
+            self.openedTabs[currentIndex].updatePlots(content)
 
     def closeRemoteGraphicsView(self, *args):
         for tab in self.openedTabs:
@@ -104,9 +104,9 @@ class GraphDockArea(QMainWindow):
         self.dockPlots.append(dock)
         self.area.addDock(self.dockPlots[-1], 'right')
 
-    def updatePlots(self):
+    def updatePlots(self, content):
         for dock in self.dockPlots:
-            dock.update()
+            dock.update(content)
 
 
 class DockGraph(Dock):

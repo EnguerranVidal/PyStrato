@@ -2,10 +2,11 @@
 import time
 
 # ------------------- PyQt Modules -------------------- #
-from PyQt5.QtCore import QDateTime
+from PyQt5.QtCore import QDateTime, QThread
 
 # --------------------- Sources ----------------------- #
 from sources.common.Widgets import *
+from sources.common.DataCapture import DataWorker
 from sources.common.PacketWidgets import PacketTabWidget
 from sources.common.GraphWidgets import GraphTabWidget
 from sources.common.parameters import load_settings, save_settings, check_format
@@ -62,16 +63,13 @@ class PyGS(QMainWindow):
         self.changeHeaderWindow = None
         self.trackedFormatsWindow = None
 
-        # Start Data Capture Thread
-        # self.dataCaptureThread = DataCaptureThread()
-        # self.dataCaptureThread.start()
+        self.dataCaptureWorker = None
+        self.dataCaptureThread = None
 
-        # Initialize Interface and Environment
+        # Initialize Interface
         self._checkEnvironment()
         self._generateUI()
-        # MenuBars and Actions
         self._createActions()
-        # self._createToolBars()
         self._createMenuBar()
 
         self.show()
@@ -368,6 +366,16 @@ class PyGS(QMainWindow):
                 self.serial = subprocess.Popen([sys.executable, serialPath])
                 self.pid = self.serial.pid
                 self.serialWindow.textedit.setDisabled(False)
+                self.dataCaptureThread = QThread()
+                self.dataCaptureWorker = DataWorker()
+                self.dataCaptureWorker.moveToThread(self.dataCaptureThread)
+                self.dataCaptureThread.started.connect(self.dataCaptureWorker.run)
+                self.dataCaptureWorker.finished.connect(self.dataCaptureThread.quit)
+                self.dataCaptureWorker.finished.connect(self.dataCaptureWorker.deleteLater)
+                self.dataCaptureThread.finished.connect(self.dataCaptureThread.deleteLater)
+                self.dataCaptureWorker.progress.connect(self.reportProgress)
+                self.dataCaptureThread.start()
+
             else:
                 cancelling = MessageBox()
                 cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
@@ -382,8 +390,14 @@ class PyGS(QMainWindow):
             self.serial.kill()
             self.serial.terminate()
             t.sleep(0.5)
-            self.serialWindow.textedit.setDisabled(True)
             self.serial = None
+            self.serialWindow.textedit.setDisabled(True)
+            self.dataCaptureWorker.interrupt()
+
+    def reportProgress(self, content):
+        #### UPDATING GRAPHS ####
+        print(content)
+        self.graphsTabWidget.updateGraphs()
 
     def openSerialMonitor(self):
         if self.serialWindow is None:

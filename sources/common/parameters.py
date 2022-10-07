@@ -1,6 +1,8 @@
 import os
 import csv
 import pandas as pd
+import numpy as np
+import time
 
 
 def load_settings(path):
@@ -103,6 +105,37 @@ def check_format(path):
 
 
 def csvRowCount(path, newLine=''):
-    with open(os.path.join(path), "r", newline=newLine) as file:
-        csvReader = csv.reader(file)
-        return sum(1 for row in csvReader)
+    try:
+        with open(os.path.join(path), "r", newline=newLine) as file:
+            csvReader = csv.reader(file)
+            return sum(1 for row in csvReader)
+    except FileNotFoundError:
+        return 0
+
+
+def retrieveCSVData(path, packetFormat, start_date="", finish_date=""):
+    if os.path.exists(path):
+        if csvRowCount(path) <= 1:
+            unixValue, values = voidCSV(packetFormat)
+            return unixValue, values
+        else:
+            df = pd.read_csv(path)
+            if start_date == "":
+                start_date = np.array(df["UNIX"])[0]
+            if finish_date == "":
+                finish_date = np.array(df["UNIX"])[-1]
+            time_mask = (df["UNIX"] >= start_date) & (df["UNIX"] <= finish_date)
+            data = df.loc[time_mask]
+            values = data.loc[:, data.columns != 'UNIX']
+            times = data["UNIX"]
+            return np.array(times), np.array(values)
+    else:
+        unixValue, values = voidCSV(packetFormat)
+        return unixValue, values
+
+
+def voidCSV(packetFormat):
+    nbValues = len(list(packetFormat['DATA'].keys()))
+    nowUnix = time.time()
+    valueArray = [[np.nan, np.nan]] * nbValues
+    return np.array([nowUnix - 1, nowUnix]), np.array(valueArray).T
