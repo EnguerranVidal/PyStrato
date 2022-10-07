@@ -47,10 +47,6 @@ class GraphTabWidget(QMainWindow):
 
         self.fillComboBox()
 
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.updateGraphs)
-        self.timer.start(100)
-
     def addDockTab(self, name):
         self.openedTabs.append(GraphDockArea(self.current_dir))
         self.graphCentralWindow.addTab(self.openedTabs[-1], name)

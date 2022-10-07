@@ -9,7 +9,7 @@ class DataWorker(QObject):
     finished = pyqtSignal()
     progress = pyqtSignal(list)
 
-    def __init__(self):
+    def __init__(self, path):
         super().__init__()
         self._active = False
         self.formats = None
@@ -17,7 +17,7 @@ class DataWorker(QObject):
         self.start_date = ""
         self.dataFiles = []
         self.rowCounts = []
-        self.currentDir = os.path.dirname(os.path.realpath(__file__))
+        self.currentDir = path
         self.dataDir = os.path.join(self.currentDir, 'data')
         self.formatDir = os.path.join(self.currentDir, 'formats')
 

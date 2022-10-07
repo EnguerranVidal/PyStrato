@@ -366,8 +366,9 @@ class PyGS(QMainWindow):
                 self.serial = subprocess.Popen([sys.executable, serialPath])
                 self.pid = self.serial.pid
                 self.serialWindow.textedit.setDisabled(False)
+                # Data Retrieving from Thread/Worker
                 self.dataCaptureThread = QThread()
-                self.dataCaptureWorker = DataWorker()
+                self.dataCaptureWorker = DataWorker(self.current_dir)
                 self.dataCaptureWorker.moveToThread(self.dataCaptureThread)
                 self.dataCaptureThread.started.connect(self.dataCaptureWorker.run)
                 self.dataCaptureWorker.finished.connect(self.dataCaptureThread.quit)
@@ -396,8 +397,7 @@ class PyGS(QMainWindow):
 
     def reportProgress(self, content):
         #### UPDATING GRAPHS ####
-        print(content)
-        self.graphsTabWidget.updateGraphs()
+        self.graphsTabWidget.updateGraphs(content)
 
     def openSerialMonitor(self):
         if self.serialWindow is None:
