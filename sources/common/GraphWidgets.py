@@ -56,15 +56,18 @@ class GraphTabWidget(QMainWindow):
         self.valuesMenu.valuesListWidget.clear()
         # Loading New Values
         name = self.valuesMenu.trackedComboBox.currentText()
-        self.valuesMenu.valuesListWidget.selectedFormat = name
-        values = list(self.formats[name]['DATA'].keys())
-        for value in values:
-            item = QListWidgetItem(value)
-            self.valuesMenu.valuesListWidget.addItem(item)
+        if name != '':
+            self.valuesMenu.valuesListWidget.selectedFormat = name
+            values = list(self.formats[name]['DATA'].keys())
+            for value in values:
+                item = QListWidgetItem(value)
+                self.valuesMenu.valuesListWidget.addItem(item)
 
     def fillComboBox(self):
         self.settings = load_settings('settings')
         files = self.settings['FORMAT_FILES']
+        if len(files) == 1 and len(files[0]) == 0:
+            files = []
         self.formats = {}
         for file in files:
             path = os.path.join(self.format_path, file)
@@ -73,13 +76,14 @@ class GraphTabWidget(QMainWindow):
             self.formats[name] = formatLine
         self.valuesMenu.trackedComboBox.clear()
         names = list(self.formats.keys())
-        for name in names:
-            self.valuesMenu.trackedComboBox.addItem(name)
+        if len(names) != 0:
+            for name in names:
+                self.valuesMenu.trackedComboBox.addItem(name)
 
     def updateGraphs(self, content):
         currentIndex = self.graphCentralWindow.currentIndex()
         if currentIndex != -1:
-            self.openedTabs[currentIndex].updatePlots(content)
+            self.openedTabs[currentIndex].updatePlots(content, self.formats)
 
     def closeRemoteGraphicsView(self, *args):
         for tab in self.openedTabs:
@@ -100,7 +104,7 @@ class GraphDockArea(QMainWindow):
         self.dockPlots.append(dock)
         self.area.addDock(self.dockPlots[-1], 'right')
 
-    def updatePlots(self, content):
+    def updatePlots(self, content, formats):
         for dock in self.dockPlots:
             dock.update(content)
 

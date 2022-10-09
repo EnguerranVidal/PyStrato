@@ -294,19 +294,25 @@ class PyGS(QMainWindow):
         self.newGraphWindow.close()
 
     def openFormatTab(self):
-        path = QFileDialog.getOpenFileName(self, 'Open Packet Format')
-        self.packetTabWidget.openFormat(path[0])
+        if os.path.exists(os.path.join(self.current_dir, 'formats')):
+            path = QFileDialog.getOpenFileName(self, 'Open Packet Format', self.format_path)
+        else:
+            path = QFileDialog.getOpenFileName(self, 'Open Packet Format')
+        if path[0] != '' and os.path.exists(path[0]):
+            self.packetTabWidget.openFormat(path[0])
 
     def openRecentFile(self, filename):
         pass
 
     def saveFormatTab(self):
         self.packetTabWidget.saveFormat()
+        self.graphsTabWidget.fillComboBox()
 
     def saveAsFormatTab(self):
         # Create Lines
         path = QFileDialog.getSaveFileName(self, 'Save File')
         self.packetTabWidget.saveFormat(path[0])
+        self.graphsTabWidget.fillComboBox()
 
     def saveAllFormatTab(self):
         self.packetTabWidget.saveAllFormats()
@@ -405,10 +411,8 @@ class PyGS(QMainWindow):
             self.serialWindow.textedit.setDisabled(True)
             self.serialWindow.textedit.setReadOnly(True)
         if self.serialWindow.isVisible():
-            pass
-            #### ADD METHOD TO GRAB ATTENTION
-        else:
-            self.serialWindow.show()
+            self.serialWindow = SerialWindow()
+        self.serialWindow.show()
 
     def setAutoscale(self, action):
         self.settings["AUTOSCALE"] = action

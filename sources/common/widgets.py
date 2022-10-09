@@ -186,7 +186,7 @@ class TrackedBalloonsWindow(QWidget):
     def __init__(self, path, parent=None):
         super().__init__(parent)
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "balloonFormats")
+        self.format_path = os.path.join(self.current_dir, "formats")
         self.setWindowTitle('Tracked Balloons')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.settings = load_settings("settings")
@@ -220,6 +220,8 @@ class TrackedBalloonsWindow(QWidget):
     def populateFormats(self):
         path = self.format_path
         trackedFormats = self.settings['FORMAT_FILES']
+        if len(trackedFormats) == 1 and len(trackedFormats[0]) == 0:
+            trackedFormats = []
         availableFormats = [file for file in os.listdir(path) if os.path.isfile(os.path.join(path, file))]
         # Get NAMES for later uses
         for i in availableFormats:

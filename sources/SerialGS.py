@@ -41,7 +41,7 @@ class SerialMonitor:
         names = list(self.balloonFormats.keys())
         for i in range(len(self.dataFiles)):
             saveFilename = self.dataFiles[i]
-            if not os.path.exists(os.path.join(self.dataDir, saveFilename)):
+            if not os.path.exists(saveFilename):
                 with open(self.settings['OUTPUT_FILE'], "a") as file:
                     file.write("Creating the " + saveFilename + " file ..." + "\n")
                 with open(saveFilename, "w", newline='') as file:
@@ -52,8 +52,8 @@ class SerialMonitor:
     def startTracking(self):
         running = True
         self.balloonPins = ['NONE'] * len(self.dataFiles)
-        self.checkSaves()
         while running:
+            self.checkSaves()
             received = str(self.connection.readline())
             packet = received[2:][:-3]
             with open(self.settings['OUTPUT_FILE'], "a") as file:
@@ -68,7 +68,6 @@ class SerialMonitor:
                         if len(payload[0]) == self.getPacketLength(i):
                             content, pin = self.disassemblePacket(i, packet)
                             if pin != self.balloonPins[i]:
-                                print(content)
                                 self.saveCSV(i, content)
                                 self.balloonPins[i] = pin
 
@@ -139,7 +138,7 @@ class SerialMonitor:
         for j in range(len(content)):
             content[j] = str(content[j])
         saveFilename = self.dataFiles[i]
-        with open(os.path.join(saveFilename), "a", newline='') as file:
+        with open(saveFilename, "a", newline='') as file:
             csvWriter = csv.writer(file)
             csvWriter.writerow(content)
 
