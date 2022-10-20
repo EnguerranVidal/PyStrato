@@ -32,7 +32,6 @@ class GraphTabWidget(QMainWindow):
         self.format_path = os.path.join(self.current_dir, "formats")
         self.formats = {}
         self.settings = {}
-        self.openedTabs = []
         # Central Widget -----------------------------------------------
         self.graphCentralWindow = QCustomTabWidget()
         self.setCentralWidget(self.graphCentralWindow)
@@ -48,8 +47,8 @@ class GraphTabWidget(QMainWindow):
         self.fillComboBox()
 
     def addDockTab(self, name):
-        self.openedTabs.append(GraphDockArea(self.current_dir))
-        self.graphCentralWindow.addTab(self.openedTabs[-1], name)
+        widget = GraphDockArea(self.current_dir)
+        self.graphCentralWindow.addTab(widget, name)
 
     def comboBoxChanged(self):
         # Removing Old Values
@@ -80,13 +79,14 @@ class GraphTabWidget(QMainWindow):
             for name in names:
                 self.valuesMenu.trackedComboBox.addItem(name)
 
-    def updateGraphs(self, content):
+    def updateTabGraphs(self, content):
         currentIndex = self.graphCentralWindow.currentIndex()
         if currentIndex != -1:
-            self.openedTabs[currentIndex].updatePlots(content, self.formats)
+            widget = self.graphCentralWindow.widget(currentIndex)
+            widget.updateDockPlots(content)
 
     def closeRemoteGraphicsView(self, *args):
-        for tab in self.openedTabs:
+        for tab in [self.graphCentralWindow.widget(index) for index in range(self.graphCentralWindow.count())]:
             for dock in tab.dockPlots:
                 dock.plottingView.close()
 
@@ -95,31 +95,39 @@ class GraphDockArea(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
         self.current_dir = path
+        self.format_path = os.path.join(self.current_dir, "formats")
         self.area = DockArea()
         self.setCentralWidget(self.area)
         self.dockPlots = []
 
     def addDock(self, name, size=(500, 200), closable=True):
-        dock = DockGraph(name, size, closable)
+        dock = DockGraph(self.current_dir, name, size, closable)
         self.dockPlots.append(dock)
         self.area.addDock(self.dockPlots[-1], 'right')
 
-    def updatePlots(self, content, formats):
+    def updateDockPlots(self, content):
         for dock in self.dockPlots:
-            dock.update(content)
+            dock.updatePlots(content)
 
 
 class DockGraph(Dock):
-    def __init__(self, name, size, closable):
+    def __init__(self, path, name, size, closable):
         Dock.__init__(self, name, size=size, closable=closable)
+        self.current_dir = path
+        self.format_path = os.path.join(self.current_dir, "formats")
+        self.settings = load_settings('settings')
         self.setAcceptDrops(True)
-        self.trackedValues = []
         self.plottingView = pg.widgets.RemoteGraphicsView.RemoteGraphicsView()
         self.plottingView.pg.setConfigOptions(antialias=True)
         self.addWidget(self.plottingView)
         self.plotItem = self.plottingView.pg.PlotItem()
         # self.plotItem._setProxyOptions(deferGetattr=True)
         self.plottingView.setCentralItem(self.plotItem)
+        self.plotItem.addLegend()
+        self.colors = ColorCycler()
+        self.trackedValues = []
+        self.storedContent = None
+        self.formats = {}
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat('application/x-qabstractitemmodeldatalist'):
@@ -136,12 +144,43 @@ class DockGraph(Dock):
             self.trackedValues.append([item.text(), parent.selectedFormat])
         self.dropArea = None
         self.overlay.setDropArea(self.dropArea)
-        self.update()
+        if self.storedContent is not None:
+            self.updatePlots(self.storedContent)
 
-    def update(self):
-        data = np.random.normal(size=(10000, 50)).sum(axis=1)
-        data1 = data + 5 * np.sin(np.linspace(0, 10, data.shape[0]))
-        self.plotItem.plot(data1, clear=True, pen=(255, 0, 0), _callSync='off')
+    def updatePlots(self, content):
+        print(len(content))
+        print(content[0])
+        print(content[1])
+        self.storedContent = content
+        self.settings = load_settings('settings')
+        self.retrieveFormats()
+        self.checkTrackedValues()
+        timeSeries = content[0]
+        for i in range(len(self.trackedValues)):
+            data = 5 * (i + 1) * np.sin(np.linspace(0, 10, 500))
+            if i == 0:
+                self.plotItem.plot(data, clear=True, pen=self.colors.next(0), _callSync='off',
+                                   name=self.trackedValues[i][0].replace('_', ' '))
+            else:
+                self.plotItem.plot(data, clear=False, pen=self.colors.next(), _callSync='off',
+                                   name=self.trackedValues[i][0].replace('_', ' '))
+
+    def retrieveFormats(self):
+        self.formats = {}
+        paths = self.settings['FORMAT_FILES']
+        for path in paths:
+            name, formatLine = load_format(os.path.join(self.format_path, path))
+            self.formats[name] = formatLine
+
+    def checkTrackedValues(self):
+        indices = []
+        for i in range(len(self.trackedValues)):
+            item = self.trackedValues[i]
+            values = list(self.formats[item[1]]['DATA'].keys())
+            if item[0] not in values:
+                indices.append(i)
+        for index in sorted(indices, reverse=True):
+            del self.trackedValues[index]
 
 
 class GraphListWidget(QListWidget):
@@ -167,3 +206,24 @@ class GraphSelectionWidget(QWidget):
         layout.addRow(self.valuesListWidget)
         layout.setVerticalSpacing(0)
         self.setLayout(layout)
+
+
+class ColorCycler:
+    def __init__(self):
+        self.cycle = [(31, 119, 180), (255, 127, 14), (44, 160, 44), (214, 39, 40), (148, 103, 189),
+                      (140, 86, 75), (227, 119, 194), (127, 127, 127), (188, 189, 34), (23, 190, 207)]
+        self.nbColors = len(self.cycle)
+        self.step = 0
+
+    def next(self, step=None):
+        if step is not None:
+            self.step = step
+        value = self.cycle[self.step]
+        self.step += 1
+        if self.step == self.nbColors:
+            self.step = 0
+        return value
+
+    def get(self, step):
+        assert step < self.nbColors
+        return self.cycle[step]

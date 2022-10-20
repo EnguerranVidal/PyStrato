@@ -90,9 +90,8 @@ class QCustomTabWidget(QTabWidget):
     def __init__(self):
         super(QCustomTabWidget, self).__init__()
         self.setTabsClosable(True)
+        self.setMovable(True)
         self.tabCloseRequested.connect(self.closeTab)
-        # for i in range(1, 10):  # add tabs here
-        # self.addTab(QWidget(), 'Tab %d' % i)
 
     def closeTab(self, currentIndex):
         currentQWidget = self.widget(currentIndex)

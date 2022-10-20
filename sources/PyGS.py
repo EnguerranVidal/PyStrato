@@ -268,7 +268,7 @@ class PyGS(QMainWindow):
         self.newGraphWindow.show()
 
     def newPlot(self):
-        if len(self.graphsTabWidget.openedTabs) > 0:
+        if self.graphsTabWidget.graphCentralWindow.count() > 0:
             self.newPlotWindow = NewPlotWindow()
             self.newPlotWindow.buttons.accepted.connect(self.createNewPlot)
             self.newPlotWindow.buttons.rejected.connect(self.newPlotWindow.close)
@@ -277,7 +277,7 @@ class PyGS(QMainWindow):
             cancelling = MessageBox()
             cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
             cancelling.setWindowTitle("Error")
-            cancelling.setText("No Graph tabs are \n set to add a plot too.")
+            cancelling.setText("No Graph tabs are\nset to add a plot too.")
             cancelling.setStandardButtons(QMessageBox.Ok)
             cancelling.setStyleSheet("QLabel{min-width: 200px;}")
             cancelling.exec_()
@@ -285,7 +285,8 @@ class PyGS(QMainWindow):
     def createNewPlot(self):
         currentIndex = self.graphsTabWidget.graphCentralWindow.currentIndex()
         name = self.newPlotWindow.nameEdit.text()
-        self.graphsTabWidget.openedTabs[currentIndex].addDock(name)
+        widget = self.graphsTabWidget.graphCentralWindow.widget(currentIndex)
+        widget.addDock(name)
         self.newPlotWindow.close()
 
     def createNewGraphTab(self):
@@ -403,7 +404,7 @@ class PyGS(QMainWindow):
 
     def reportProgress(self, content):
         #### UPDATING GRAPHS ####
-        self.graphsTabWidget.updateGraphs(content)
+        self.graphsTabWidget.updateTabGraphs(content)
 
     def openSerialMonitor(self):
         if self.serialWindow is None:

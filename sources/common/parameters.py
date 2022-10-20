@@ -43,7 +43,7 @@ def save_format(packetFormat, path):
     if packetFormat['ID'] is not None:
         lines.append('ID:' + packetFormat['ID'] + '\n')
     elif packetFormat['PIN'] is not None:
-        lines.append('PIN:' + packetFormat['PIN']  + '\n')
+        lines.append('PIN:' + packetFormat['PIN'] + '\n')
     elif packetFormat['CLOCK'] is not None:
         lines.append('CLOCK:' + packetFormat['CLOCK'] + ':' + '\n')
     names = list(packetFormat['DATA'].keys())
