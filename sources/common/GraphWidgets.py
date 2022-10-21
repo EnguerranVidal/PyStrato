@@ -16,10 +16,8 @@ import pyqtgraph as pg
 from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.widgets.RemoteGraphicsView
 
-from qtwidgets import Toggle, AnimatedToggle
-
 # --------------------- Sources ----------------------- #
-from sources.common.parameters import load_settings, save_settings, load_format, save_format
+from sources.common.parameters import load_settings, load_format, retrieveCSVData
 from sources.common.Widgets import QCustomTabWidget
 
 
@@ -94,14 +92,17 @@ class GraphTabWidget(QMainWindow):
 class GraphDockArea(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
-        self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "formats")
+        self.currentDir = path
+        self.dataDir = os.path.join(self.currentDir, 'data')
+        self.formatDir = os.path.join(self.currentDir, 'formats')
+        self.settings = load_settings('settings')
         self.area = DockArea()
         self.setCentralWidget(self.area)
         self.dockPlots = []
+        self._initializeContent()
 
     def addDock(self, name, size=(500, 200), closable=True):
-        dock = DockGraph(self.current_dir, name, size, closable)
+        dock = DockGraph(self.currentDir, name, size, closable, self.storedContent)
         self.dockPlots.append(dock)
         self.area.addDock(self.dockPlots[-1], 'right')
 
@@ -109,9 +110,24 @@ class GraphDockArea(QMainWindow):
         for dock in self.dockPlots:
             dock.updatePlots(content)
 
+    def _initializeContent(self):
+        self.formats = {}
+        dataFiles = []
+        self.settings = load_settings('settings')
+        paths = self.settings['FORMAT_FILES']
+        for path in paths:
+            name, formatLine = load_format(os.path.join(self.formatDir, path))
+            self.formats[name] = formatLine
+            dataFiles.append(os.path.join(self.dataDir, formatLine['FILE']))
+        self.storedContent = []
+        for i in range(len(dataFiles)):
+            name = list(self.formats.keys())[i]
+            dataValues = retrieveCSVData(dataFiles[i], self.formats[name])
+            self.storedContent.append(dataValues)
+
 
 class DockGraph(Dock):
-    def __init__(self, path, name, size, closable):
+    def __init__(self, path, name, size, closable, content=None):
         Dock.__init__(self, name, size=size, closable=closable)
         self.current_dir = path
         self.format_path = os.path.join(self.current_dir, "formats")
@@ -126,7 +142,7 @@ class DockGraph(Dock):
         self.plotItem.addLegend()
         self.colors = ColorCycler()
         self.trackedValues = []
-        self.storedContent = None
+        self.storedContent = content
         self.formats = {}
 
     def dragEnterEvent(self, event):

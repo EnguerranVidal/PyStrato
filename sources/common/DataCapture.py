@@ -37,12 +37,14 @@ class DataWorker(QObject):
         self._active = True
         while self._active:
             content = []
-            time.sleep(1)
-            for i in range(len(self.dataFiles)):
-                name = list(self.formats.keys())[i]
-                dataValues = retrieveCSVData(self.dataFiles[i], self.formats[name], self.start_date)
-                content.append(dataValues)
-            self.progress.emit(content)
+            time.sleep(0.1)
+            if True in [self.rowCounts[i] != csvRowCount(self.dataFiles[i]) for i in range(len(self.dataFiles))]:
+                self.rowCounts = [csvRowCount(dataFile) for dataFile in self.dataFiles]
+                for i in range(len(self.dataFiles)):
+                    name = list(self.formats.keys())[i]
+                    dataValues = retrieveCSVData(self.dataFiles[i], self.formats[name], self.start_date)
+                    content.append(dataValues)
+                self.progress.emit(content)
         self.finished.emit()
 
 
