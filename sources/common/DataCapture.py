@@ -40,8 +40,8 @@ class DataWorker(QObject):
             time.sleep(1)
             for i in range(len(self.dataFiles)):
                 name = list(self.formats.keys())[i]
-                dataUNIX, dataValues = retrieveCSVData(self.dataFiles[i], self.formats[name], self.start_date)
-                content.append([dataUNIX, dataValues])
+                dataValues = retrieveCSVData(self.dataFiles[i], self.formats[name], self.start_date)
+                content.append(dataValues)
             self.progress.emit(content)
         self.finished.emit()
 

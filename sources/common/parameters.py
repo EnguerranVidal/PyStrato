@@ -116,8 +116,9 @@ def csvRowCount(path, newLine=''):
 def retrieveCSVData(path, packetFormat, start_date="", finish_date=""):
     if os.path.exists(path):
         if csvRowCount(path) <= 1:
-            unixValue, values = voidCSV(packetFormat)
-            return unixValue, values
+            values = voidCSV(packetFormat)
+            names = csvHeader(path)
+            return names, values
         else:
             df = pd.read_csv(path)
             if start_date == "":
@@ -126,16 +127,37 @@ def retrieveCSVData(path, packetFormat, start_date="", finish_date=""):
                 finish_date = np.array(df["UNIX"])[-1]
             time_mask = (df["UNIX"] >= start_date) & (df["UNIX"] <= finish_date)
             data = df.loc[time_mask]
-            values = data.loc[:, data.columns != 'UNIX']
-            times = data["UNIX"]
-            return np.array(times), np.array(values)
+            values = data.loc[:, data.columns != 'Reception Time']
+            names = csvHeader(path)
+            return names, np.array(values)
     else:
-        unixValue, values = voidCSV(packetFormat)
-        return unixValue, values
+        values = voidCSV(packetFormat)
+        names = csvHeader(path)
+        return names, values
 
 
 def voidCSV(packetFormat):
-    nbValues = len(list(packetFormat['DATA'].keys()))
+    keys = list(packetFormat.keys())
     nowUnix = time.time()
-    valueArray = [[np.nan, np.nan]] * nbValues
-    return np.array([nowUnix - 1, nowUnix]), np.array(valueArray).T
+    nbValues = 1
+    if 'DATA' in keys:
+        nbValues += len(list(packetFormat['DATA'].keys()))
+    if 'CLOCK' in keys:
+        nbValues += 1
+    line1 = [nowUnix - 1]
+    line2 = [nowUnix]
+    for i in range(nbValues):
+        line1.append(np.nan)
+        line2.append(np.nan)
+    valueArray = [line1, line2]
+    return np.array(valueArray)
+
+
+def csvHeader(path):
+    df = pd.read_csv(path)
+    columnNames = list(df.columns)
+    columnNames.pop(0)
+    for i in range(len(columnNames)):
+        if columnNames[i] != 'Internal Clock':
+            columnNames[i] = columnNames[i].replace(' ', '_')
+    return columnNames

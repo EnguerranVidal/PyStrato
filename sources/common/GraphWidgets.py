@@ -148,21 +148,23 @@ class DockGraph(Dock):
             self.updatePlots(self.storedContent)
 
     def updatePlots(self, content):
-        print(len(content))
-        print(content[0])
-        print(content[1])
         self.storedContent = content
         self.settings = load_settings('settings')
         self.retrieveFormats()
         self.checkTrackedValues()
-        timeSeries = content[0]
+        # timeSeries = [content[i][1][:, 0] for i in range(len(content))]
+        names = list(self.formats.keys())
         for i in range(len(self.trackedValues)):
-            data = 5 * (i + 1) * np.sin(np.linspace(0, 10, 500))
+            dataName, formatName = self.trackedValues[i][0], self.trackedValues[i][1]
+            contentLabels = content[names.index(formatName)][0]
+            dataSeries = content[names.index(formatName)][1][:, contentLabels.index(dataName)]
             if i == 0:
-                self.plotItem.plot(data, clear=True, pen=self.colors.next(0), _callSync='off',
+                linePen = {'color': self.colors.next(0), 'width': 3}
+                self.plotItem.plot(dataSeries, clear=True, pen=linePen, _callSync='off',
                                    name=self.trackedValues[i][0].replace('_', ' '))
             else:
-                self.plotItem.plot(data, clear=False, pen=self.colors.next(), _callSync='off',
+                linePen = {'color': self.colors.next(), 'width': 3}
+                self.plotItem.plot(dataSeries, clear=False, pen=linePen, _callSync='off',
                                    name=self.trackedValues[i][0].replace('_', ' '))
 
     def retrieveFormats(self):
