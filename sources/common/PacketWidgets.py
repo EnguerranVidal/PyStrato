@@ -44,7 +44,7 @@ class PacketTabWidget(QMainWindow):
         # Setting Connects ---------------------------------------------
         self.packetMenu.openComboBox.currentIndexChanged.connect(self.comboBoxChanged)
         self.packetMenu.valuesListWidget.clicked.connect(self.itemListSelected)
-        self.packetMenu.valuesListWidget.model().rowsMoved.connect(self.itemListDragDrop)
+        # self.packetMenu.valuesListWidget.model().rowsMoved.connect(self.itemListDragDrop)
         self.packetCentralWidget.bottomWidget.totalSlider.valueChanged.connect(self.totalChanged)
         self.packetCentralWidget.bottomWidget.floatSlider.valueChanged.connect(self.floatChanged)
 
@@ -76,9 +76,6 @@ class PacketTabWidget(QMainWindow):
             item = QListWidgetItem(value)
             self.packetMenu.valuesListWidget.addItem(item)
         self.packetMenu.nbLabel.setText("Number of Data Values : " + str(self.packetMenu.valuesListWidget.count()))
-
-    def itemListDragDrop(self):
-        pass
 
     def itemListSelected(self):
         name = self.packetMenu.openComboBox.currentText()
@@ -130,22 +127,24 @@ class PacketTabWidget(QMainWindow):
 
     def closeFormat(self):
         name = self.packetMenu.openComboBox.currentText()
-        path = self.formats[name]['PATH']
-        name, formatLine = load_format(path)
-        if formatLine != self.formats[name]:
-            messageBox = QMessageBox()
-            title = "Close Format"
-            message = "WARNING !\n\nIf you close without saving, any changes made to the format" \
-                      "will be lost.\n\nSave format before closing?"
-            reply = messageBox.question(self, title, message, messageBox.Yes | messageBox.No |
-                                        messageBox.Cancel, messageBox.Cancel)
-            if reply == messageBox.Yes or reply == messageBox.No:
-                if reply == messageBox.Yes:
-                    save_format(self.formats[name], path)
-                index = self.packetMenu.openComboBox.currentIndex()
-                self.packetMenu.openComboBox.removeItem(index)
-                self.packetMenu.openComboBox.setCurrentIndex(0)
-                self.comboBoxChanged()
+        print(name)
+        if name != '':
+            path = self.formats[name]['PATH']
+            name, formatLine = load_format(path)
+            if formatLine != self.formats[name]:
+                messageBox = QMessageBox()
+                title = "Close Format"
+                message = "WARNING !\n\nIf you close without saving, any changes made to the format" \
+                          "will be lost.\n\nSave format before closing?"
+                reply = messageBox.question(self, title, message, messageBox.Yes | messageBox.No |
+                                            messageBox.Cancel, messageBox.Cancel)
+                if reply == messageBox.Yes or reply == messageBox.No:
+                    if reply == messageBox.Yes:
+                        save_format(self.formats[name], path)
+                    index = self.packetMenu.openComboBox.currentIndex()
+                    self.packetMenu.openComboBox.removeItem(index)
+                    self.packetMenu.openComboBox.setCurrentIndex(0)
+                    self.comboBoxChanged()
 
     def closeAllFormat(self):
         n = self.packetMenu.openComboBox.count()

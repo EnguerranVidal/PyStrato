@@ -11,12 +11,12 @@ def load_settings(path):
         lines = file.readlines()
     for i in range(len(lines)):
         line = lines[i].split('=')
-        if line[0] == "AVAILABLE_BAUDS" or line[0] == "FORMAT_FILES":
+        if line[0] in ['AVAILABLE_BAUDS', 'FORMAT_FILES', 'OPENED_RECENTLY']:
             bauds = line[1].split(',')
             for j in range(len(bauds)):
                 bauds[j] = bauds[j].rstrip("\n")
             parameters[line[0]] = bauds
-        elif line[0] == "RSSI" or line[0] == "AUTOSCROLL" or line[0] == "AUTOSCALE":
+        elif line[0] in ['RSSI', 'AUTOSCROLL', 'AUTOSCALE']:
             parameters[line[0]] = bool(int(line[1].rstrip("\n")))
         else:
             parameters[line[0]] = line[1].rstrip("\n")
@@ -30,9 +30,9 @@ def save_settings(parameters, path):
         for i in range(len(lines)):
             line = lines[i].split('=')
             setting = line[0]
-            if setting == "AVAILABLE_BAUDS" or setting == "FORMAT_FILES":
+            if setting in ['AVAILABLE_BAUDS', 'FORMAT_FILES', 'OPENED_RECENTLY']:
                 file.write(setting + '=' + ','.join(parameters[setting]) + '\n')
-            elif setting == "RSSI" or setting == "AUTOSCROLL" or setting == "AUTOSCALE":
+            elif setting in ['RSSI', 'AUTOSCROLL', 'AUTOSCALE']:
                 file.write(setting + '=' + str(int(parameters[setting])) + '\n')
             else:
                 file.write(setting + '=' + str(parameters[setting]) + '\n')

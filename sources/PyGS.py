@@ -120,6 +120,10 @@ class PyGS(QMainWindow):
         self.saveAllFormatAction = QAction('&Save All', self)
         self.saveAllFormatAction.setStatusTip('Save All Packet Formats')
         self.saveAllFormatAction.triggered.connect(self.saveAllFormatTab)
+        # Close Format
+        self.closeFormatAction = QAction('&Close', self)
+        self.closeFormatAction.setStatusTip('Close Current Format')
+        self.closeFormatAction.triggered.connect(self.closeFormatTab)
         # Import Format
         self.importFormatAction = QAction('&Import Format', self)
         self.importFormatAction.setStatusTip('Import Format')
@@ -186,6 +190,8 @@ class PyGS(QMainWindow):
         self.fileMenu.addAction(self.saveAsFormatAction)
         self.fileMenu.addAction(self.saveAllFormatAction)
         self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.closeFormatAction)
+        self.fileMenu.addSeparator()
         self.manageFormatsMenu = QMenu('&Manage Formats', self)
         self.manageFormatsMenu.addAction(self.importFormatAction)
         self.manageFormatsMenu.addAction(self.trackedFormatAction)
@@ -243,10 +249,10 @@ class PyGS(QMainWindow):
             os.mkdir(self.backup_path)
 
     def center(self):
-        qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
+        frameGeometry = self.frameGeometry()
+        screenCenter = QDesktopWidget().availableGeometry().center()
+        frameGeometry.moveCenter(screenCenter)
+        self.move(frameGeometry.topLeft())
 
     def newFormatTab(self):
         self.newFormatWindow = NewFormatWindow()
@@ -301,9 +307,25 @@ class PyGS(QMainWindow):
             path = QFileDialog.getOpenFileName(self, 'Open Packet Format')
         if path[0] != '' and os.path.exists(path[0]):
             self.packetTabWidget.openFormat(path[0])
+            self.addToRecent(path[0])
+
+    def addToRecent(self, path):
+        self.settings['OPENED_RECENTLY'].insert(0, path)
+        if len(self.settings['OPENED_RECENTLY']) == 5:
+            self.settings['OPENED_RECENTLY'].pop()
+        openedRecently = []
+        for i in range(len(self.settings['OPENED_RECENTLY'])):
+            if self.settings['OPENED_RECENTLY'][i] not in openedRecently:
+                openedRecently.append(self.settings['OPENED_RECENTLY'][i])
+        self.settings['OPENED_RECENTLY'] = openedRecently
+        save_settings(self.settings, 'settings')
 
     def openRecentFile(self, filename):
-        pass
+        filenames = [os.path.basename(path) for path in self.settings['OPENED_RECENTLY']]
+        path = self.settings['OPENED_RECENTLY'][filenames.index(filename)]
+        if os.path.exists(path):
+            self.packetTabWidget.openFormat(path)
+            self.addToRecent(path)
 
     def saveFormatTab(self):
         self.packetTabWidget.saveFormat()
@@ -317,6 +339,9 @@ class PyGS(QMainWindow):
 
     def saveAllFormatTab(self):
         self.packetTabWidget.saveAllFormats()
+
+    def closeFormatTab(self):
+        self.packetTabWidget.closeFormat()
 
     def openTrackedFormats(self):
         self.trackedFormatsWindow = TrackedBalloonsWindow(self.current_dir)
@@ -381,7 +406,7 @@ class PyGS(QMainWindow):
                 self.dataCaptureWorker.finished.connect(self.dataCaptureThread.quit)
                 self.dataCaptureWorker.finished.connect(self.dataCaptureWorker.deleteLater)
                 self.dataCaptureThread.finished.connect(self.dataCaptureThread.deleteLater)
-                self.dataCaptureWorker.progress.connect(self.reportProgress)
+                self.dataCaptureWorker.progress.connect(self.dataCaptureUpdated)
                 self.dataCaptureThread.start()
 
             else:
@@ -402,8 +427,7 @@ class PyGS(QMainWindow):
             self.serialWindow.textedit.setDisabled(True)
             self.dataCaptureWorker.interrupt()
 
-    def reportProgress(self, content):
-        #### UPDATING GRAPHS ####
+    def dataCaptureUpdated(self, content):
         self.graphsTabWidget.updateTabGraphs(content)
 
     def openSerialMonitor(self):
@@ -422,7 +446,7 @@ class PyGS(QMainWindow):
     def populateRecentMenu(self):
         self.recentMenu.clear()
         actions = []
-        filenames = [f"File-{n}" for n in range(5)]
+        filenames = [os.path.basename(path) for path in self.settings['OPENED_RECENTLY']]
         for filename in filenames:
             action = QAction(filename, self)
             action.triggered.connect(partial(self.openRecentFile, filename))
@@ -515,14 +539,6 @@ class PyGS(QMainWindow):
         else:
             pass
 
-    def currentGeneralTab(self, *args):
-        pass
-
-    def whatTab(self):
-        currentIndex = self.tabWidget.currentIndex()
-        currentWidget = self.tabWidget.currentWidget()
-        print(currentIndex)
-
     def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()
         self.dateLabel.setText(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
@@ -541,17 +557,12 @@ class PyGS(QMainWindow):
         reply = QMessageBox.question(self, 'Message', "Are you sure to quit?", QMessageBox.Yes |
                                      QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
-            # Stopping Serial Connection
             self.stopSerial()
-            # Removing Serial Output File
             os.remove("output")
-            # Closing All Sub Windows
+            time.sleep(0.5)
+            self.serialMonitorTimer.stop()
             for window in QApplication.topLevelWidgets():
                 window.close()
-            # Stopping Timers
-            t.sleep(0.5)
-            self.serialMonitorTimer.stop()
-            # self.dataCaptureThread.terminate()
             event.accept()
         else:
             event.ignore()
