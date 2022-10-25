@@ -8,8 +8,10 @@ import time
 from sources.common.parameters import load_settings, load_format
 
 
-class SerialMonitor:
+class OldParser:
     def __init__(self):
+        super().__init__()
+        self._buffer = ''
         self.formatDir = 'formats'
         self.dataDir = 'data'
         self.settings = load_settings('settings')
@@ -23,12 +25,31 @@ class SerialMonitor:
         self.dataFiles = [os.path.join(self.dataDir, self.balloonFormats[name]['FILE'])
                           for name in list(self.balloonFormats.keys())]
         self.checkSaves()
-        self.connection = Serial(self.settings['SELECTED_PORT'], self.settings['SELECTED_BAUD'])
-        with open(self.settings['OUTPUT_FILE'], "a") as file:
-            file.write("Connected to port " + self.settings['SELECTED_PORT'] + " with baud rate of " +
-                       self.settings['SELECTED_BAUD'] + "." + "\n")
+        self.balloonPins = ['NONE'] * len(self.dataFiles)
+        self.settings = load_settings('settings')
         #### LOADING IDs ####
         self.balloonIds = [self.balloonFormats[name]['ID'] for name in list(self.balloonFormats.keys())]
+
+    def parse(self, buffer, errorHandler=None):
+        self.checkSaves()
+        self._buffer += str(buffer)[2:][:-1]
+        lines = self._buffer.split('\\n')
+        self._buffer = lines.pop()
+        for packet in lines:
+            with open(self.settings['OUTPUT_FILE'], "a") as file:
+                file.write(datetime.now().strftime("%H:%M:%S") + " -> " + packet + '\n')
+            # Verifying for header
+            if packet[0:len(self.settings['HEADER'])] == self.settings['HEADER']:
+                for i in range(len(self.balloonIds)):
+                    # Knowing which balloon
+                    id_index = len(self.balloonIds[i]) + len(self.settings['HEADER']) - 1
+                    if packet[id_index] == self.balloonIds[i][0]:
+                        payload = packet[len(self.settings['HEADER']):].split()
+                        if len(payload[0]) == self.getPacketLength(i):
+                            content, pin = self.disassemblePacket(i, packet)
+                            if pin != self.balloonPins[i]:
+                                self.saveCSV(i, content)
+                                self.balloonPins[i] = pin
 
     def checkSaves(self):
         # --- Creating data directory if non-existent
@@ -49,27 +70,16 @@ class SerialMonitor:
                     header = self.formatHeader(names[i])
                     csv_writer.writerow(header)
 
-    def startTracking(self):
-        running = True
-        self.balloonPins = ['NONE'] * len(self.dataFiles)
-        while running:
-            self.checkSaves()
-            received = str(self.connection.readline())
-            packet = received[2:][:-3]
-            with open(self.settings['OUTPUT_FILE'], "a") as file:
-                file.write(datetime.now().strftime("%H:%M:%S") + " -> " + packet + '\n')
-            # Verifying for header
-            if packet[0:len(self.settings['HEADER'])] == self.settings['HEADER']:
-                for i in range(len(self.balloonIds)):
-                    # Knowing which balloon
-                    id_index = len(self.balloonIds[i]) + len(self.settings['HEADER']) - 1
-                    if packet[id_index] == self.balloonIds[i][0]:
-                        payload = packet[len(self.settings['HEADER']):].split()
-                        if len(payload[0]) == self.getPacketLength(i):
-                            content, pin = self.disassemblePacket(i, packet)
-                            if pin != self.balloonPins[i]:
-                                self.saveCSV(i, content)
-                                self.balloonPins[i] = pin
+    def formatHeader(self, i):
+        header = ["Reception Time", "UNIX"]
+        keys = list(self.balloonFormats[i].keys())
+        if 'CLOCK' in keys:
+            header.append("Internal Clock")
+        if 'DATA' in keys:
+            names = [name.replace('_', ' ') for name in list(self.balloonFormats[i]['DATA'].keys())]
+            header += names
+        header.append("RSSI")
+        return header
 
     def disassemblePacket(self, i, packet):
         packet = packet[len(self.settings['HEADER']):]
@@ -116,17 +126,6 @@ class SerialMonitor:
             count += int(value['SIGN']) + int(value['TOTAL'])
         return count
 
-    def formatHeader(self, i):
-        header = ["Reception Time", "UNIX"]
-        keys = list(self.balloonFormats[i].keys())
-        if 'CLOCK' in keys:
-            header.append("Internal Clock")
-        if 'DATA' in keys:
-            names = [name.replace('_', ' ') for name in list(self.balloonFormats[i]['DATA'].keys())]
-            header += names
-        header.append("RSSI")
-        return header
-
     @staticmethod
     def verifyMessageData(string, sign):
         if not string[sign:].replace('.', '', 1).isdigit():
@@ -141,6 +140,22 @@ class SerialMonitor:
         with open(saveFilename, "a", newline='') as file:
             csvWriter = csv.writer(file)
             csvWriter.writerow(content)
+
+
+class SerialMonitor:
+    def __init__(self):
+        self.settings = load_settings('settings')
+        self.connection = Serial(self.settings['SELECTED_PORT'], self.settings['SELECTED_BAUD'], timeout=1)
+        with open(self.settings['OUTPUT_FILE'], "a") as file:
+            file.write("Connected to port " + self.settings['SELECTED_PORT'] + " with baud rate of " +
+                       self.settings['SELECTED_BAUD'] + "." + "\n")
+
+    def startTracking(self):
+        running = True
+        parser = OldParser()
+        while running:
+            received = self.connection.read(self.connection.inWaiting() or 1)
+            parser.parse(received)
 
 
 if __name__ == '__main__':
