@@ -3,7 +3,7 @@ import os
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSlot, QTimer, QModelIndex
+from PyQt5.QtCore import Qt, pyqtSlot, QTimer, QModelIndex, pyqtSignal
 from PyQt5.QtGui import *
 import pyqtgraph as pg
 from pyqtgraph.dockarea import Dock, DockArea
@@ -17,6 +17,7 @@ from sources.common.parameters import load_settings, save_settings, load_format
 
 
 class SerialWindow(QWidget):
+    sendCommand = pyqtSignal(str)
     def __init__(self):
         super(SerialWindow, self).__init__()
         self.resize(450, 350)
