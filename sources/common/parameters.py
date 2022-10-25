@@ -12,10 +12,13 @@ def load_settings(path):
     for i in range(len(lines)):
         line = lines[i].split('=')
         if line[0] in ['AVAILABLE_BAUDS', 'FORMAT_FILES', 'OPENED_RECENTLY']:
-            bauds = line[1].split(',')
-            for j in range(len(bauds)):
-                bauds[j] = bauds[j].rstrip("\n")
-            parameters[line[0]] = bauds
+            splitSetting = line[1].split(',')
+            for j in range(len(splitSetting)):
+                splitSetting[j] = splitSetting[j].rstrip("\n")
+            if len(splitSetting) == 1 and splitSetting[0] == '':
+                parameters[line[0]] = []
+            else:
+                parameters[line[0]] = splitSetting
         elif line[0] in ['RSSI', 'AUTOSCROLL', 'AUTOSCALE']:
             parameters[line[0]] = bool(int(line[1].rstrip("\n")))
         else:

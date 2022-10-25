@@ -1,5 +1,10 @@
 ######################## IMPORTS ########################
 import time
+import os
+import shutil
+import sys
+import subprocess
+from functools import partial
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtCore import QDateTime, QThread
@@ -141,14 +146,18 @@ class PyGS(QMainWindow):
         self.changeHeaderAct = QAction('&Change Header', self)
         self.changeHeaderAct.setStatusTip('Change Packets Header')
         self.changeHeaderAct.triggered.connect(self.openChangeHeader)
-        # Add Plot Tab
+        # Add New Graph Tab
         self.newGraphAction = QAction('&Add Graph Tab', self)
         self.newGraphAction.setStatusTip('Add New Graph Tab')
         self.newGraphAction.triggered.connect(self.newGraphTab)
-        # Add Graph Tab
-        self.newPlotAction = QAction('&Add Plot', self)
-        self.newPlotAction.setStatusTip('Add New Plot')
-        self.newPlotAction.triggered.connect(self.newPlot)
+        # Add New Basic TimeAxis Plot
+        self.newBasicPlotAction = QAction('&DateTime Plot', self)
+        self.newBasicPlotAction.setStatusTip('Add New DateTime Plot')
+        self.newBasicPlotAction.triggered.connect(self.newBasicPlot)
+        # Add New Remote Plot
+        self.newRemotePlotAction = QAction('&Remote Plot', self)
+        self.newRemotePlotAction.setStatusTip('Add New Remote Plot')
+        self.newRemotePlotAction.triggered.connect(self.newRemotePlot)
         # Toggle Autoscale
         self.autoscaleAct = QAction('&Autoscale', self, checkable=True, checked=self.settings["AUTOSCALE"])
         self.autoscaleAct.setStatusTip("Toggle Graphs' Autoscale")
@@ -184,6 +193,7 @@ class PyGS(QMainWindow):
         self.fileMenu.addAction(self.openFormatAction)
         self.recentMenu = QMenu('&Recent', self)
         self.recentMenu.aboutToShow.connect(self.populateRecentMenu)
+
         self.fileMenu.addMenu(self.recentMenu)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.saveFormatAction)
@@ -198,6 +208,7 @@ class PyGS(QMainWindow):
         self.fileMenu.addMenu(self.manageFormatsMenu)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.exitAct)
+        self.fileMenu.aboutToShow.connect(self.populateFileMenu)
 
         ###  EDIT MENU  ###
         self.editMenu = self.menubar.addMenu('&Edit')
@@ -205,9 +216,12 @@ class PyGS(QMainWindow):
 
         ###  WINDOW MENU  ###
         self.windowMenu = self.menubar.addMenu('&Window')
-        self.manageGraphsMenu = QMenu('&Manage Graphs', self)
+        self.manageGraphsMenu = QMenu('&Graph Tab', self)
         self.manageGraphsMenu.addAction(self.newGraphAction)
-        self.manageGraphsMenu.addAction(self.newPlotAction)
+        self.addPlotMenu = QMenu('&Add New Plot', self)
+        self.addPlotMenu.addAction(self.newRemotePlotAction)
+        self.addPlotMenu.addAction(self.newBasicPlotAction)
+        self.manageGraphsMenu.addMenu(self.addPlotMenu)
         self.windowMenu.addMenu(self.manageGraphsMenu)
         self.windowMenu.addSeparator()
         self.windowMenu.addAction(self.autoscaleAct)
@@ -273,10 +287,10 @@ class PyGS(QMainWindow):
         self.newGraphWindow.buttons.rejected.connect(self.newGraphWindow.close)
         self.newGraphWindow.show()
 
-    def newPlot(self):
+    def newRemotePlot(self):
         if self.graphsTabWidget.graphCentralWindow.count() > 0:
             self.newPlotWindow = NewPlotWindow()
-            self.newPlotWindow.buttons.accepted.connect(self.createNewPlot)
+            self.newPlotWindow.buttons.accepted.connect(self.createNewRemotePlot)
             self.newPlotWindow.buttons.rejected.connect(self.newPlotWindow.close)
             self.newPlotWindow.show()
         else:
@@ -288,11 +302,33 @@ class PyGS(QMainWindow):
             cancelling.setStyleSheet("QLabel{min-width: 200px;}")
             cancelling.exec_()
 
-    def createNewPlot(self):
+    def newBasicPlot(self):
+        if self.graphsTabWidget.graphCentralWindow.count() > 0:
+            self.newPlotWindow = NewPlotWindow()
+            self.newPlotWindow.buttons.accepted.connect(self.createNewBasicPlot)
+            self.newPlotWindow.buttons.rejected.connect(self.newPlotWindow.close)
+            self.newPlotWindow.show()
+        else:
+            cancelling = MessageBox()
+            cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+            cancelling.setWindowTitle("Error")
+            cancelling.setText("No Graph tabs are\nset to add a plot too.")
+            cancelling.setStandardButtons(QMessageBox.Ok)
+            cancelling.setStyleSheet("QLabel{min-width: 200px;}")
+            cancelling.exec_()
+
+    def createNewRemotePlot(self):
         currentIndex = self.graphsTabWidget.graphCentralWindow.currentIndex()
         name = self.newPlotWindow.nameEdit.text()
         widget = self.graphsTabWidget.graphCentralWindow.widget(currentIndex)
-        widget.addDock(name)
+        widget.addDockRemote(name)
+        self.newPlotWindow.close()
+
+    def createNewBasicPlot(self):
+        currentIndex = self.graphsTabWidget.graphCentralWindow.currentIndex()
+        name = self.newPlotWindow.nameEdit.text()
+        widget = self.graphsTabWidget.graphCentralWindow.widget(currentIndex)
+        widget.addDockDateTime(name)
         self.newPlotWindow.close()
 
     def createNewGraphTab(self):
@@ -311,13 +347,14 @@ class PyGS(QMainWindow):
 
     def addToRecent(self, path):
         self.settings['OPENED_RECENTLY'].insert(0, path)
-        if len(self.settings['OPENED_RECENTLY']) == 5:
-            self.settings['OPENED_RECENTLY'].pop()
         openedRecently = []
         for i in range(len(self.settings['OPENED_RECENTLY'])):
+            print(self.settings['OPENED_RECENTLY'][i], self.settings['OPENED_RECENTLY'][i] not in openedRecently)
             if self.settings['OPENED_RECENTLY'][i] not in openedRecently:
                 openedRecently.append(self.settings['OPENED_RECENTLY'][i])
         self.settings['OPENED_RECENTLY'] = openedRecently
+        if len(self.settings['OPENED_RECENTLY']) == 5:
+            self.settings['OPENED_RECENTLY'].pop()
         save_settings(self.settings, 'settings')
 
     def openRecentFile(self, filename):
@@ -422,7 +459,7 @@ class PyGS(QMainWindow):
         if self.serial is not None:
             self.serial.kill()
             self.serial.terminate()
-            t.sleep(0.5)
+            time.sleep(0.5)
             self.serial = None
             self.serialWindow.textedit.setDisabled(True)
             self.dataCaptureWorker.interrupt()
@@ -442,6 +479,25 @@ class PyGS(QMainWindow):
     def setAutoscale(self, action):
         self.settings["AUTOSCALE"] = action
         save_settings(self.settings, "settings")
+
+    def populateFileMenu(self):
+        # OPENED RECENTLY MENU
+        if len(self.settings['OPENED_RECENTLY']) == 0:
+            self.recentMenu.setDisabled(True)
+        else:
+            self.recentMenu.setDisabled(False)
+        # SAVE AND CLOSE ACTIONS
+        if len(list(self.packetTabWidget.formats.keys())) == 0:
+            self.saveFormatAction.setDisabled(True)
+            self.saveAllFormatAction.setDisabled(True)
+            self.saveAsFormatAction.setDisabled(True)
+            self.closeFormatAction.setDisabled(True)
+
+        else:
+            self.saveFormatAction.setDisabled(False)
+            self.saveAllFormatAction.setDisabled(False)
+            self.saveAsFormatAction.setDisabled(False)
+            self.closeFormatAction.setDisabled(False)
 
     def populateRecentMenu(self):
         self.recentMenu.clear()

@@ -101,8 +101,13 @@ class GraphDockArea(QMainWindow):
         self.dockPlots = []
         self._initializeContent()
 
-    def addDock(self, name, size=(500, 200), closable=True):
-        dock = DockGraph(self.currentDir, name, size, closable, self.storedContent)
+    def addDockRemote(self, name, size=(500, 200), closable=True):
+        dock = DockGraphRemote(self.currentDir, name, size, closable, self.storedContent)
+        self.dockPlots.append(dock)
+        self.area.addDock(self.dockPlots[-1], 'right')
+
+    def addDockDateTime(self, name, size=(500, 200), closable=True):
+        dock = DockGraphDateTime(self.currentDir, name, size, closable, self.storedContent)
         self.dockPlots.append(dock)
         self.area.addDock(self.dockPlots[-1], 'right')
 
@@ -126,7 +131,7 @@ class GraphDockArea(QMainWindow):
             self.storedContent.append(dataValues)
 
 
-class DockGraph(Dock):
+class DockGraphRemote(Dock):
     def __init__(self, path, name, size, closable, content=None):
         Dock.__init__(self, name, size=size, closable=closable)
         self.current_dir = path
@@ -137,7 +142,6 @@ class DockGraph(Dock):
         self.plottingView.pg.setConfigOptions(antialias=True)
         self.addWidget(self.plottingView)
         self.plotItem = self.plottingView.pg.PlotItem()
-        # self.plotItem._setProxyOptions(deferGetattr=True)
         self.plottingView.setCentralItem(self.plotItem)
         self.plotItem.addLegend()
         self.colors = ColorCycler()
@@ -168,7 +172,6 @@ class DockGraph(Dock):
         self.settings = load_settings('settings')
         self.retrieveFormats()
         self.checkTrackedValues()
-        # timeSeries = [content[i][1][:, 0] for i in range(len(content))]
         names = list(self.formats.keys())
         for i in range(len(self.trackedValues)):
             dataName, formatName = self.trackedValues[i][0], self.trackedValues[i][1]
@@ -182,6 +185,77 @@ class DockGraph(Dock):
                 linePen = {'color': self.colors.next(), 'width': 3}
                 self.plotItem.plot(dataSeries, clear=False, pen=linePen, _callSync='off',
                                    name=self.trackedValues[i][0].replace('_', ' '))
+
+    def retrieveFormats(self):
+        self.formats = {}
+        paths = self.settings['FORMAT_FILES']
+        for path in paths:
+            name, formatLine = load_format(os.path.join(self.format_path, path))
+            self.formats[name] = formatLine
+
+    def checkTrackedValues(self):
+        indices = []
+        for i in range(len(self.trackedValues)):
+            item = self.trackedValues[i]
+            values = list(self.formats[item[1]]['DATA'].keys())
+            if item[0] not in values:
+                indices.append(i)
+        for index in sorted(indices, reverse=True):
+            del self.trackedValues[index]
+
+
+class DockGraphDateTime(Dock):
+    def __init__(self, path, name, size, closable, content=None):
+        Dock.__init__(self, name, size=size, closable=closable)
+        self.current_dir = path
+        self.format_path = os.path.join(self.current_dir, "formats")
+        self.settings = load_settings('settings')
+        self.setAcceptDrops(True)
+        self.plotWidget = pg.PlotWidget(axisItems={'bottom': pg.DateAxisItem()})
+        self.addWidget(self.plotWidget)
+        self.colors = ColorCycler()
+        self.trackedValues = []
+        self.storedContent = content
+        self.formats = {}
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat('application/x-qabstractitemmodeldatalist'):
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if isinstance(event.source(), GraphListWidget):
+            model = QStandardItemModel()
+            model.dropMimeData(event.mimeData(), Qt.CopyAction, 0, 0, QModelIndex())
+            item = model.item(0, 0)
+            parent = event.source()
+            self.trackedValues.append([item.text(), parent.selectedFormat])
+        self.dropArea = None
+        self.overlay.setDropArea(self.dropArea)
+        if self.storedContent is not None:
+            self.updatePlots(self.storedContent)
+
+    def updatePlots(self, content):
+        self.storedContent = content
+        self.settings = load_settings('settings')
+        self.retrieveFormats()
+        self.checkTrackedValues()
+        timeValues = [content[i][1][:, 0] for i in range(len(content))]
+        names = list(self.formats.keys())
+        for i in range(len(self.trackedValues)):
+            dataName, formatName = self.trackedValues[i][0], self.trackedValues[i][1]
+            contentLabels = content[names.index(formatName)][0]
+            dataSeries = content[names.index(formatName)][1][:, contentLabels.index(dataName)]
+            timeSeries = timeValues[names.index(formatName)]
+            if i == 0:
+                linePen = {'color': self.colors.next(0), 'width': 3}
+                self.plotWidget.plot(x=timeSeries, y=dataSeries, clear=True, pen=linePen, _callSync='off',
+                                     name=self.trackedValues[i][0].replace('_', ' '))
+            else:
+                linePen = {'color': self.colors.next(), 'width': 3}
+                self.plotWidget.plot(x=timeSeries, y=dataSeries, clear=False, pen=linePen, _callSync='off',
+                                     name=self.trackedValues[i][0].replace('_', ' '))
 
     def retrieveFormats(self):
         self.formats = {}
