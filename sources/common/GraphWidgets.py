@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt, pyqtSlot, QTimer, QEvent, QModelIndex
 from PyQt5.QtGui import *
 import pyqtgraph as pg
+from ecom.database import CommunicationDatabase
 from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.widgets.RemoteGraphicsView
 
@@ -177,20 +178,39 @@ class DockGraphRemote(Dock):
         self.formats = {}
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasFormat('application/x-qabstractitemmodeldatalist'):
-            event.accept()
-        else:
+        if not event.mimeData().hasFormat('application/x-qabstractitemmodeldatalist') \
+                or not isinstance(event.source(), GraphListWidget):
             event.ignore()
+            return
+        model = QStandardItemModel()
+        model.dropMimeData(event.mimeData(), Qt.CopyAction, 0, 0, QModelIndex())
+        item = model.item(0, 0)
+        parent = event.source()
+        databaseName = parent.selectedBalloon
+        database = CommunicationDatabase(os.path.join(self.current_dir, 'formats', databaseName))
+        for telemetryType in database.telemetryTypes:
+            if telemetryType.id.name != parent.selectedPackage:
+                continue
+            for dataTypeInfo in telemetryType.data:
+                if dataTypeInfo.name == item.text():
+                    if not issubclass(dataTypeInfo.type.type, (int, float)):
+                        event.ignore()
+                        return
+                    break
+            else:
+                event.ignore()
+                return
+        event.accept()
 
     def dropEvent(self, event):
-        if isinstance(event.source(), GraphListWidget):
-            model = QStandardItemModel()
-            model.dropMimeData(event.mimeData(), Qt.CopyAction, 0, 0, QModelIndex())
-            item = model.item(0, 0)
-            parent = event.source()
-            self.trackedValues.append([item.text(), parent.selectedPackage, parent.selectedBalloon])
         self.dropArea = None
         self.overlay.setDropArea(self.dropArea)
+        model = QStandardItemModel()
+        model.dropMimeData(event.mimeData(), Qt.CopyAction, 0, 0, QModelIndex())
+        item = model.item(0, 0)
+        parent = event.source()
+        databaseName = parent.selectedBalloon
+        self.trackedValues.append([item.text(), parent.selectedPackage, databaseName])
         self.updatePlots()
 
     def updatePlots(self, content=None):
@@ -249,7 +269,7 @@ class DockGraphDateTime(Dock):
             model.dropMimeData(event.mimeData(), Qt.CopyAction, 0, 0, QModelIndex())
             item = model.item(0, 0)
             parent = event.source()
-            self.trackedValues.append([item.text(), parent.packageName, parent.balloonName])
+            self.trackedValues.append([item.text(), parent.selectedPackage, parent.selectedBalloon])
         self.dropArea = None
         self.overlay.setDropArea(self.dropArea)
         if self.storedContent is not None:
