@@ -39,7 +39,6 @@ class SerialMonitor(QThread):
                 parsers[name] = OldParser(self.output)
         self._active = True
         while self._active:
-            pass
             received = connection.read(connection.inWaiting() or 1)
             for parserName, parser in parsers.items():
                 telemetries = parser.parse(received, errorHandler=lambda error: print(error))
