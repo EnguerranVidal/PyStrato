@@ -160,6 +160,7 @@ class PyGS(QMainWindow):
         self.autoscaleAct.triggered.connect(self.setAutoscale)
         # Run Serial
         self.runSerialAct = QAction('&Run', self)
+        self.runSerialAct.setShortcut('Ctrl+R')
         self.runSerialAct.setStatusTip('Run Serial Monitoring')
         self.runSerialAct.triggered.connect(self.startSerial)
         # Stop Serial
@@ -168,6 +169,7 @@ class PyGS(QMainWindow):
         self.stopSerialAct.triggered.connect(self.stopSerial)
         # Opening Serial Monitor
         self.openMonitorAct = QAction('&Open Serial Monitor', self)
+        self.openMonitorAct.setShortcut('Ctrl+M')
         self.openMonitorAct.setIcon(QIcon('sources/icons/Monitor.png'))
         self.openMonitorAct.setStatusTip('Open Serial Monitor')
         self.openMonitorAct.triggered.connect(self.openSerialMonitor)
