@@ -1,6 +1,9 @@
 import csv
 import os
 from datetime import datetime
+
+from ecom.database import CommunicationDatabase
+from ecom.parser import TelemetryParser
 from serial import Serial
 import time
 
@@ -152,10 +155,14 @@ class SerialMonitor:
 
     def startTracking(self):
         running = True
-        parser = OldParser()
+        database = CommunicationDatabase('communication')
+        parsers = [OldParser(), TelemetryParser(database)]
         while running:
             received = self.connection.read(self.connection.inWaiting() or 1)
-            parser.parse(received)
+            for parser in parsers:
+                telemetries = parser.parse(received, errorHandler=lambda error: print(error))
+                if telemetries:
+                    print(list(telemetries))
 
 
 if __name__ == '__main__':

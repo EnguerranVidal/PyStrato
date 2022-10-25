@@ -1,0 +1,5 @@
+Name,Type,Description
+time,ms,The CPU time this message was generated.
+level,LogLevel,The severity of this message.
+size,uint16_t,The size of the message in bytes.
+message,char[.size],The message text.

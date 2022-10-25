@@ -1,0 +1,2 @@
+Name,Type,Description
+time,ms,The time the heartbeat was generated in milliseconds since boot.
