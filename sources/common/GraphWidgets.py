@@ -1,11 +1,11 @@
 ######################## IMPORTS ########################
+from dataclasses import dataclass
 import os
 import shutil
 import sys
 import time as t
 import subprocess
 from functools import partial
-import sip
 import numpy as np
 
 # ------------------- PyQt Modules -------------------- #
@@ -17,7 +17,7 @@ from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.widgets.RemoteGraphicsView
 
 # --------------------- Sources ----------------------- #
-from sources.common.parameters import load_settings, load_format, retrieveCSVData
+from sources.common.parameters import load_settings, load_format, retrieveCSVData, loadNewFormat
 from sources.common.Widgets import QCustomTabWidget
 
 
@@ -30,6 +30,8 @@ class GraphTabWidget(QMainWindow):
         self.format_path = os.path.join(self.current_dir, "formats")
         self.formats = {}
         self.settings = {}
+        self.content = ContentStorage(self.current_dir)
+        self.content.fill()
         # Central Widget -----------------------------------------------
         self.graphCentralWindow = QCustomTabWidget()
         self.setCentralWidget(self.graphCentralWindow)
@@ -50,15 +52,27 @@ class GraphTabWidget(QMainWindow):
 
     def comboBoxChanged(self):
         # Removing Old Values
-        self.valuesMenu.valuesListWidget.clear()
+        self.valuesMenu.packagesTabWidget.clear()
         # Loading New Values
         name = self.valuesMenu.trackedComboBox.currentText()
         if name != '':
-            self.valuesMenu.valuesListWidget.selectedFormat = name
-            values = list(self.formats[name]['DATA'].keys())
-            for value in values:
-                item = QListWidgetItem(value)
-                self.valuesMenu.valuesListWidget.addItem(item)
+            formatInfo = self.formats[name]
+            if isinstance(formatInfo, dict):
+                packages = {'Default': list(formatInfo['DATA'].keys())}
+            else:
+                packages = {
+                    package.id.name: [
+                        dataPoint.name for dataPoint in package.data
+                    ]
+                    for package in formatInfo.telemetryTypes
+                }
+            for packageName, values in packages.items():
+                valuesList = GraphListWidget(name, packageName)
+                valuesList.setDragDropMode(QAbstractItemView.InternalMove)
+                for value in values:
+                    item = QListWidgetItem(value)
+                    valuesList.addItem(item)
+                self.valuesMenu.packagesTabWidget.addTab(valuesList, packageName)
 
     def fillComboBox(self):
         self.settings = load_settings('settings')
@@ -68,7 +82,10 @@ class GraphTabWidget(QMainWindow):
         self.formats = {}
         for file in files:
             path = os.path.join(self.format_path, file)
-            name, formatLine = load_format(path)
+            if os.path.isdir(path):
+                name, formatLine = loadNewFormat(path)
+            else:
+                name, formatLine = load_format(path)
             # Getting Format Into ComboBox
             self.formats[name] = formatLine
         self.valuesMenu.trackedComboBox.clear()
@@ -78,10 +95,11 @@ class GraphTabWidget(QMainWindow):
                 self.valuesMenu.trackedComboBox.addItem(name)
 
     def updateTabGraphs(self, content):
+        self.content.append(content)
         currentIndex = self.graphCentralWindow.currentIndex()
         if currentIndex != -1:
             widget = self.graphCentralWindow.widget(currentIndex)
-            widget.updateDockPlots(content)
+            widget.updateDockPlots(self.content)
 
     def closeRemoteGraphicsView(self, *args):
         for tab in [self.graphCentralWindow.widget(index) for index in range(self.graphCentralWindow.count())]:
@@ -99,10 +117,9 @@ class GraphDockArea(QMainWindow):
         self.area = DockArea()
         self.setCentralWidget(self.area)
         self.dockPlots = []
-        self._initializeContent()
 
     def addDockRemote(self, name, size=(500, 200), closable=True):
-        dock = DockGraphRemote(self.currentDir, name, size, closable, self.storedContent)
+        dock = DockGraphRemote(self.currentDir, name, size, closable)
         self.dockPlots.append(dock)
         self.area.addDock(self.dockPlots[-1], 'right')
 
@@ -115,24 +132,35 @@ class GraphDockArea(QMainWindow):
         for dock in self.dockPlots:
             dock.updatePlots(content)
 
-    def _initializeContent(self):
-        self.formats = {}
-        dataFiles = []
+
+class ContentStorage:
+    def __init__(self, path):
+        self.currentDir = path
+        self.storage = {}
+
+    def fill(self):
         self.settings = load_settings('settings')
         paths = self.settings['FORMAT_FILES']
         for path in paths:
-            name, formatLine = load_format(os.path.join(self.formatDir, path))
-            self.formats[name] = formatLine
-            dataFiles.append(os.path.join(self.dataDir, formatLine['FILE']))
-        self.storedContent = []
-        for i in range(len(dataFiles)):
-            name = list(self.formats.keys())[i]
-            dataValues = retrieveCSVData(dataFiles[i], self.formats[name])
-            self.storedContent.append(dataValues)
+            path = os.path.join(self.currentDir, 'formats', path)
+            if os.path.isdir(path):
+                name, database = loadNewFormat(path)
+                self.storage[name] = {
+                    telemetryType.id.name: {
+                        dataPoint.name: []
+                        for dataPoint in telemetryType.data
+                    }
+                    for telemetryType in database.telemetryTypes
+                }
+
+    def append(self, content):
+        packageStorage = self.storage[content['parser']][content['type']]
+        for key, value in content['data'].items():
+            packageStorage[key].append(value)
 
 
 class DockGraphRemote(Dock):
-    def __init__(self, path, name, size, closable, content=None):
+    def __init__(self, path, name, size, closable):
         Dock.__init__(self, name, size=size, closable=closable)
         self.current_dir = path
         self.format_path = os.path.join(self.current_dir, "formats")
@@ -146,7 +174,6 @@ class DockGraphRemote(Dock):
         self.plotItem.addLegend()
         self.colors = ColorCycler()
         self.trackedValues = []
-        self.storedContent = content
         self.formats = {}
 
     def dragEnterEvent(self, event):
@@ -161,22 +188,20 @@ class DockGraphRemote(Dock):
             model.dropMimeData(event.mimeData(), Qt.CopyAction, 0, 0, QModelIndex())
             item = model.item(0, 0)
             parent = event.source()
-            self.trackedValues.append([item.text(), parent.selectedFormat])
+            self.trackedValues.append([item.text(), parent.selectedPackage, parent.selectedBalloon])
         self.dropArea = None
         self.overlay.setDropArea(self.dropArea)
-        if self.storedContent is not None:
-            self.updatePlots(self.storedContent)
+        self.updatePlots()
 
-    def updatePlots(self, content):
-        self.storedContent = content
+    def updatePlots(self, content=None):
         self.settings = load_settings('settings')
-        self.retrieveFormats()
         self.checkTrackedValues()
-        names = list(self.formats.keys())
+        if content is None:
+            # TODO: No data
+            return
         for i in range(len(self.trackedValues)):
-            dataName, formatName = self.trackedValues[i][0], self.trackedValues[i][1]
-            contentLabels = content[names.index(formatName)][0]
-            dataSeries = content[names.index(formatName)][1][:, contentLabels.index(dataName)]
+            dataName, packageName, balloonName = self.trackedValues[i]
+            dataSeries = content.storage[balloonName][packageName][dataName]
             if i == 0:
                 linePen = {'color': self.colors.next(0), 'width': 3}
                 self.plotItem.plot(dataSeries, clear=True, pen=linePen, _callSync='off',
@@ -186,22 +211,16 @@ class DockGraphRemote(Dock):
                 self.plotItem.plot(dataSeries, clear=False, pen=linePen, _callSync='off',
                                    name=self.trackedValues[i][0].replace('_', ' '))
 
-    def retrieveFormats(self):
-        self.formats = {}
-        paths = self.settings['FORMAT_FILES']
-        for path in paths:
-            name, formatLine = load_format(os.path.join(self.format_path, path))
-            self.formats[name] = formatLine
-
     def checkTrackedValues(self):
-        indices = []
-        for i in range(len(self.trackedValues)):
-            item = self.trackedValues[i]
-            values = list(self.formats[item[1]]['DATA'].keys())
-            if item[0] not in values:
-                indices.append(i)
-        for index in sorted(indices, reverse=True):
-            del self.trackedValues[index]
+        pass
+        # indices = []
+        # for i in range(len(self.trackedValues)):
+        #     item = self.trackedValues[i]
+        #     values = list(self.formats[item[1]]['DATA'].keys())
+        #     if item[0] not in values:
+        #         indices.append(i)
+        # for index in sorted(indices, reverse=True):
+        #     del self.trackedValues[index]
 
 
 class DockGraphDateTime(Dock):
@@ -230,7 +249,7 @@ class DockGraphDateTime(Dock):
             model.dropMimeData(event.mimeData(), Qt.CopyAction, 0, 0, QModelIndex())
             item = model.item(0, 0)
             parent = event.source()
-            self.trackedValues.append([item.text(), parent.selectedFormat])
+            self.trackedValues.append([item.text(), parent.packageName, parent.balloonName])
         self.dropArea = None
         self.overlay.setDropArea(self.dropArea)
         if self.storedContent is not None:
@@ -276,9 +295,10 @@ class DockGraphDateTime(Dock):
 
 
 class GraphListWidget(QListWidget):
-    def __init__(self):
+    def __init__(self, balloonName, packageName):
         super(QListWidget, self).__init__()
-        self.selectedFormat = None
+        self.selectedBalloon = balloonName
+        self.selectedPackage = packageName
         self.setDragEnabled(True)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
@@ -290,12 +310,11 @@ class GraphSelectionWidget(QWidget):
         # Open Files ComboBox
         self.trackedComboBox = QComboBox()
         # Data Values ListBox
-        self.valuesListWidget = GraphListWidget()
-        self.valuesListWidget.setDragDropMode(QAbstractItemView.InternalMove)
+        self.packagesTabWidget = QTabWidget()
 
         layout = QFormLayout()
         layout.addRow(self.trackedComboBox)
-        layout.addRow(self.valuesListWidget)
+        layout.addRow(self.packagesTabWidget)
         layout.setVerticalSpacing(0)
         self.setLayout(layout)
 

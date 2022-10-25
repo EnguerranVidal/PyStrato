@@ -9,7 +9,7 @@ from serial import Serial
 import time
 
 # --------------------- Sources ----------------------- #
-from sources.common.parameters import load_settings, load_format
+from sources.common.parameters import load_settings, load_format, loadNewFormat
 
 
 class SerialMonitor(QThread):
@@ -28,22 +28,31 @@ class SerialMonitor(QThread):
         connection = Serial(self.settings['SELECTED_PORT'], self.settings['SELECTED_BAUD'], timeout=1)
         self.output.emit("Connected to port " + self.settings['SELECTED_PORT'] + " with baud rate of " +
                          self.settings['SELECTED_BAUD'] + ".")
-        database = CommunicationDatabase(os.path.join(self.currentDir, 'communication'))
-        parsers = [OldParser(self.output), TelemetryParser(database)]
+        parsers = {}
+        for path in self.settings['FORMAT_FILES']:
+            path = os.path.join(self.currentDir, 'formats', path)
+            if os.path.isdir(path):
+                name, database = loadNewFormat(path)
+                parsers[name] = TelemetryParser(database)
+            else:
+                name, _ = load_format(path)
+                parsers[name] = OldParser(self.output)
         self._active = True
         while self._active:
             pass
             received = connection.read(connection.inWaiting() or 1)
-            for parser in parsers:
+            for parserName, parser in parsers.items():
                 telemetries = parser.parse(received, errorHandler=lambda error: print(error))
                 if telemetries:
                     for telemetry in telemetries:
                         if isinstance(telemetry, dict):
                             content = telemetry
+                            telemetryType = 'Default'
                         else:
                             self.output.emit(str(telemetry))
                             content = telemetry.data
-                        self.progress.emit(content)
+                            telemetryType = telemetry.type.name
+                        self.progress.emit({'parser': parserName, 'type': telemetryType, 'data': content})
         self.finished.emit()
 
     def interrupt(self):

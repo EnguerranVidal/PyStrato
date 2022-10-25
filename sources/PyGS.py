@@ -452,7 +452,7 @@ class PyGS(QMainWindow):
             self.serialWindow.textedit.setDisabled(True)
 
     def newSerialData(self, content):
-        print(content)
+        self.graphsTabWidget.updateTabGraphs(content)
 
     def onSerialOutput(self, newLine):
         needScrolling = False

@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import time
 
+from ecom.database import CommunicationDatabase
+
 
 def load_settings(path):
     parameters = {}
@@ -82,6 +84,12 @@ def load_format(path):
         elif line[0] == 'CLOCK':
             CLOCK = line[1]
     return name, {'ID': ID, 'PIN': PIN, 'CLOCK': CLOCK, 'PATH': path, 'FILE': FILE, 'DATA': DATA}
+
+
+def loadNewFormat(path):
+    database = CommunicationDatabase(path)
+    name = os.path.basename(path)
+    return name, database
 
 
 def check_format(path):
