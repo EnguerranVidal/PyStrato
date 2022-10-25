@@ -10,8 +10,8 @@ from functools import partial
 from PyQt5.QtCore import QDateTime, QThread
 
 # --------------------- Sources ----------------------- #
+from sources.SerialGS import SerialMonitor
 from sources.common.Widgets import *
-from sources.common.DataCapture import DataWorker
 from sources.common.PacketWidgets import PacketTabWidget
 from sources.common.GraphWidgets import GraphTabWidget
 from sources.common.parameters import load_settings, save_settings, check_format
@@ -52,24 +52,20 @@ class PyGS(QMainWindow):
         if not os.path.exists('OUTPUT'):
             file = open("output", "w").close()
         self.serial = None
-        self.pid = None
         self.available_ports = None
         self.packetTabList = []
         self.graphsTabList = []
         self.serialWindow = SerialWindow()
+        self.serialWindow.textedit.setDisabled(True)
 
         self.serialMonitorTimer = QTimer()
-        self.serialMonitorTimer.timeout.connect(self.checkSubProcess)
-        self.outputLines = 0
+        self.serialMonitorTimer.timeout.connect(self.checkSerialMonitor)
         self.serialMonitorTimer.start(100)
         self.newFormatWindow = None
         self.newGraphWindow = None
         self.newPlotWindow = None
         self.changeHeaderWindow = None
         self.trackedFormatsWindow = None
-
-        self.dataCaptureWorker = None
-        self.dataCaptureThread = None
 
         # Initialize Interface
         self._checkEnvironment()
@@ -432,20 +428,11 @@ class PyGS(QMainWindow):
         if sb == QMessageBox.Yes:
             serialPath = os.path.join(self.current_dir, "sources/SerialGS.py")
             if os.path.exists(serialPath):
-                self.serial = subprocess.Popen([sys.executable, serialPath])
-                self.pid = self.serial.pid
+                self.serial = SerialMonitor(self.current_dir)
                 self.serialWindow.textedit.setDisabled(False)
-                # Data Retrieving from Thread/Worker
-                self.dataCaptureThread = QThread()
-                self.dataCaptureWorker = DataWorker(self.current_dir)
-                self.dataCaptureWorker.moveToThread(self.dataCaptureThread)
-                self.dataCaptureThread.started.connect(self.dataCaptureWorker.run)
-                self.dataCaptureWorker.finished.connect(self.dataCaptureThread.quit)
-                self.dataCaptureWorker.finished.connect(self.dataCaptureWorker.deleteLater)
-                self.dataCaptureThread.finished.connect(self.dataCaptureThread.deleteLater)
-                self.dataCaptureWorker.progress.connect(self.dataCaptureUpdated)
-                self.dataCaptureThread.start()
-
+                self.serial.output.connect(self.onSerialOutput)
+                self.serial.progress.connect(self.newSerialData)
+                self.serial.start()
             else:
                 cancelling = MessageBox()
                 cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
@@ -457,12 +444,23 @@ class PyGS(QMainWindow):
 
     def stopSerial(self):
         if self.serial is not None:
-            self.serial.kill()
-            self.serial.terminate()
-            time.sleep(0.5)
+            self.serial.interrupt()
             self.serial = None
+            time.sleep(0.5)
             self.serialWindow.textedit.setDisabled(True)
-            self.dataCaptureWorker.interrupt()
+
+    def newSerialData(self, content):
+        print(content)
+
+    def onSerialOutput(self, newLine):
+        needScrolling = False
+        value = self.serialWindow.textedit.verticalScrollBar().maximum()
+        if self.serialWindow.textedit.verticalScrollBar().value() == value:
+            needScrolling = True
+        self.serialWindow.textedit.append(newLine + '\n')
+        if bool(self.settings["AUTOSCROLL"]) and needScrolling:
+            value = self.serialWindow.textedit.verticalScrollBar().maximum()
+            self.serialWindow.textedit.verticalScrollBar().setValue(value)
 
     def dataCaptureUpdated(self, content):
         self.graphsTabWidget.updateTabGraphs(content)
@@ -571,29 +569,11 @@ class PyGS(QMainWindow):
             self.stopSerial()
             self.startSerial()
 
-    def checkSubProcess(self):
+    def checkSerialMonitor(self):
         self.settings = load_settings("settings")
-        if self.serial is not None and self.serial.poll() is not None:
+        if self.serial is not None and not self.serial.isRunning():
             self.stopSerial()
             self.serialWindow.textedit.setDisabled(True)
-        elif self.serial is not None and self.serial.poll() is None:
-            with open(self.settings["OUTPUT_FILE"], "r") as file:
-                lines = file.readlines()
-            if len(lines) != self.outputLines:
-                needScrolling = False
-                value = self.serialWindow.textedit.verticalScrollBar().maximum()
-                if self.serialWindow.textedit.verticalScrollBar().value() == value:
-                    needScrolling = True
-                if len(lines) == 0:
-                    self.serialWindow.textedit.setText('')
-                else:
-                    self.serialWindow.textedit.append(lines[-1])
-                self.outputLines = len(lines)
-                if bool(self.settings["AUTOSCROLL"]) and needScrolling:
-                    value = self.serialWindow.textedit.verticalScrollBar().maximum()
-                    self.serialWindow.textedit.verticalScrollBar().setValue(value)
-        else:
-            pass
 
     def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()

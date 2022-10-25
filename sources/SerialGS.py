@@ -1,6 +1,7 @@
 import csv
 import os
 from datetime import datetime
+from PyQt5.QtCore import pyqtSignal, QThread
 
 from ecom.database import CommunicationDatabase
 from ecom.parser import TelemetryParser
@@ -11,9 +12,48 @@ import time
 from sources.common.parameters import load_settings, load_format
 
 
-class OldParser:
-    def __init__(self):
+class SerialMonitor(QThread):
+    progress = pyqtSignal(dict)
+    output = pyqtSignal(str)
+
+    def __init__(self, path):
         super().__init__()
+        self.currentDir = path
+        self._active = False
+        self.settings = load_settings('settings')
+        self.dataDir = os.path.join(self.currentDir, 'data')
+        self.formatDir = os.path.join(self.currentDir, 'formats')
+
+    def run(self):
+        connection = Serial(self.settings['SELECTED_PORT'], self.settings['SELECTED_BAUD'], timeout=1)
+        self.output.emit("Connected to port " + self.settings['SELECTED_PORT'] + " with baud rate of " +
+                         self.settings['SELECTED_BAUD'] + ".")
+        database = CommunicationDatabase(os.path.join(self.currentDir, 'communication'))
+        parsers = [OldParser(self.output), TelemetryParser(database)]
+        self._active = True
+        while self._active:
+            pass
+            received = connection.read(connection.inWaiting() or 1)
+            for parser in parsers:
+                telemetries = parser.parse(received, errorHandler=lambda error: print(error))
+                if telemetries:
+                    for telemetry in telemetries:
+                        if isinstance(telemetry, dict):
+                            content = telemetry
+                        else:
+                            self.output.emit(str(telemetry))
+                            content = telemetry.data
+                        self.progress.emit(content)
+        self.finished.emit()
+
+    def interrupt(self):
+        self._active = False
+
+
+class OldParser:
+    def __init__(self, outputSignal):
+        super().__init__()
+        self._output = outputSignal
         self._buffer = ''
         self.formatDir = 'formats'
         self.dataDir = 'data'
@@ -38,9 +78,9 @@ class OldParser:
         self._buffer += str(buffer)[2:][:-1]
         lines = self._buffer.split('\\n')
         self._buffer = lines.pop()
+        packages = []
         for packet in lines:
-            with open(self.settings['OUTPUT_FILE'], "a") as file:
-                file.write(datetime.now().strftime("%H:%M:%S") + " -> " + packet + '\n')
+            self._output.emit(datetime.now().strftime("%H:%M:%S") + " -> " + packet)
             # Verifying for header
             if packet[0:len(self.settings['HEADER'])] == self.settings['HEADER']:
                 for i in range(len(self.balloonIds)):
@@ -53,12 +93,14 @@ class OldParser:
                             if pin != self.balloonPins[i]:
                                 self.saveCSV(i, content)
                                 self.balloonPins[i] = pin
+                                packages.append({self.formatHeader(i): value for i, value in enumerate(content)})
+        return packages
 
     def checkSaves(self):
         # --- Creating data directory if non-existent
         if not os.path.exists(self.dataDir):
             os.mkdir(self.dataDir)
-        backupPath = os.path.join(self.dataDir, "backups")
+        backupPath = os.path.join(self.dataDir, 'backups')
         if not os.path.exists(backupPath):
             os.mkdir(backupPath)
         # --- Creating files if non-existent
@@ -66,22 +108,21 @@ class OldParser:
         for i in range(len(self.dataFiles)):
             saveFilename = self.dataFiles[i]
             if not os.path.exists(saveFilename):
-                with open(self.settings['OUTPUT_FILE'], "a") as file:
-                    file.write("Creating the " + saveFilename + " file ..." + "\n")
+                self._output.emit('Creating the ' + saveFilename + ' file ...')
                 with open(saveFilename, "w", newline='') as file:
                     csv_writer = csv.writer(file)
                     header = self.formatHeader(names[i])
                     csv_writer.writerow(header)
 
     def formatHeader(self, i):
-        header = ["Reception Time", "UNIX"]
+        header = ['Reception Time', 'UNIX']
         keys = list(self.balloonFormats[i].keys())
         if 'CLOCK' in keys:
-            header.append("Internal Clock")
+            header.append('Internal Clock')
         if 'DATA' in keys:
             names = [name.replace('_', ' ') for name in list(self.balloonFormats[i]['DATA'].keys())]
             header += names
-        header.append("RSSI")
+        header.append('RSSI')
         return header
 
     def disassemblePacket(self, i, packet):
@@ -143,26 +184,6 @@ class OldParser:
         with open(saveFilename, "a", newline='') as file:
             csvWriter = csv.writer(file)
             csvWriter.writerow(content)
-
-
-class SerialMonitor:
-    def __init__(self):
-        self.settings = load_settings('settings')
-        self.connection = Serial(self.settings['SELECTED_PORT'], self.settings['SELECTED_BAUD'], timeout=1)
-        with open(self.settings['OUTPUT_FILE'], "a") as file:
-            file.write("Connected to port " + self.settings['SELECTED_PORT'] + " with baud rate of " +
-                       self.settings['SELECTED_BAUD'] + "." + "\n")
-
-    def startTracking(self):
-        running = True
-        database = CommunicationDatabase('communication')
-        parsers = [OldParser(), TelemetryParser(database)]
-        while running:
-            received = self.connection.read(self.connection.inWaiting() or 1)
-            for parser in parsers:
-                telemetries = parser.parse(received, errorHandler=lambda error: print(error))
-                if telemetries:
-                    print(list(telemetries))
 
 
 if __name__ == '__main__':
