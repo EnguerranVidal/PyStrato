@@ -1,0 +1,2 @@
+Name,Type,Default,Description
+verification code,uint32_t,RESET_CHIP_VERIFICATION_CODE,A code that needs to match the predefined value for the chip to get reset.

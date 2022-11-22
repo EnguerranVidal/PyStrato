@@ -1,0 +1,2 @@
+Name,Type,Default,Description
+config,ConfigurationId,,The configuration whose value will be requested.

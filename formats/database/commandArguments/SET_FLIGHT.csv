@@ -1,0 +1,3 @@
+Name,Type,Default,Description
+verification code,uint32_t,SET_FLIGHT_VERIFICATION_CODE,A code that needs to match the predefined value to confirm the change.
+enable,bool,,Whether or not flight mode should be enabled.

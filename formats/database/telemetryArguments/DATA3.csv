@@ -1,0 +1,4 @@
+Name,Type,Description
+time,ms,The current system time in milliseconds since boot.
+orientation,Quaternion,The current orientation calculated by the primary IMU using sensor fusion.
+battery level,float (volt),The voltage level of the FFU battery in volt.

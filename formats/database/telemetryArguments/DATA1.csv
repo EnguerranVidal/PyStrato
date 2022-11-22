@@ -1,0 +1,13 @@
+Name,Type,Description
+time,ms,The current system time in milliseconds since boot.
+processor temperature,celsius,The temperature of the processor in °C.
+battery temperature,celsius,The temperature read from the thermal sensor which close to the battery in °C.
+Pdu Pcb temperature,celsius,The temperature read from the thermal sensor which close to the PDU PCB in °C.
+motor controller temperature,celsius,The temperature read from the thermal sensor which close to the motor controllers in °C.
+motor bracket temperature,celsius,The temperature read from the thermal sensor which close to the motor bracket in °C.
+retention wall temperature,celsius,The temperature read from the thermal sensor which close to the retention wall in °C.
+recovery wall temperature,celsius,The temperature read from the thermal sensor which close to the recovery wall in °C.
+primary imu temperature,int8_t (celsius),The temperature of the primary IMU in °C.
+secondary imu temperature,int8_t (celsius),The temperature of the secondary IMU in °C.
+motor current,Vec3F,The current drawn by the motors in ampere.
+secondary imu rotation,Vec3F,The rotations in radians per seconds measured by the secondary IMU.

@@ -1,0 +1,7 @@
+Name,Type,Description
+time,ms,The current system time in milliseconds since boot.
+gps time,ms,The GPS time of week of the navigation epoch in milliseconds.
+longitude,deg,Longitude in degrees.
+latitude,deg,Latitude in degrees.
+height,meter,The height above the ellipsoid in meter.
+recovery state,RecoveryState,The current state of the recovery system.

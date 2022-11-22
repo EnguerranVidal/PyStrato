@@ -1,0 +1,2 @@
+Name,Type,Default,Description
+state,SystemState,,The current state of the system state machine.

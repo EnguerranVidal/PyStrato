@@ -1,0 +1,3 @@
+Name,Type,Default,Description
+config,ConfigurationId,,The configuration that will be changed.
+value,config?,,The new value of the configuration.

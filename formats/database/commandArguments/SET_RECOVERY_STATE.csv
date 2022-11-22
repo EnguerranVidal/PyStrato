@@ -1,0 +1,2 @@
+Name,Type,Default,Description
+state,RecoveryState,,The target state of the recovery system.

@@ -1,0 +1,2 @@
+Name,Type,Default,Description
+enabled,bool,,Whether or not the motor warmup sequence should be enabled.

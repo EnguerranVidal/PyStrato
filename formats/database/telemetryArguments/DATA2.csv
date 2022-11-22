@@ -1,0 +1,16 @@
+Name,Type,Description
+time,ms,The current system time in milliseconds since boot.
+primary x acceleration,mps2,The acceleration on the x (roll) axis in meters per second squared measured by the primary IMU.
+primary y acceleration,mps2,The acceleration on the y (pitch) axis in meters per second squared measured by the primary IMU.
+primary z acceleration,mps2,The acceleration on the z (yaw) axis in meters per second squared measured by the primary IMU.
+primary x magnetic force,microTesla,The magnetic force on the x (roll) axis in micro Tesla measured by the primary IMU.
+primary y magnetic force,microTesla,The magnetic force on the y (pitch) axis in micro Tesla measured by the primary IMU.
+primary z magnetic force,microTesla,The magnetic force on the z (yaw) axis in micro Tesla measured by the primary IMU.
+secondary x acceleration,mps2,The acceleration on the x (roll) axis in meters per second squared measured by the secondary IMU.
+secondary y acceleration,mps2,The acceleration on the y (pitch) axis in meters per second squared measured by the secondary IMU.
+secondary z acceleration,mps2,The acceleration on the z (yaw) axis in meters per second squared measured by the secondary IMU.
+secondary x magnetic force,microTesla,The magnetic force on the x (roll) axis in micro Tesla measured by the secondary IMU.
+secondary y magnetic force,microTesla,The magnetic force on the y (pitch) axis in micro Tesla measured by the secondary IMU.
+secondary z magnetic force,microTesla,The magnetic force on the z (yaw) axis in micro Tesla measured by the secondary IMU.
+pressure,bar,The current pressure in bar.
+state,SystemState,The current state of the system state machine.

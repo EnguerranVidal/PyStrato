@@ -1,0 +1,2 @@
+Name,Type,Description
+command number,uint8_t,The counter number of the command that this telemetry acknowledges.

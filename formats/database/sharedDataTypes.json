@@ -1,0 +1,187 @@
+{
+  "TelecommandData": {
+    "__doc__": "A telecommand send from the base.",
+    "counter": {
+      "__type__": "uint8_t",
+      "__doc__": "A number identifying this command."
+    },
+    "command": {
+      "__type__": "Telecommand",
+      "__doc__": "The type of telecommand."
+    },
+    "data": {
+      "__type__": "bytes[MAX_TELECOMMAND_DATA_SIZE]",
+      "__doc__": "The argument data for this command."
+    }
+  },
+  "GroundStationMessage": {
+    "__doc__": "A message from the base.",
+    "sync byte 1": {
+      "__type__": "uint8_t",
+      "__value__": "SYNC_BYTE_1",
+      "__doc__": "The first synchronisation byte."
+    },
+    "sync byte 2": {
+      "__type__": "uint8_t",
+      "__value__": "SYNC_BYTE_2",
+      "__doc__": "The second synchronisation byte."
+    },
+    "telecommand": {
+      "__type__": "TelecommandData",
+      "__doc__": "The telecommand that is send with this message."
+    },
+    "checksum": {
+      "__type__": "uint16_t",
+      "__doc__": "The checksum of the message.\nThe two sync bytes and the checksum itself are not included in the checksum."
+    }
+  },
+  "TelemetryMessageHeader": {
+    "__doc__": "The header of a message for the base.",
+    "sync byte 1": {
+      "__type__": "uint8_t",
+      "__value__": "SYNC_BYTE_1",
+      "__doc__": "The first synchronisation byte."
+    },
+    "sync byte 2": {
+      "__type__": "uint8_t",
+      "__value__": "SYNC_BYTE_2",
+      "__doc__": "The second synchronisation byte."
+    },
+    "checksum": {
+      "__type__": "uint16_t",
+      "__doc__": "The checksum of the message.\nThe two sync bytes and the checksum are not included in the checksum, but the telemetry data is included."
+    },
+    "type": {
+      "__type__": "TelemetryType",
+      "__doc__": "The type of telemetry that is send in this message."
+    }
+  },
+  "Quaternion": {
+    "__doc__": "A quaternion representing a direction in space.",
+    "x": "double",
+    "y": "double",
+    "z": "double",
+    "w": "double"
+  },
+  "SystemState": {
+    "__doc__": "Possible states of the system.",
+    "__type__": "uint8_t",
+    "__values__": {
+      "STATE_IDLE": {
+        "__doc__": "The system is inactive and waiting for a new command."
+      },
+      "STATE_PRE_LAUNCH": {
+        "__doc__": "The system is awaiting the launch."
+      },
+      "STATE_LAUNCH": {
+        "__doc__": "The system is in the launch state and reacting to signals from the rocket."
+      },
+      "STATE_EXPERIMENT": {
+        "__doc__": "The system is free falling performing the experiment."
+      },
+      "STATE_RECOVERY": {
+        "__doc__": "The system is inactive and transmitting location updates."
+      },
+      "STATE_PAYLOAD_OFF": {
+        "__doc__": "The system is inactive and the payload is shut off."
+      },
+      "STATE_TESTING": {
+        "__doc__": "The system is in a testing state."
+      }
+    }
+  },
+  "RecoveryState": {
+    "__doc__": "State of the recovery subsystem.",
+    "__type__": "uint8_t",
+    "__values__": {
+      "RECOVERY_START": {
+        "__doc__": "The system is in startup and waiting for ejection."
+      },
+      "RECOVERY_FLIGHT": {
+        "__doc__": "The system is in flight and is waiting to trigger the parachutes."
+      },
+      "RECOVERY_COMMANDED": {
+        "__doc__": "The system has triggered the parachutes."
+      },
+      "RECOVERY_DESCENDING": {
+        "__doc__": "The system is descending with the parachutes."
+      },
+      "RECOVERY_LANDED": {
+        "__doc__": "The system has landed on the ground."
+      },
+      "RECOVERY_STAYING_ALIVE": {
+        "__doc__": "The system is reducing activity to save battery."
+      }
+    }
+  },
+  "MessageType": {
+    "__doc__": "A type of a telemetry message.",
+    "__type__": "uint8_t",
+    "__values__": {
+      "DEBUG_MESSAGE": {
+        "__doc__": "A verbose message that will only be sent if the testing pin is set."
+      },
+      "INFO_MESSAGE": {
+        "__doc__": "An informational message."
+      },
+      "ERROR_MESSAGE": {
+        "__doc__": "A message indicating an error or failure."
+      },
+      "CRITICAL_ERROR_MESSAGE": {
+        "__doc__": "A message indicating a critical error or failure."
+      }
+    }
+  },
+  "AdcsMode": {
+    "__doc__": "The modes the ADCS can run in.",
+    "__type__": "uint8_t",
+    "__values__": {
+      "MODE_OFF": {
+        "__doc__": "The ADCS system is off. The motors are not commanded."
+      },
+      "MODE_SPIN_UP": {
+        "__doc__": "The system tries to spin up the motors according to a predefined spin up sequence."
+      },
+      "MODE_WARM_UP": {
+        "__doc__": "The system tries to spin the motors to warm them up."
+      },
+      "MODE_STABILITY": {
+        "__doc__": "The system tries to reach a zero rotation state."
+      },
+      "MODE_ORIENTATION": {
+        "__doc__": "The system tries to orient itself to a given target orientation."
+      },
+      "MODE_PWM_DEBUG": {
+        "__doc__": "The ADCS commands a fixed pwm signal to the motors.\n@see setDebugPWM"
+      },
+      "MODE_RPM_DEBUG": {
+        "__doc__": "The ADCS commands a fixed rpm value to the motors."
+      },
+      "MODE_SEQ_DEBUG": {
+        "__doc__": "The ADCS commands a looping testing sequence to the motors."
+      }
+    }
+  },
+  "Vec3Int32": {
+    "__doc__": "A three dimensional vector with 32 bit numbers.",
+    "roll": "int32_t",
+    "pitch": "int32_t",
+    "yaw": "int32_t"
+  },
+  "Vec3Int32WithTime": {
+    "__doc__": "A three dimensional vector with a timestamp.",
+    "time": "ms",
+    "data": "Vec3Int32"
+  },
+  "Vec3F": {
+    "__doc__": "A three dimensional vector with floating point numbers.",
+    "roll": "float",
+    "pitch": "float",
+    "yaw": "float"
+  },
+  "Vec3FWithTime": {
+    "__doc__": "A three dimensional vector with a timestamp.",
+    "time": "ms",
+    "data": "Vec3F"
+  }
+}

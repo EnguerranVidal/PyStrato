@@ -1,0 +1,24 @@
+Name,Debug,Description,Response name, Response type,Response description
+SET_LAST_STATE,false,Set the last state that is saved in flash memory.,,,
+GET_LAST_STATE,false,Get the last state that is saved in flash memory.,last state,SystemState,The last system state.
+NEW_LOG_FILE,false,Close the current log file and switch to a new one.,,,
+RESET_CHIP,false,Initiate a reset of the board.,,,
+SET_CURRENT_STATE,false,Set the current state of the system state machine.,,,
+GET_CURRENT_STATE,false,Get the current state of the system state machine.,state,SystemState,The current system state.
+SET_FLIGHT,false,Enable the condition allow ejection of the flight unit from the rocket.,,,
+GET_FLIGHT,false,Get the flight condition state,flight mode,bool,Whether or not the flight mode is enabled.
+SET_PRE_LAUNCH_TIMER,false,Set the pre launch timer.,,,
+SET_VIDEO_ENABLED,false,Enable or disable the GoPros.,,,
+RESET_RECOVERY,false,Reset the state of the recovery thread.,,,
+MOTOR_ENABLED,false,Enable or disable all reaction wheel motors.,,,
+MOTOR_WARMUP,false,Enable or disable the motor warmup sequence.,,,
+SET_CONFIG,false,Set a configuration parameter.,,,
+GET_CONFIG,false,Request the value of a configuration item from the secondary device.,value,config?,The value of the requested configuration item.
+SET_PWM,true,Set the pwm signal that should be send if the ADCS is in "MODE_PWM_DEBUG".,,,
+SET_RPM,true,Set the rpm signal that should be send if the ADCS is in "MODE_RPM_DEBUG".,,,
+SET_ADCS_MODE,true,Set the mode of the ADC system.,,,
+DEPLOY_PARACHUTE,true,Deploy the parachute. This bypasses all software checks! Use with care!,,,
+SEND_IRIDIUM_MESSAGE,true,Send a predefined test message trough the Iridium network.,,,
+CALIBRATE_IMU,true,Initiate calibration of one of the IMUs.,calibration result,bool,Whether or not the calibration was successful.
+SET_PAYLOAD_VIDEO,true,Enable or disable the video recording by the payload.,,,
+SET_RECOVERY_STATE,true,Set the state of the recovery thread.,,,

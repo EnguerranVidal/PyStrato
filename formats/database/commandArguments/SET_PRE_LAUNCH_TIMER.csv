@@ -1,0 +1,2 @@
+Name,Type,Default,Description
+timer,ms,,The new value of the pre launch timer in milliseconds since pre-launch started.

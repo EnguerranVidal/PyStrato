@@ -1,0 +1,36 @@
+Name,Type,Default Value,Description
+parachute trigger altitude,meter,5500,The altitude in meters as determined by GPS below which the parachute should get deployed.
+parachute trigger pressure,bar,0.458,The pressure in bar below which the parachute should get deployed.
+altimeter min possible value,bar,0,"If the pressure sensor reports values below this, it will be considered broken."
+altimeter max possible value,bar,120000,"If the pressure sensor reports values above this, it will be considered broken."
+landed pressure min,bar,0.7,The pressure in bar above which the FFU can be considered to be landed.
+landed pressure max change,bar,0.01,The maximum change in pressure between measurements for which the FFU is allowed to be considered landed.
+stable pressure landed duration,ms,1000,"The duration in milliseconds for which the pressure has to be stable, in order for the FFU to be considered landed."
+recovery telemetry send period,ms,10000,The period in milliseconds at which the recovery telemetry is going to be send.
+recovery telemetry landed send period,ms,10000,The period in milliseconds at which the recovery telemetry is going to be send once the FFU landed.
+recovery telemetry staying alive send period,ms,600000,"The period in milliseconds at which the telemetry is going to be send once the recovery system is in ""staying alive"" mode."
+stay alive trigger time,ms,300000,"The time in milliseconds after landing when to switch to ""staying alive"" mode."
+parachute deploy trigger time,ms,500000,"Time in milliseconds after ejection when to trigger the parachute deployment, if it wasn't triggered before."
+required consecutive parachute deploy sensor time,ms,1000,The time in milliseconds of consecutive altimeter or GPS readings below the threshold that must be made in order to trigger the parachute deployment.
+GPS failed init wait time,ms,1000,The time in milliseconds to wait to retry a failed GPS initialization.
+landed max attitude,meter,1000,The attitude in meters given by GPS below which the FFU can be considered to be landed.
+landed max attitude change,meter,10,The maximum change in attitude read by GPS below which the FFU is allowed to be considered landed.
+stable attitude landed duration,ms,1000,"The duration in milliseconds for which the attitude read by GBS has to be stable, in order for the FFU to be considered landed."
+detumble controller p,int16_t,300,The proportional gain of the detumble controller.
+detumble controller i,int16_t,0,The integral gain of the detumble controller.
+detumble controller d,int16_t,0,The derivative gain of the detumble controller.
+orientation controller p,int16_t,10,The proportional gain of the orientation controller.
+orientation controller i,int16_t,0,The integral gain of the orientation controller.
+orientation controller d,int16_t,100,The derivative gain of the orientation controller.
+use motor speeds for controller,bool,false,Whether to use the motor speeds in the controllers.
+heartbeat period,ms,1000,How much time should pass between heartbeat messages in milliseconds.
+pre launch IMU calibration time,ms,5000,The time in milliseconds after pre launch start when the IMU calibration should happen.
+pre launch motor warmup start time,ms,10000,The time in milliseconds after pre launch start when the motor warmup sequence should be started.
+pre launch motor warmup end time,ms,20000,The time in milliseconds after pre launch start when the motor warmup sequence should end.
+min ADCS battery level,volt,10.5,The minimum battery level for which the ADCS is allowed to run.
+GoPro off time,ms,3000,The time in milliseconds for the pulse on the GoPro pin to turn the GoPros off.
+GoPro on time,ms,500,The time in milliseconds for the pulse on the GoPro pin to turn the GoPros on.
+eject ADCS start wait time,ms,1000,The time in milliseconds to wait after ejection is detected to enable the ADCS controller.
+IMU status check interval,ms,500,The interval in which the status of the IMUs is checked.
+SD Card check interval,ms,5000,The time between successive checks of the SD-Cards in milliseconds.
+initial telemetry delay,ms,50,An initial delay to wait after boot before generating telemetry.

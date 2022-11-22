@@ -1,0 +1,12 @@
+Name,Type,Description
+rpm,double,Rotations per minute.
+pwm,double,Pulse with modulation (in percent from 0 to 100).
+volt,double,Voltage.
+bar,float,Pressure.
+meter,double,A distance in meter.
+deg,double,An angle in degrees.
+sec,double,A time in seconds.
+ms,uint32_t,A time in milliseconds.
+celsius,float,A temperature in °C.
+mps2,float,An acceleration in meters per seconds squared.
+microTesla,float,Magnetic field strength in micro tesla.

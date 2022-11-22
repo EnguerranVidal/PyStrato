@@ -1,0 +1,2 @@
+Name,Type,Default,Description
+enabled,bool,,Whether or not the motors should be enabled.

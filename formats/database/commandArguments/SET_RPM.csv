@@ -1,0 +1,2 @@
+Name,Type,Default,Description
+value,rpm,,The new rpm value for the motors.
