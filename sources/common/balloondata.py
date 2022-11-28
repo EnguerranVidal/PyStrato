@@ -194,7 +194,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
                         dataPointType = 'config?'
                     else:
                         dataPointType = self._getTypeName(argument.typeInfo)
-                    default = '' if argument.default is None else str(argument.default)
+                    default = '' if argument.default is None else json.dumps(argument.default)
                     csvWriter.writerow([argument.name, dataPointType, default, argument.description])
 
     def _saveTelemetry(self, telemetriesFilePath):
