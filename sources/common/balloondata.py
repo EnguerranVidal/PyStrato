@@ -141,9 +141,9 @@ class BalloonPackageDatabase(CommunicationDatabase):
             with open(unitsFilePath, "w", newline='', encoding='utf-8') as file:
                 csvWriter = csv.writer(file)
                 csvWriter.writerow(['Name', 'Type', 'Description'])
-                for unitName, unit in self.units.items():
-                    for unitVariant in unit:
-                        csvWriter.writerow([unitVariant.name, unitVariant.baseTypeName, unitVariant.description])
+                for unitName, unitVariants in self.units.items():
+                    unit = unitVariants[0]
+                    csvWriter.writerow([unit.name, unit.baseTypeName, unit.description])
         except IOError as error:
             raise CommunicationDatabaseError(f'Error writing {unitsFilePath}: {error}')
 
@@ -238,3 +238,6 @@ class BalloonPackageDatabase(CommunicationDatabase):
         if isinstance(typeInfo, Unit) and self.units[typeName][0].baseTypeName != typeInfo.baseTypeName:
             typeName = f'{typeInfo.baseTypeName} ({typeName})'
         return typeName
+
+
+

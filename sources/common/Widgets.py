@@ -10,7 +10,7 @@ from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.widgets.RemoteGraphicsView
 
 # --------------------- Sources ----------------------- #
-from sources.common.parameters import load_settings, save_settings, load_format
+from sources.common.FileHandling import load_settings, save_settings, load_format
 
 
 ######################## CLASSES ########################
@@ -127,10 +127,10 @@ class NewPlotWindow(QWidget):
         self.setLayout(self.dlgLayout)
 
 
-class NewFormatWindow(QDialog):
+class NewPackageWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle('Create New Format')
+        self.setWindowTitle('Create New Package')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.dataChanged = False
         self.saveChanged = False
@@ -142,20 +142,11 @@ class NewFormatWindow(QDialog):
         self.dataEdit = QLineEdit()
         self.formatEdit = QLineEdit()
         self.formLayout.addRow('Name:', self.nameEdit)
-        self.formLayout.addRow('Data File:', self.dataEdit)
-        self.formLayout.addRow('Save File:', self.formatEdit)
         self.dlgLayout.addLayout(self.formLayout)
         self.buttons = QDialogButtonBox()
         self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         self.dlgLayout.addWidget(self.buttons)
         self.setLayout(self.dlgLayout)
-
-    def editLineEdits(self):
-        name = self.nameEdit.text()
-        if len(name) == 0:
-            name = 'Example'
-        self.dataEdit.setText(name.capitalize() + 'Data' + '.csv')
-        self.formatEdit.setText(name.capitalize() + 'Format' + '.config')
 
 
 class HeaderChangeWindow(QWidget):
@@ -179,7 +170,7 @@ class TrackedBalloonsWindow(QWidget):
     def __init__(self, path, parent=None):
         super().__init__(parent)
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "formats")
+        self.format_path = os.path.join(self.current_dir, "databases")
         self.setWindowTitle('Tracked Balloons')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.settings = load_settings("settings")

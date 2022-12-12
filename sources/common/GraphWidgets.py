@@ -18,7 +18,7 @@ from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.widgets.RemoteGraphicsView
 
 # --------------------- Sources ----------------------- #
-from sources.common.parameters import load_settings, load_format, retrieveCSVData, loadNewFormat
+from sources.common.FileHandling import load_settings, load_format, retrieveCSVData, loadDatabase
 from sources.common.Widgets import QCustomTabWidget
 
 
@@ -28,7 +28,7 @@ class GraphTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "formats")
+        self.format_path = os.path.join(self.current_dir, "databases")
         self.formats = {}
         self.settings = {}
         self.content = ContentStorage(self.current_dir)
@@ -84,7 +84,7 @@ class GraphTabWidget(QMainWindow):
         for file in files:
             path = os.path.join(self.format_path, file)
             if os.path.isdir(path):
-                name, formatLine = loadNewFormat(path)
+                name, formatLine = loadDatabase(path)
             else:
                 name, formatLine = load_format(path)
             # Getting Format Into ComboBox
@@ -113,7 +113,7 @@ class GraphDockArea(QMainWindow):
         super(QMainWindow, self).__init__()
         self.currentDir = path
         self.dataDir = os.path.join(self.currentDir, 'data')
-        self.formatDir = os.path.join(self.currentDir, 'formats')
+        self.formatDir = os.path.join(self.currentDir, 'databases')
         self.settings = load_settings('settings')
         self.area = DockArea()
         self.setCentralWidget(self.area)
@@ -136,6 +136,7 @@ class GraphDockArea(QMainWindow):
 
 class ContentStorage:
     def __init__(self, path):
+        self.settings = load_settings('settings')
         self.currentDir = path
         self.storage = {}
 
@@ -143,9 +144,9 @@ class ContentStorage:
         self.settings = load_settings('settings')
         paths = self.settings['FORMAT_FILES']
         for path in paths:
-            path = os.path.join(self.currentDir, 'formats', path)
+            path = os.path.join(self.currentDir, 'databases', path)
             if os.path.isdir(path):
-                name, database = loadNewFormat(path)
+                name, database = loadDatabase(path)
                 self.storage[name] = {
                     telemetryType.id.name: {
                         dataPoint.name: []
@@ -164,7 +165,7 @@ class DockGraphRemote(Dock):
     def __init__(self, path, name, size, closable):
         Dock.__init__(self, name, size=size, closable=closable)
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "formats")
+        self.format_path = os.path.join(self.current_dir, "databases")
         self.settings = load_settings('settings')
         self.setAcceptDrops(True)
         self.plottingView = pg.widgets.RemoteGraphicsView.RemoteGraphicsView()
@@ -187,7 +188,7 @@ class DockGraphRemote(Dock):
         item = model.item(0, 0)
         parent = event.source()
         databaseName = parent.selectedBalloon
-        database = CommunicationDatabase(os.path.join(self.current_dir, 'formats', databaseName))
+        database = CommunicationDatabase(os.path.join(self.current_dir, 'databases', databaseName))
         for telemetryType in database.telemetryTypes:
             if telemetryType.id.name != parent.selectedPackage:
                 continue
@@ -236,7 +237,7 @@ class DockGraphRemote(Dock):
         # indices = []
         # for i in range(len(self.trackedValues)):
         #     item = self.trackedValues[i]
-        #     values = list(self.formats[item[1]]['DATA'].keys())
+        #     values = list(self.databases[item[1]]['DATA'].keys())
         #     if item[0] not in values:
         #         indices.append(i)
         # for index in sorted(indices, reverse=True):
@@ -247,7 +248,7 @@ class DockGraphDateTime(Dock):
     def __init__(self, path, name, size, closable, content=None):
         Dock.__init__(self, name, size=size, closable=closable)
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "formats")
+        self.format_path = os.path.join(self.current_dir, "databases")
         self.settings = load_settings('settings')
         self.setAcceptDrops(True)
         self.plotWidget = pg.PlotWidget(axisItems={'bottom': pg.DateAxisItem()})

@@ -9,7 +9,7 @@ from serial import Serial
 import time
 
 # --------------------- Sources ----------------------- #
-from sources.common.parameters import load_settings, load_format, loadNewFormat
+from sources.common.FileHandling import load_settings, load_format, loadDatabase
 
 
 class SerialMonitor(QThread):
@@ -22,7 +22,7 @@ class SerialMonitor(QThread):
         self._active = False
         self.settings = load_settings('settings')
         self.dataDir = os.path.join(self.currentDir, 'data')
-        self.formatDir = os.path.join(self.currentDir, 'formats')
+        self.formatDir = os.path.join(self.currentDir, 'databases')
 
     def run(self):
         connection = Serial(self.settings['SELECTED_PORT'], self.settings['SELECTED_BAUD'], timeout=1)
@@ -30,9 +30,9 @@ class SerialMonitor(QThread):
                          self.settings['SELECTED_BAUD'] + ".")
         parsers = {}
         for path in self.settings['FORMAT_FILES']:
-            path = os.path.join(self.currentDir, 'formats', path)
+            path = os.path.join(self.currentDir, 'databases', path)
             if os.path.isdir(path):
-                name, database = loadNewFormat(path)
+                name, database = loadDatabase(path)
                 parsers[name] = TelemetryParser(database)
             else:
                 name, _ = load_format(path)
@@ -63,7 +63,7 @@ class OldParser:
         super().__init__()
         self._output = outputSignal
         self._buffer = ''
-        self.formatDir = 'formats'
+        self.formatDir = 'databases'
         self.dataDir = 'data'
         self.settings = load_settings('settings')
         self.balloonFormats = {}

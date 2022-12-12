@@ -1,10 +1,48 @@
+import dataclasses
 import os
 import csv
 import pandas as pd
 import numpy as np
 import time
 
-from ecom.database import CommunicationDatabase
+from ecom.database import CommunicationDatabase, Unit
+from ecom.datatypes import TypeInfo, DefaultValueInfo
+
+from sources.common.balloondata import BalloonPackageDatabase
+
+
+def loadDatabase(path):
+    database = BalloonPackageDatabase(path)
+    name = os.path.basename(path)
+    return name, database
+
+
+def testSaving(path):
+    database = BalloonPackageDatabase(path)
+
+    ### ADDING CONSTANTS ###
+    typeName = 'uint32_t'
+    uint32Type = TypeInfo(TypeInfo.lookupBaseType(typeName), typeName, typeName)
+    database.constants['someConstant'] = 1, 'some description', uint32Type
+
+    ### ADDING UNITS ###
+    unitName = 'unit1'
+    database.units[unitName] = [Unit.fromTypeInfo(unitName, uint32Type, 'Some unit')]
+    unitName = 'unit2'
+    x = '10'
+    if x:
+        default = DefaultValueInfo(int(x))
+    else:
+        default = None
+    database.units[unitName] = [Unit(TypeInfo.lookupBaseType(typeName), unitName, typeName, 'Some unit', default=default)]
+
+    ### EDITING UNITS ###
+    unitName = 'ms'
+    database.units[unitName][0] = dataclasses.replace(database.units[unitName][0], description='Something else')
+
+    database.units[unitName][0] = dataclasses.replace(database.units[unitName][0], type=int, baseTypeName='uint16_t')
+
+    database.save(path + '1')
 
 
 def load_settings(path):
@@ -84,12 +122,6 @@ def load_format(path):
         elif line[0] == 'CLOCK':
             CLOCK = line[1]
     return name, {'ID': ID, 'PIN': PIN, 'CLOCK': CLOCK, 'PATH': path, 'FILE': FILE, 'DATA': DATA}
-
-
-def loadNewFormat(path):
-    database = CommunicationDatabase(path)
-    name = os.path.basename(path)
-    return name, database
 
 
 def check_format(path):

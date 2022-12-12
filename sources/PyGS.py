@@ -14,7 +14,7 @@ from sources.SerialGS import SerialMonitor
 from sources.common.Widgets import *
 from sources.common.PacketWidgets import PacketTabWidget
 from sources.common.GraphWidgets import GraphTabWidget
-from sources.common.parameters import load_settings, save_settings, check_format
+from sources.common.FileHandling import load_settings, save_settings, check_format
 
 
 ######################## CLASSES ########################
@@ -22,7 +22,7 @@ class PyGS(QMainWindow):
     def __init__(self, path):
         super().__init__()
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "formats")
+        self.format_path = os.path.join(self.current_dir, "databases")
         self.data_path = os.path.join(self.current_dir, "data")
         self.backup_path = os.path.join(self.data_path, "backups")
         # Main Window Settings
@@ -49,8 +49,6 @@ class PyGS(QMainWindow):
         self.statusDateTimer.start(0)
 
         ##################  VARIABLES  ##################
-        if not os.path.exists('OUTPUT'):
-            file = open("output", "w").close()
         self.serial = None
         self.available_ports = None
         self.packetTabList = []
@@ -267,16 +265,14 @@ class PyGS(QMainWindow):
         self.move(frameGeometry.topLeft())
 
     def newFormatTab(self):
-        self.newFormatWindow = NewFormatWindow()
+        self.newFormatWindow = NewPackageWindow()
         self.newFormatWindow.buttons.accepted.connect(self.acceptNewFormatTab)
         self.newFormatWindow.buttons.rejected.connect(self.newFormatWindow.close)
         self.newFormatWindow.show()
 
     def acceptNewFormatTab(self):
         name = self.newFormatWindow.nameEdit.text()
-        configFile = self.newFormatWindow.formatEdit.text()
-        saveFile = self.newFormatWindow.dataEdit.text()
-        self.packetTabWidget.newFormat(name, configFile, saveFile)
+        self.packetTabWidget.newFormat(name)
         self.newFormatWindow.close()
 
     def newGraphTab(self):
@@ -335,19 +331,17 @@ class PyGS(QMainWindow):
         self.newGraphWindow.close()
 
     def openFormatTab(self):
-        if os.path.exists(os.path.join(self.current_dir, 'formats')):
-            path = QFileDialog.getOpenFileName(self, 'Open Packet Format', self.format_path)
+        if os.path.exists(os.path.join(self.current_dir, 'databases')):
+            path = QFileDialog.getExistingDirectory(self, "Select Directory", self.format_path)
         else:
-            path = QFileDialog.getOpenFileName(self, 'Open Packet Format')
-        if path[0] != '' and os.path.exists(path[0]):
-            self.packetTabWidget.openFormat(path[0])
-            self.addToRecent(path[0])
+            path = QFileDialog.getExistingDirectory(self, "Select Directory")
+        self.packetTabWidget.openFormat(path)
+        self.addToRecent(path)
 
     def addToRecent(self, path):
         self.settings['OPENED_RECENTLY'].insert(0, path)
         openedRecently = []
         for i in range(len(self.settings['OPENED_RECENTLY'])):
-            print(self.settings['OPENED_RECENTLY'][i], self.settings['OPENED_RECENTLY'][i] not in openedRecently)
             if self.settings['OPENED_RECENTLY'][i] not in openedRecently:
                 openedRecently.append(self.settings['OPENED_RECENTLY'][i])
         self.settings['OPENED_RECENTLY'] = openedRecently
@@ -487,7 +481,7 @@ class PyGS(QMainWindow):
         else:
             self.recentMenu.setDisabled(False)
         # SAVE AND CLOSE ACTIONS
-        if len(list(self.packetTabWidget.formats.keys())) == 0:
+        if len(list(self.packetTabWidget.databases.keys())) == 0:
             self.saveFormatAction.setDisabled(True)
             self.saveAllFormatAction.setDisabled(True)
             self.saveAsFormatAction.setDisabled(True)
@@ -596,7 +590,6 @@ class PyGS(QMainWindow):
                                      QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.stopSerial()
-            os.remove("output")
             time.sleep(0.5)
             self.serialMonitorTimer.stop()
             for window in QApplication.topLevelWidgets():
