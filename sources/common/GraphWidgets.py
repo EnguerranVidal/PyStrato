@@ -28,7 +28,7 @@ class GraphTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "databases")
+        self.format_path = os.path.join(self.current_dir, "formats")
         self.formats = {}
         self.settings = {}
         self.content = ContentStorage(self.current_dir)
@@ -113,7 +113,7 @@ class GraphDockArea(QMainWindow):
         super(QMainWindow, self).__init__()
         self.currentDir = path
         self.dataDir = os.path.join(self.currentDir, 'data')
-        self.formatDir = os.path.join(self.currentDir, 'databases')
+        self.formatDir = os.path.join(self.currentDir, 'formats')
         self.settings = load_settings('settings')
         self.area = DockArea()
         self.setCentralWidget(self.area)
@@ -144,7 +144,7 @@ class ContentStorage:
         self.settings = load_settings('settings')
         paths = self.settings['FORMAT_FILES']
         for path in paths:
-            path = os.path.join(self.currentDir, 'databases', path)
+            path = os.path.join(self.currentDir, 'formats', path)
             if os.path.isdir(path):
                 name, database = loadDatabase(path)
                 self.storage[name] = {
@@ -165,7 +165,7 @@ class DockGraphRemote(Dock):
     def __init__(self, path, name, size, closable):
         Dock.__init__(self, name, size=size, closable=closable)
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "databases")
+        self.format_path = os.path.join(self.current_dir, "formats")
         self.settings = load_settings('settings')
         self.setAcceptDrops(True)
         self.plottingView = pg.widgets.RemoteGraphicsView.RemoteGraphicsView()
@@ -188,7 +188,7 @@ class DockGraphRemote(Dock):
         item = model.item(0, 0)
         parent = event.source()
         databaseName = parent.selectedBalloon
-        database = CommunicationDatabase(os.path.join(self.current_dir, 'databases', databaseName))
+        database = CommunicationDatabase(os.path.join(self.current_dir, 'formats', databaseName))
         for telemetryType in database.telemetryTypes:
             if telemetryType.id.name != parent.selectedPackage:
                 continue
@@ -248,7 +248,7 @@ class DockGraphDateTime(Dock):
     def __init__(self, path, name, size, closable, content=None):
         Dock.__init__(self, name, size=size, closable=closable)
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "databases")
+        self.format_path = os.path.join(self.current_dir, "formats")
         self.settings = load_settings('settings')
         self.setAcceptDrops(True)
         self.plotWidget = pg.PlotWidget(axisItems={'bottom': pg.DateAxisItem()})

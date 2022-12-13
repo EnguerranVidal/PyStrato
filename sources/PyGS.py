@@ -22,7 +22,7 @@ class PyGS(QMainWindow):
     def __init__(self, path):
         super().__init__()
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "databases")
+        self.format_path = os.path.join(self.current_dir, "formats")
         self.data_path = os.path.join(self.current_dir, "data")
         self.backup_path = os.path.join(self.data_path, "backups")
         # Main Window Settings
@@ -331,7 +331,7 @@ class PyGS(QMainWindow):
         self.newGraphWindow.close()
 
     def openFormatTab(self):
-        if os.path.exists(os.path.join(self.current_dir, 'databases')):
+        if os.path.exists(self.format_path):
             path = QFileDialog.getExistingDirectory(self, "Select Directory", self.format_path)
         else:
             path = QFileDialog.getExistingDirectory(self, "Select Directory")

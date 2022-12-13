@@ -10,7 +10,7 @@ from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.widgets.RemoteGraphicsView
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, save_settings, load_format
+from sources.common.FileHandling import load_settings, save_settings
 
 
 ######################## CLASSES ########################
@@ -18,6 +18,7 @@ from sources.common.FileHandling import load_settings, save_settings, load_forma
 
 class SerialWindow(QWidget):
     sendCommand = pyqtSignal(str)
+
     def __init__(self):
         super(SerialWindow, self).__init__()
         self.resize(450, 350)
@@ -170,7 +171,7 @@ class TrackedBalloonsWindow(QWidget):
     def __init__(self, path, parent=None):
         super().__init__(parent)
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "databases")
+        self.format_path = os.path.join(self.current_dir, "formats")
         self.setWindowTitle('Tracked Balloons')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.settings = load_settings("settings")
@@ -206,22 +207,18 @@ class TrackedBalloonsWindow(QWidget):
         trackedFormats = self.settings['FORMAT_FILES']
         if len(trackedFormats) == 1 and len(trackedFormats[0]) == 0:
             trackedFormats = []
-        availableFormats = [file for file in os.listdir(path) if os.path.isfile(os.path.join(path, file))]
+        availableFormats = [directory for directory in os.listdir(path) if os.path.isdir(os.path.join(path, directory))]
         # Get NAMES for later uses
-        for i in availableFormats:
-            self.names[self.formatName(i)] = i
-        for i in trackedFormats:
-            if i in availableFormats:
-                availableFormats.remove(i)
+        for directory in availableFormats:
+            self.names[os.path.basename(directory)] = directory
+        for directory in trackedFormats:
+            if directory in availableFormats:
+                availableFormats.remove(directory)
         # Fill both lists
-        for i in trackedFormats:
-            self.selectedList.addItem(self.formatName(i))
-        for i in availableFormats:
-            self.availableList.addItem(self.formatName(i))
-
-    def formatName(self, file):
-        balloon = load_format(os.path.join(self.format_path, file))
-        return balloon[0]
+        for directory in trackedFormats:
+            self.selectedList.addItem(os.path.basename(directory))
+        for directory in availableFormats:
+            self.availableList.addItem(os.path.basename(directory))
 
     def getListedValues(self):
         trackedFormats = []

@@ -120,6 +120,7 @@ class UnitsWidget(QMainWindow):
         self.rowWidgets = {'SELECTION': [], 'UNIT NAME': [], 'UNIT TYPE': [], 'DESCRIPTION': []}
 
     def removeSelected(self):
+
         pass
 
     def addNewUnit(self):
