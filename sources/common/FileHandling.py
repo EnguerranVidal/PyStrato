@@ -13,7 +13,7 @@ from sources.common.balloondata import BalloonPackageDatabase
 
 def loadDatabase(path):
     database = BalloonPackageDatabase(path)
-    name = os.path.basename(path)
+    name = (path)
     return name, database
 
 
