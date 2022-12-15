@@ -18,8 +18,9 @@ from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.widgets.RemoteGraphicsView
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, load_format, retrieveCSVData, loadDatabase
+from sources.common.FileHandling import load_settings, load_format, retrieveCSVData
 from sources.common.Widgets import QCustomTabWidget
+from sources.common.balloondata import BalloonPackageDatabase
 
 
 ######################## CLASSES ########################
@@ -83,12 +84,8 @@ class GraphTabWidget(QMainWindow):
         self.formats = {}
         for file in files:
             path = os.path.join(self.format_path, file)
-            if os.path.isdir(path):
-                name, formatLine = loadDatabase(path)
-            else:
-                name, formatLine = load_format(path)
-            # Getting Format Into ComboBox
-            self.formats[name] = formatLine
+            name, database = os.path.basename(path), BalloonPackageDatabase(path)
+            self.formats[name] = database
         self.valuesMenu.trackedComboBox.clear()
         names = list(self.formats.keys())
         if len(names) != 0:
@@ -146,7 +143,7 @@ class ContentStorage:
         for path in paths:
             path = os.path.join(self.currentDir, 'formats', path)
             if os.path.isdir(path):
-                name, database = loadDatabase(path)
+                name, database = os.path.basename(path), BalloonPackageDatabase(path)
                 self.storage[name] = {
                     telemetryType.id.name: {
                         dataPoint.name: []

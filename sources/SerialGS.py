@@ -9,7 +9,8 @@ from serial import Serial
 import time
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, load_format, loadDatabase
+from sources.common.FileHandling import load_settings, load_format
+from sources.common.balloondata import BalloonPackageDatabase
 
 
 class SerialMonitor(QThread):
@@ -32,7 +33,7 @@ class SerialMonitor(QThread):
         for path in self.settings['FORMAT_FILES']:
             path = os.path.join(self.currentDir, 'databases', path)
             if os.path.isdir(path):
-                name, database = loadDatabase(path)
+                name, database = os.path.basename(path), BalloonPackageDatabase(path)
                 parsers[name] = TelemetryParser(database)
             else:
                 name, _ = load_format(path)

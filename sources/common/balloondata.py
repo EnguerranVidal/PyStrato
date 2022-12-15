@@ -239,5 +239,9 @@ class BalloonPackageDatabase(CommunicationDatabase):
             typeName = f'{typeInfo.baseTypeName} ({typeName})'
         return typeName
 
+    def getTypeName(self, typeInfo):
+        return self._getTypeName(typeInfo)
+
+
 
 

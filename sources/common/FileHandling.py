@@ -11,12 +11,6 @@ from ecom.datatypes import TypeInfo, DefaultValueInfo
 from sources.common.balloondata import BalloonPackageDatabase
 
 
-def loadDatabase(path):
-    database = BalloonPackageDatabase(path)
-    name = (path)
-    return name, database
-
-
 def testSaving(path):
     database = BalloonPackageDatabase(path)
 

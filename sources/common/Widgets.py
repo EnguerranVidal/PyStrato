@@ -168,18 +168,18 @@ class HeaderChangeWindow(QWidget):
 
 
 class TrackedBalloonsWindow(QWidget):
-    def __init__(self, path, parent=None):
-        super().__init__(parent)
+    def __init__(self, path):
+        super().__init__()
         self.current_dir = path
         self.format_path = os.path.join(self.current_dir, "formats")
         self.setWindowTitle('Tracked Balloons')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.settings = load_settings("settings")
         # Selected Balloon List
-        self.selectedList = BalloonsListWidget(self.current_dir)
+        self.selectedList = BalloonsListWidget()
         self.selectedLabel = QLabel('Tracked Formats')
         # Trackable Balloons List
-        self.availableList = BalloonsListWidget(self.current_dir)
+        self.availableList = BalloonsListWidget()
         self.availableLabel = QLabel('Available Formats')
         # General Layout
         layout = QVBoxLayout()
@@ -229,9 +229,8 @@ class TrackedBalloonsWindow(QWidget):
 
 
 class BalloonsListWidget(QListWidget):
-    def __init__(self, path):
+    def __init__(self):
         super(QListWidget, self).__init__()
-        self.current_dir = path
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
         self.setDragDropOverwriteMode(False)

@@ -24,6 +24,7 @@ from ecom.datatypes import TypeInfo, DefaultValueInfo
 from sources.common.FileHandling import load_format, save_format
 from sources.common.balloondata import BalloonPackageDatabase
 from sources.databases.units import UnitsWidget
+from sources.databases.configurations import ConfigurationsWidget
 
 
 ######################## CLASSES ########################
@@ -83,7 +84,8 @@ class PacketTabWidget(QMainWindow):
             if itemName == 'Constants':
                 self.setCentralWidget(QWidget(self))
             if itemName == 'Configurations':
-                self.setCentralWidget(QWidget(self))
+                self.centralWidget = ConfigurationsWidget(database=self.databases[databaseName])
+                self.setCentralWidget(self.centralWidget)
             if itemName == 'Shared Data Types':
                 self.setCentralWidget(QWidget(self))
             if itemName == 'Telemetries':
