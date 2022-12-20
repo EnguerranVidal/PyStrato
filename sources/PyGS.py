@@ -336,8 +336,9 @@ class PyGS(QMainWindow):
             path = QFileDialog.getExistingDirectory(self, "Select Directory", self.format_path)
         else:
             path = QFileDialog.getExistingDirectory(self, "Select Directory")
-        self.packetTabWidget.openFormat(path)
-        self.addToRecent(path)
+        if os.path.abspath(path) not in [os.path.abspath(self.format_path), os.path.abspath(self.current_dir)]:
+            self.packetTabWidget.openFormat(path)
+            self.addToRecent(path)
 
     def addToRecent(self, path):
         self.settings['OPENED_RECENTLY'].insert(0, path)

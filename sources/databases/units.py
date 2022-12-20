@@ -66,33 +66,31 @@ class UnitsWidget(QMainWindow):
         self.tableWidgetLayout.addWidget(self.rowWidgets['DESCRIPTION'][-1], rowCount, 3, 1, 1)
 
     def generateComboBox(self, unitType):
-        comboBox = QComboBox()
+        comboBox = QComboBox(self.tableWidget)
         comboBox.addItems(self.unitTypes)
         comboBox.setCurrentIndex(self.unitTypes.index(unitType))
         comboBox.currentIndexChanged.connect(self.unitTypeChanged)
         return comboBox
 
-    @staticmethod
-    def generateLabel(textContent):
-        label = QLabel()
+    def generateLabel(self, textContent):
+        label = QLabel(self.tableWidget)
         label.setText(textContent)
+        # label.setFixedHeight(30)
         return label
 
     def generateLineEdit(self, textContent):
-        lineEdit = QLineEdit()
+        lineEdit = QLineEdit(self.tableWidget)
         lineEdit.setText(textContent)
         lineEdit.textChanged.connect(self.descriptionChanged)
         return lineEdit
 
-    @staticmethod
-    def generateCheckBox():
-        checkbox = QCheckBox()
+    def generateCheckBox(self):
+        checkbox = QCheckBox(self.tableWidget)
         return checkbox
 
     def fillTable(self):
         ### ADD HEADER ###
-        self.headerWidget = QWidget(self.tableWidget)
-        self.tableWidgetLayout.addWidget(QWidget(), 0, 0, 1, 1)
+        self.tableWidgetLayout.addWidget(self.generateLabel(''), 0, 0, 1, 1)
         self.tableWidgetLayout.addWidget(self.generateLabel('NAME'), 0, 1, 1, 1)
         self.tableWidgetLayout.addWidget(self.generateLabel('TYPE'), 0, 2, 1, 1)
         self.tableWidgetLayout.addWidget(self.generateLabel('DESCRIPTION'), 0, 3, 1, 1)
@@ -100,12 +98,25 @@ class UnitsWidget(QMainWindow):
         for unitName, unitVariants in self.database.units.items():
             unit = unitVariants[0]
             self.addUnitRow(name=unit.name, unitType=unit.baseTypeName, description=unit.description)
+            # self.tableWidgetLayout.setRowStretch(0, 0)
 
     def cleanTable(self):
+        for i in reversed(range(1, self.tableWidgetLayout.count())):
+            self.tableWidgetLayout.itemAt(i).widget().setParent(None)
         self.rowWidgets = {'SELECTION': [], 'UNIT NAME': [], 'UNIT TYPE': [], 'DESCRIPTION': []}
 
     def removeSelected(self):
-        pass
+        # Retrieving selected units for removal
+        states = [checkbox.isChecked() for checkbox in self.rowWidgets['SELECTION']]
+        unitNames = list(self.database.units.keys())
+        removedUnits = [unitNames[i] for i in range(len(unitNames)) if states[i]]
+        if len(removedUnits) != 0:
+            # Removing selected units
+            for unit in removedUnits:
+                self.database.units.pop(unit)
+            # Refreshing Table
+            self.cleanTable()
+            self.fillTable()
 
     def addNewUnit(self):
         self.newUnitWindow = NewUnitWindow(self)
@@ -115,6 +126,7 @@ class UnitsWidget(QMainWindow):
 
     def acceptNewUnit(self):
         name = self.newUnitWindow.nameEdit.text()
+        typeName = self.newUnitWindow.comboBox.currentText()
         if name in list(self.database.units.keys()):
             messageBox = QMessageBox()
             title = "Unit Error"
@@ -125,7 +137,6 @@ class UnitsWidget(QMainWindow):
                 self.newUnitWindow.close()
                 # TODO : Add Variant creation
         else:
-            typeName = 'int8_t'
             unitType = TypeInfo(TypeInfo.lookupBaseType(typeName), typeName, typeName)
             self.database.units[name] = [Unit.fromTypeInfo(name, unitType, '')]
             self.addUnitRow(name=name, unitType=typeName, description='')
@@ -161,12 +172,17 @@ class NewUnitWindow(QDialog):
         super().__init__(parent)
         self.setWindowTitle('Add New Unit')
         # self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        unitTypes = ['int8_t', 'uint8_t', 'bool', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t',
+                     'int64_t', 'uint64_t', 'float', 'double', 'char', 'bytes']
         self.resize(400, 100)
         self.dlgLayout = QVBoxLayout()
         self.formLayout = QFormLayout()
         self.nameEdit = QLineEdit()
+        self.comboBox = QComboBox()
+        self.comboBox.addItems(unitTypes)
+        self.comboBox.setCurrentIndex(unitTypes.index('int8_t'))
         self.formLayout.addRow('Name:', self.nameEdit)
-        self.formLayout.addRow('Name:', parent.generateComboBox())
+        self.formLayout.addRow('Type:', self.comboBox)
         self.dlgLayout.addLayout(self.formLayout)
         self.buttons = QDialogButtonBox()
         self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)

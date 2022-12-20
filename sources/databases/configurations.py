@@ -18,13 +18,14 @@ from sources.common.balloondata import BalloonPackageDatabase
 class ConfigurationsWidget(QMainWindow):
     def __init__(self, database: BalloonPackageDatabase):
         super(QMainWindow, self).__init__()
-        self.headerWidget = None
+        self.newConfigWindow = None
         self.configTypeSelector = None
         self.database = database
         self.basicTypes = ['int8_t', 'uint8_t', 'bool', 'int16_t', 'uint16_t',
                            'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'float',
                            'double', 'char', 'bytes']
-
+        self.rowWidgets = {'SELECTION': [], 'CONFIG NAME': [], 'CONFIG TYPE': [],
+                           'DEFAULT VALUE': [], 'DESCRIPTION': []}
         self.centralWidget = QWidget(self)
         self.centralLayout = QVBoxLayout(self.centralWidget)
 
@@ -43,25 +44,20 @@ class ConfigurationsWidget(QMainWindow):
         self.buttonLayout = QHBoxLayout(self.buttonWidget)
         self.buttonLayout.addWidget(self.buttonAddConfig)
         self.buttonLayout.addWidget(self.buttonDeleteConfig)
+        self.buttonAddConfig.clicked.connect(self.addNewConfig)
+        self.buttonDeleteConfig.clicked.connect(self.removeSelected)
 
         self.centralLayout.addWidget(self.buttonWidget)
         self.centralLayout.addWidget(self.scrollArea)
         self.setCentralWidget(self.centralWidget)
-
-        self.buttonAddConfig.clicked.connect(self.addNewConfig)
-        self.buttonDeleteConfig.clicked.connect(self.removeSelected)
-
-        self.rowWidgets = {'SELECTION': [], 'CONFIG NAME': [], 'CONFIG TYPE': [],
-                           'DEFAULT VALUE': [],  'DESCRIPTION': []}
-
-        self.fillConfigurationsTable()
+        self.fillTable()
         self.show()
 
     def addConfigurationRow(self, name='', configType='int8_t', defaultValue='', description=''):
         newRowCount = len(self.rowWidgets['SELECTION']) + 1
         self.rowWidgets['SELECTION'].append(self.generateCheckBox())
         self.rowWidgets['CONFIG NAME'].append(self.generateLabel(name))
-        self.rowWidgets['CONFIG TYPE'].append(self.generateTypePushButton(configType, newRowCount))
+        self.rowWidgets['CONFIG TYPE'].append(self.generateTypePushButton(configType, newRowCount - 1))
         self.rowWidgets['DEFAULT VALUE'].append(self.generateDefaultEdit(configType, defaultValue))
         self.rowWidgets['DESCRIPTION'].append(self.generateLineEdit(description))
         self.tableWidgetLayout.addWidget(self.rowWidgets['SELECTION'][-1], newRowCount, 0, 1, 1)
@@ -82,14 +78,26 @@ class ConfigurationsWidget(QMainWindow):
         return label
 
     def cleanTable(self):
+        for i in reversed(range(1, self.tableWidgetLayout.count())):
+            self.tableWidgetLayout.itemAt(i).widget().setParent(None)
         self.rowWidgets = {'SELECTION': [], 'CONFIG NAME': [], 'CONFIG TYPE': [],
                            'DEFAULT VALUE': [], 'DESCRIPTION': []}
 
     def removeSelected(self):
-        pass
+        # Retrieving selected units for removal
+        states = [checkbox.isChecked() for checkbox in self.rowWidgets['SELECTION']]
+        configIndices = [i for i in range(len(states)) if states[i]]
+        if len(configIndices) != 0:
+            # Removing selected units
+            configIndices.reverse()
+            for i in configIndices:
+                self.database.configurations.pop(i)
+            # Refreshing Table
+            self.cleanTable()
+            self.fillTable()
 
     def generateTypePushButton(self, textContent, i):
-        typeButton = QPushButton()
+        typeButton = QPushButton(self.tableWidget)
         unitList = [unitName for unitName, unitVariants in self.database.units.items()]
         if textContent not in self.basicTypes and textContent not in unitList:  # Degenerate Type
             typeButton.setStyleSheet('QPushButton {color: red;}')
@@ -97,28 +105,41 @@ class ConfigurationsWidget(QMainWindow):
         typeButton.clicked.connect(lambda: self.openAvailableTypes(i))
         return typeButton
 
-    def generateDefaultEdit(self, configType, defaultValue):
+    def generateDefaultEdit(self, configType='int8_t', defaultValue=''):
+        intTypes = ['int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'int64_t', 'uint64_t']
+        floatTypes = ['float', 'double']
         if configType not in self.basicTypes:  # Must be in Units... Hopefully...
             unitList = [unitName for unitName, unitVariants in self.database.units.items()]
             if configType not in unitList:  # Unknown Unit
-                return QWidget()
+                return QWidget(self.tableWidget)
             else:
                 configType = self.database.units[configType][0].baseTypeName
         if configType == 'bool':
-            comboBox = QComboBox()
+            comboBox = QComboBox(self.tableWidget)
             comboBox.addItems(['true', 'false'])
-            comboBox.setCurrentIndex(['true', 'false'].index(defaultValue))
+            if defaultValue in ['true', 'false']:
+                comboBox.setCurrentIndex(['true', 'false'].index(defaultValue))
+            else:
+                comboBox.setCurrentIndex(0)
             return comboBox
         else:
-            lineEdit = QLineEdit()
+            lineEdit = QLineEdit(self.tableWidget)
             lineEdit.setText(str(defaultValue))
+            if configType in intTypes:
+                onlyInt = QIntValidator()
+                lineEdit.setValidator(onlyInt)
+            elif configType in floatTypes:
+                onlyFloat = QDoubleValidator()
+                locale = QLocale(QLocale.English, QLocale.UnitedStates)
+                onlyFloat.setLocale(locale)
+                onlyFloat.setNotation(QDoubleValidator.StandardNotation)
+                lineEdit.setValidator(onlyFloat)
             return lineEdit
 
-    @staticmethod
-    def generateLineEdit(textContent):
-        lineEdit = QLineEdit()
+    def generateLineEdit(self, textContent):
+        lineEdit = QLineEdit(self.tableWidget)
         lineEdit.setText(textContent)
-        # lineEdit.textChanged.connect(self.descriptionChanged)
+        lineEdit.textChanged.connect(self.descriptionChanged)
         return lineEdit
 
     def openAvailableTypes(self, i):
@@ -133,16 +154,30 @@ class ConfigurationsWidget(QMainWindow):
         self.rowWidgets['CONFIG TYPE'][i].setStyleSheet('')
         self.rowWidgets['CONFIG TYPE'][i].setText(typeName)
         # TODO CHANGE CONFIGURATION IN NATIVE DATABASE
-        # TODO CHANGE DEFAULT VALUE WIDGET TYPE BASED ON PYTHON TYPE (BOOL, STRING, FLOAT, INTEGER)
+
+        self.tableWidgetLayout.removeWidget(self.rowWidgets['DEFAULT VALUE'][i])
+        self.rowWidgets['DEFAULT VALUE'][i] = self.generateDefaultEdit(typeName, '')
+        self.tableWidgetLayout.addWidget(self.rowWidgets['DEFAULT VALUE'][i], i + 1, 3, 1, 1)
         self.configTypeSelector.close()
 
     def addNewConfig(self):
+        self.newConfigWindow = NewConfigWindow(self)
+        self.newConfigWindow.buttons.accepted.connect(self.acceptNewConfig)
+        self.newConfigWindow.buttons.rejected.connect(self.newConfigWindow.close)
+        self.newConfigWindow.show()
+
+    def acceptNewConfig(self):
+        name = self.newConfigWindow.nameEdit.text()
+        # TODO Add new config in configurations with given name and set parameters
         pass
 
-    def fillConfigurationsTable(self):
+    def descriptionChanged(self):
+        # TODO Change config description by retrieving it from lineedit
+        pass
+
+    def fillTable(self):
         ### ADD HEADER ###
-        self.headerWidget = QWidget(self.tableWidget)
-        self.tableWidgetLayout.addWidget(QWidget(), 0, 0, 1, 1)
+        self.tableWidgetLayout.addWidget(self.generateLabel(''), 0, 0, 1, 1)
         self.tableWidgetLayout.addWidget(self.generateLabel('NAME'), 0, 1, 1, 1)
         self.tableWidgetLayout.addWidget(self.generateLabel('TYPE'), 0, 2, 1, 1)
         self.tableWidgetLayout.addWidget(self.generateLabel('DEFAULT'), 0, 3, 1, 1)
@@ -167,8 +202,8 @@ class ConfigTypeSelector(QWidget):
         self.basicTypesLabel = QLabel('Basic Types')
         self.unitsList = QListWidget()
         self.unitsLabel = QLabel('Database Units')
-        self.basicTypesList.itemSelectionChanged.connect(self.selectionChanged)
-        self.unitsList.itemSelectionChanged.connect(self.selectionChanged)
+        self.basicTypesList.itemClicked.connect(self.itemClickedBasic)
+        self.unitsList.itemClicked.connect(self.itemClickedUnit)
 
         # General Layout
         centralLayout = QGridLayout()
@@ -203,8 +238,27 @@ class ConfigTypeSelector(QWidget):
         for unitName, unitVariants in self.database.units.items():
             self.unitsList.addItem(unitName)
 
-    def selectionChanged(self):
-        typeSelected = self.basicTypesList.selectedItems()
-        unitSelected = self.unitsList.selectedItems()
-        print(typeSelected)
-        print(unitSelected)
+    def itemClickedBasic(self):
+        selection = self.basicTypesList.selectedItems()
+        self.selectedLabel.setText(selection[0].text())
+
+    def itemClickedUnit(self):
+        selection = self.unitsList.selectedItems()
+        self.selectedLabel.setText(selection[0].text())
+
+
+class NewConfigWindow(QDialog):
+    def __init__(self, parent: ConfigurationsWidget):
+        super().__init__(parent)
+        self.setWindowTitle('Add New Configuration')
+        # self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.resize(400, 100)
+        self.dlgLayout = QVBoxLayout()
+        self.formLayout = QFormLayout()
+        self.nameEdit = QLineEdit()
+        self.formLayout.addRow('Name:', self.nameEdit)
+        self.dlgLayout.addLayout(self.formLayout)
+        self.buttons = QDialogButtonBox()
+        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self.dlgLayout.addWidget(self.buttons)
+        self.setLayout(self.dlgLayout)
