@@ -20,9 +20,11 @@ class UnitsWidget(QMainWindow):
         self.newUnitWindow = None
         self.headerWidget = None
         self.database = database
-        self.unitTypes = ['int8_t', 'uint8_t', 'bool', 'int16_t', 'uint16_t',
-                          'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'float',
-                          'double', 'char', 'bytes']
+        self.baseTypesValues = ['int8_t', 'uint8_t', 'bool', 'int16_t', 'uint16_t',
+                                'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'float',
+                                'double', 'char', 'bytes']
+        self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
+        self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
         self.centralWidget = QWidget(self)
         self.centralLayout = QVBoxLayout(self.centralWidget)
 
@@ -67,8 +69,8 @@ class UnitsWidget(QMainWindow):
 
     def generateComboBox(self, unitType):
         comboBox = QComboBox(self.tableWidget)
-        comboBox.addItems(self.unitTypes)
-        comboBox.setCurrentIndex(self.unitTypes.index(unitType))
+        comboBox.addItems(self.baseTypesValues)
+        comboBox.setCurrentIndex(self.baseTypesValues.index(unitType))
         comboBox.currentIndexChanged.connect(self.unitTypeChanged)
         return comboBox
 
@@ -146,7 +148,9 @@ class UnitsWidget(QMainWindow):
         for i in range(len(self.rowWidgets['DESCRIPTION'])):
             name = self.rowWidgets['UNIT NAME'][i].text()
             description = self.rowWidgets['DESCRIPTION'][i].text()
-            self.database.units[name][0] = dataclasses.replace(self.database.units[name][0], description=description)
+            for j in range(len(self.database.units[name])):
+                self.database.units[name][j] = dataclasses.replace(self.database.units[name][j],
+                                                                   description=description)
 
     def unitTypeChanged(self):
         intTypes = ['int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'int64_t', 'uint64_t']
@@ -154,7 +158,7 @@ class UnitsWidget(QMainWindow):
         stringTypes = ['char', 'bytes']
         for i in range(len(self.rowWidgets['DESCRIPTION'])):
             name = self.rowWidgets['UNIT NAME'][i].text()
-            unitType = self.rowWidgets['UNIT TYPE'][i].currentText()
+            unitType = self.rowWidgts['UNIT TYPE'][i].currentText()
             if unitType in intTypes:
                 pythonType = int
             elif unitType in floatTypes:

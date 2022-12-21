@@ -1,17 +1,38 @@
+import dataclasses
 import json
 import os
 import csv
 import shutil
 from enum import Enum
+from typing import Any, Optional, Type
 
 from ecom.database import CommunicationDatabase, CommunicationDatabaseError, Unit, ConfigurationValueResponse, \
-    ConfigurationValueArgument
+    ConfigurationValueArgument, Configuration, Telecommand
 from ecom.datatypes import TypeInfo, StructType
+from ecom.parser import TelemetryResponse, TelemetryResponseType
 
 
 class BalloonPackageDatabase(CommunicationDatabase):
     """ The shared communication database for balloon packages. Contains all information about the telecommunication.
     """
+
+    def __eq__(self, other: CommunicationDatabase):
+        print('----')
+        print(self._units == other.units)
+        print(self._constants == other.constants)
+        print(self._typeMapping == other.dataTypes)
+        print(self._telecommands == other.telecommands)
+        print(self._telemetryTypes == other.telemetryTypes)
+        print(self._configurations == other.configurations)
+        print('----')
+
+        return isinstance(other, CommunicationDatabase) and \
+            self._units == other.units and \
+            self._constants == other.constants and \
+            self._typeMapping == other.dataTypes and \
+            self._telecommands == other.telecommands and \
+            self._telemetryTypes == other.telemetryTypes and \
+            self._configurations == other.configurations
 
     def save(self, dataDirectory):
         try:
@@ -235,12 +256,52 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
     def _getTypeName(self, typeInfo):
         typeName = typeInfo.name
-        if isinstance(typeInfo, Unit) and self.units[typeName][0].baseTypeName != typeInfo.baseTypeName:
-            typeName = f'{typeInfo.baseTypeName} ({typeName})'
+        try:
+            if isinstance(typeInfo, Unit) and self.units[typeName][0].baseTypeName != typeInfo.baseTypeName:
+                typeName = f'{typeInfo.baseTypeName} ({typeName})'
+        except KeyError:
+            # Unit does not exist anymore : not searching for variants
+            pass
         return typeName
 
     def getTypeName(self, typeInfo):
         return self._getTypeName(typeInfo)
+
+    def addConfiguration(self, name: str, replaceIndex: Optional[int] = None,  **kwargs):
+        self._configurations = self._editElement(
+            name, self._configurations, Configuration, replaceIndex=replaceIndex, **kwargs)
+
+    def addTelecommand(self, name: str, replaceIndex: Optional[int] = None,  **kwargs):
+        self._telecommands = self._editElement(
+            name, self._telecommands, Telecommand, replaceIndex=replaceIndex, **kwargs)
+
+    def editTelemetry(self, name: str, replaceIndex: Optional[int] = None,  **kwargs):
+        self._telemetryTypes = self._editElement(
+            name, self._telemetryTypes, TelemetryResponseType, replaceIndex=replaceIndex, **kwargs)
+
+    @staticmethod
+    def _editElement(name: str, elements, typeClass, replaceIndex: Optional[int] = None, **kwargs):
+        for element in elements:
+            elementEnum = element.id.__class__  # type: Type[Enum]
+            break
+        else:             return
+        existingEnumNames = [config.name for config in elementEnum]
+        existingEnumNames.append(name)
+        elementEnum = Enum(elementEnum.__name__, existingEnumNames, start=0)
+        newElements = [
+            dataclasses.replace(element, id=elementId)
+            for element, elementId in zip(elements, elementEnum)
+        ]
+        newElement = typeClass(
+            id=elementEnum[name],
+            name=name,
+            **kwargs,
+        )
+        if replaceIndex is None:
+            newElements.append(newElement)
+        else:
+            newElements[replaceIndex] = newElement
+        return newElements
 
 
 

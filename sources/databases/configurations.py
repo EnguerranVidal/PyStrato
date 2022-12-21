@@ -114,7 +114,8 @@ class ConfigurationsWidget(QMainWindow):
                 return QWidget(self.tableWidget)
             else:
                 configType = self.database.units[configType][0].baseTypeName
-        if configType == 'bool':
+        configTypeInfo = self.database.getTypeInfo(configType)
+        if issubclass(configTypeInfo.type, bool):
             comboBox = QComboBox(self.tableWidget)
             comboBox.addItems(['true', 'false'])
             if defaultValue in ['true', 'false']:
@@ -123,12 +124,16 @@ class ConfigurationsWidget(QMainWindow):
                 comboBox.setCurrentIndex(0)
             return comboBox
         else:
+            # TODO add minimum maximum ranges and types to comply with C types
             lineEdit = QLineEdit(self.tableWidget)
             lineEdit.setText(str(defaultValue))
-            if configType in intTypes:
+            if issubclass(configTypeInfo.type, int):
+                # maxRange = configTypeInfo.getMaxNumericalValue(self.database)
+                # minRange = configTypeInfo.getMinNumericalValue(self.database)
+                # onlyInt = QIntValidator(minRange, maxRange)
                 onlyInt = QIntValidator()
                 lineEdit.setValidator(onlyInt)
-            elif configType in floatTypes:
+            elif issubclass(configTypeInfo.type, float):
                 onlyFloat = QDoubleValidator()
                 locale = QLocale(QLocale.English, QLocale.UnitedStates)
                 onlyFloat.setLocale(locale)
@@ -153,12 +158,38 @@ class ConfigurationsWidget(QMainWindow):
         typeName = self.configTypeSelector.selectedLabel.text()
         self.rowWidgets['CONFIG TYPE'][i].setStyleSheet('')
         self.rowWidgets['CONFIG TYPE'][i].setText(typeName)
-        # TODO CHANGE CONFIGURATION IN NATIVE DATABASE
-
+        typeInfo = self.database.getTypeInfo(self.rowWidgets['CONFIG TYPE'][i].text())
+        self.database.configurations[i] = dataclasses.replace(self.database.configurations[i], type=typeInfo)
+        config = self.database.configurations[i]
+        compatible = self.compatibleDefaultValue()
+        if not compatible:
+            defaultValue = typeInfo.type()
+            self.database.configurations[i] = dataclasses.replace(
+                self.database.configurations[i], defaultValue=defaultValue)
+        else:
+            defaultValue = self.database.configurations[i].defaultValue
         self.tableWidgetLayout.removeWidget(self.rowWidgets['DEFAULT VALUE'][i])
-        self.rowWidgets['DEFAULT VALUE'][i] = self.generateDefaultEdit(typeName, '')
+        self.rowWidgets['DEFAULT VALUE'][i] = self.generateDefaultEdit(typeName, str(defaultValue))
         self.tableWidgetLayout.addWidget(self.rowWidgets['DEFAULT VALUE'][i], i + 1, 3, 1, 1)
         self.configTypeSelector.close()
+
+    def defaultValueChanged(self):
+        for i, (defaultValueWidget, configItem) in enumerate(
+                zip(self.rowWidgets['DEFAULT VALUE'], self.database.configurations)):
+            if issubclass(configItem.type.type, bool):
+                defaultValue = self.rowWidgts['DEFAULT VALUE'][i].currentText() == 'true'  # if bool
+            else:
+                try:
+                    defaultValue = configItem.type.type(self.rowWidgts['DEFAULT VALUE'][i].text())  # else
+                except (ValueError, TypeInfo) as error:
+                    print(f'{error}')
+                    return
+            self.database.configurations[i] = dataclasses.replace(configItem, defaultValue=defaultValue)
+
+    @staticmethod
+    def compatibleDefaultValue():
+        # TODO Create Compatible verification function
+        return False
 
     def addNewConfig(self):
         self.newConfigWindow = NewConfigWindow(self)
@@ -168,12 +199,20 @@ class ConfigurationsWidget(QMainWindow):
 
     def acceptNewConfig(self):
         name = self.newConfigWindow.nameEdit.text()
-        # TODO Add new config in configurations with given name and set parameters
-        pass
+        if name in [config.name for config in self.database.configurations]:
+            pass  # TODO Open Error Message
+        typeName = 'uint8_t'
+        defaultValue = '120'
+        baseTypeInfo = TypeInfo(TypeInfo.lookupBaseType(typeName), typeName, typeName)
+        self.database.addConfiguration(name, baseTypeInfo, defaultValue)
+        self.addConfigurationRow(name, typeName, defaultValue, description='')
+        self.newConfigWindow.close()
 
     def descriptionChanged(self):
-        # TODO Change config description by retrieving it from lineedit
-        pass
+        for i, (descriptionWidget, configItem) in enumerate(
+                zip(self.rowWidgets['DESCRIPTION'], self.database.configurations)):
+            description = descriptionWidget.text()
+            self.database.configurations[i] = dataclasses.replace(configItem, description=description)
 
     def fillTable(self):
         ### ADD HEADER ###
@@ -250,15 +289,28 @@ class ConfigTypeSelector(QWidget):
 class NewConfigWindow(QDialog):
     def __init__(self, parent: ConfigurationsWidget):
         super().__init__(parent)
+        self.configTypeSelector = None
         self.setWindowTitle('Add New Configuration')
         # self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.resize(400, 100)
         self.dlgLayout = QVBoxLayout()
         self.formLayout = QFormLayout()
         self.nameEdit = QLineEdit()
+        self.typePushButton = QPushButton('int8_t')
+        self.typePushButton.clicked.connect(self.openAvailableTypes)
+        self.defaultValueEdit = QLineEdit()
         self.formLayout.addRow('Name:', self.nameEdit)
         self.dlgLayout.addLayout(self.formLayout)
         self.buttons = QDialogButtonBox()
         self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         self.dlgLayout.addWidget(self.buttons)
         self.setLayout(self.dlgLayout)
+
+    def openAvailableTypes(self):
+        self.configTypeSelector = ConfigTypeSelector(self.typePushButton.text(), database=self.database)
+        self.configTypeSelector.buttons.accepted.connect(self.acceptTypeChange)
+        self.configTypeSelector.buttons.rejected.connect(self.configTypeSelector.close)
+        self.configTypeSelector.show()
+
+    def acceptTypeChange(self):
+        typeName = self.configTypeSelector.selectedLabel.text()

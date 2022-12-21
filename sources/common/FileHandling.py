@@ -1,11 +1,15 @@
 import dataclasses
 import os
 import csv
+from typing import Type
+
 import pandas as pd
 import numpy as np
 import time
 
-from ecom.database import CommunicationDatabase, Unit
+from enum import Enum
+
+from ecom.database import CommunicationDatabase, Unit, Configuration
 from ecom.datatypes import TypeInfo, DefaultValueInfo
 
 from sources.common.balloondata import BalloonPackageDatabase
@@ -18,6 +22,31 @@ def testSaving(path):
     typeName = 'uint32_t'
     uint32Type = TypeInfo(TypeInfo.lookupBaseType(typeName), typeName, typeName)
     database.constants['someConstant'] = 1, 'some description', uint32Type
+
+    ### ADDING CONFIG ###
+    newConfigName = 'new config'
+    for config in database.configurations:
+        configEnum = config.id.__class__  # type: Type[Enum]
+        break
+    else:
+        return
+    existingEnumNames = [config.name for config in configEnum]
+    existingEnumNames.append(newConfigName)
+    configEnum = Enum(configEnum.__name__, existingEnumNames, start=0)
+    newConfigs = [
+        dataclasses.replace(config, id=configId)
+        for config, configId in zip(database.configurations, configEnum)
+    ]
+    newConfigs.append(Configuration(
+        id=configEnum[newConfigName],
+        name=newConfigName,
+        type=TypeInfo(TypeInfo.lookupBaseType(typeName), typeName, typeName),
+        defaultValue=1,
+        description='A new configuration',
+    ))
+    database._configurations = newConfigs
+
+    ### EDIT CONFIG ###
 
     ### ADDING UNITS ###
     unitName = 'unit1'
@@ -37,6 +66,12 @@ def testSaving(path):
     database.units[unitName][0] = dataclasses.replace(database.units[unitName][0], type=int, baseTypeName='uint16_t')
 
     database.save(path + '1')
+
+    ### DATABASE VERIFYING DEFAULT VALUES FOR CONFIGS COMPATIBLE WITH TYPES ###
+    for config in database.configurations:
+        if not isinstance(config.defaultValue, config.type.type):
+            print(f'Default value {config.defaultValue!r} for config {config.name} is not valid')
+
 
 
 def load_settings(path):
