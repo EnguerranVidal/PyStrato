@@ -192,17 +192,23 @@ class ConfigurationsWidget(QMainWindow):
         return False
 
     def addNewConfig(self):
-        self.newConfigWindow = NewConfigWindow(self)
+        self.newConfigWindow = NewConfigWindow(self.database)
         self.newConfigWindow.buttons.accepted.connect(self.acceptNewConfig)
         self.newConfigWindow.buttons.rejected.connect(self.newConfigWindow.close)
         self.newConfigWindow.show()
 
     def acceptNewConfig(self):
         name = self.newConfigWindow.nameEdit.text()
-        if name in [config.name for config in self.database.configurations]:
-            pass  # TODO Open Error Message
-        typeName = 'uint8_t'
-        defaultValue = '120'
+        typeName = self.newConfigWindow.typePushButton.text()
+        if typeName not in self.basicTypes:  # Must be in Units... Hopefully...
+            unitList = [unitName for unitName, unitVariants in self.database.units.items()]
+            if typeName in unitList:
+                typeName = self.database.units[typeName][0].baseTypeName
+        configTypeInfo = self.database.getTypeInfo(typeName)
+        if issubclass(configTypeInfo.type, bool):
+            defaultValue = self.newConfigWindow.defaultValueEdit.currentText() == 'true'
+        else:
+            defaultValue = configTypeInfo.type(self.newConfigWindow.defaultValueEdit.text())
         baseTypeInfo = TypeInfo(TypeInfo.lookupBaseType(typeName), typeName, typeName)
         self.database.addConfiguration(name, baseTypeInfo, defaultValue)
         self.addConfigurationRow(name, typeName, defaultValue, description='')
@@ -287,20 +293,29 @@ class ConfigTypeSelector(QWidget):
 
 
 class NewConfigWindow(QDialog):
-    def __init__(self, parent: ConfigurationsWidget):
-        super().__init__(parent)
+    def __init__(self, database):
+        super().__init__()
+        self.basicTypes = ['int8_t', 'uint8_t', 'bool', 'int16_t', 'uint16_t',
+                           'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'float',
+                           'double', 'char', 'bytes']
+        self.database = database
         self.configTypeSelector = None
         self.setWindowTitle('Add New Configuration')
         # self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.resize(400, 100)
         self.dlgLayout = QVBoxLayout()
+        self.formWidget = QWidget(self)
         self.formLayout = QFormLayout()
         self.nameEdit = QLineEdit()
         self.typePushButton = QPushButton('int8_t')
         self.typePushButton.clicked.connect(self.openAvailableTypes)
         self.defaultValueEdit = QLineEdit()
         self.formLayout.addRow('Name:', self.nameEdit)
-        self.dlgLayout.addLayout(self.formLayout)
+        self.formLayout.addRow('Type:', self.typePushButton)
+        self.formLayout.addRow('', QWidget())
+        self.formLayout.addRow('Value:', self.defaultValueEdit)
+        self.formWidget.setLayout(self.formLayout)
+        self.dlgLayout.addWidget(self.formWidget)
         self.buttons = QDialogButtonBox()
         self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         self.dlgLayout.addWidget(self.buttons)
@@ -314,3 +329,45 @@ class NewConfigWindow(QDialog):
 
     def acceptTypeChange(self):
         typeName = self.configTypeSelector.selectedLabel.text()
+        self.typePushButton.setText(typeName)
+        typeInfo = self.database.getTypeInfo(self.typePushButton.text())
+        # TODO Add Compatibility issue function
+        defaultValue = typeInfo.type()
+        self.formLayout.removeWidget(self.defaultValueEdit)
+        self.defaultValueEdit = self.generateDefaultEdit(typeName, str(defaultValue))
+        self.formLayout.addWidget(self.defaultValueEdit)
+        self.configTypeSelector.close()
+
+    def generateDefaultEdit(self, configType='int8_t', defaultValue=''):
+        if configType not in self.basicTypes:  # Must be in Units... Hopefully...
+            unitList = [unitName for unitName, unitVariants in self.database.units.items()]
+            if configType not in unitList:  # Unknown Unit
+                return QWidget()
+            else:
+                configType = self.database.units[configType][0].baseTypeName
+        configTypeInfo = self.database.getTypeInfo(configType)
+        if issubclass(configTypeInfo.type, bool):
+            comboBox = QComboBox()
+            comboBox.addItems(['true', 'false'])
+            if defaultValue in ['true', 'false']:
+                comboBox.setCurrentIndex(['true', 'false'].index(defaultValue))
+            else:
+                comboBox.setCurrentIndex(0)
+            return comboBox
+        else:
+            # TODO add minimum maximum ranges and types to comply with C types
+            lineEdit = QLineEdit()
+            lineEdit.setText(str(defaultValue))
+            if issubclass(configTypeInfo.type, int):
+                # maxRange = configTypeInfo.getMaxNumericalValue(self.database)
+                # minRange = configTypeInfo.getMinNumericalValue(self.database)
+                # onlyInt = QIntValidator(minRange, maxRange)
+                onlyInt = QIntValidator()
+                lineEdit.setValidator(onlyInt)
+            elif issubclass(configTypeInfo.type, float):
+                onlyFloat = QDoubleValidator()
+                locale = QLocale(QLocale.English, QLocale.UnitedStates)
+                onlyFloat.setLocale(locale)
+                onlyFloat.setNotation(QDoubleValidator.StandardNotation)
+                lineEdit.setValidator(onlyFloat)
+            return lineEdit
