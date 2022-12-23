@@ -35,6 +35,8 @@ class BalloonPackageDatabase(CommunicationDatabase):
             self._configurations == other.configurations
 
     def save(self, dataDirectory):
+        # TODO Script to create a quick copy of the database to avoid corruption from errors in the saving process
+        # ------ Remove All Files
         try:
             shutil.rmtree(dataDirectory)
         except FileNotFoundError:
@@ -275,7 +277,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
         self._telecommands = self._editElement(
             name, self._telecommands, Telecommand, replaceIndex=replaceIndex, **kwargs)
 
-    def editTelemetry(self, name: str, replaceIndex: Optional[int] = None,  **kwargs):
+    def addTelemetry(self, name: str, replaceIndex: Optional[int] = None,  **kwargs):
         self._telemetryTypes = self._editElement(
             name, self._telemetryTypes, TelemetryResponseType, replaceIndex=replaceIndex, **kwargs)
 

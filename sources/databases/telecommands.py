@@ -14,10 +14,10 @@ from sources.common.balloondata import BalloonPackageDatabase
 
 
 ######################## CLASSES ########################
-class TelemetriesWidget(QMainWindow):
+class TelecommandsWidget(QMainWindow):
     def __init__(self, database: BalloonPackageDatabase):
         super(QMainWindow, self).__init__()
-        self.newTelemetryWindow = None
+        self.newTelecommandWindow = None
         self.database = database
 
         self.centralWidget = QWidget(self)
@@ -25,7 +25,7 @@ class TelemetriesWidget(QMainWindow):
 
         # -------- Arguments Dock Widget and its Properties
         self.argumentsDockWidget = QDockWidget()
-        self.selectedTelemetryIndex = None
+        self.selectedTelecommandIndex = None
         self.addDockWidget(Qt.RightDockWidgetArea, self.argumentsDockWidget)
         self.argumentsDockWidget.setFeatures(QDockWidget.DockWidgetClosable)
         self.argumentsDockWidget.hide()
@@ -56,7 +56,6 @@ class TelemetriesWidget(QMainWindow):
 
         self.rowWidgets = {'SELECTION': [], 'NAME': [], 'ARGUMENTS': [], 'DESCRIPTION': []}
 
-        self.fillTable()
         self.show()
 
     def fillTable(self):
@@ -114,57 +113,21 @@ class TelemetriesWidget(QMainWindow):
             self.database.telemetryTypes[i] = dataclasses.replace(telemetryItem, description=description)
 
     def addNewTelemetry(self):
-        self.newTelemetryWindow = NewTelemetryWindow(self.database)
-        self.newTelemetryWindow.buttons.accepted.connect(self.acceptNewTelemetry)
-        self.newTelemetryWindow.buttons.rejected.connect(self.newTelemetryWindow.close)
-        self.newTelemetryWindow.show()
+        self.newTelecommandWindow = NewTelecommandWindow(self.database)
+        self.newTelecommandWindow.buttons.accepted.connect(self.acceptNewTelecommand)
+        self.newTelecommandWindow.buttons.rejected.connect(self.newTelecommandWindow.close)
+        self.newTelecommandWindow.show()
 
-    def acceptNewTelemetry(self):
-        name = self.newTelemetryWindow.nameEdit.text()
-        names = [telemetryResponseType.id.name for telemetryResponseType in self.database.telemetryTypes]
-        if name in names:
-            warning_dialog = QMessageBox()
-            warning_dialog.setWindowTitle("Warning")
-            warning_dialog.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
-            warning_dialog.setText('This Telemetry name is already taken.')
-            warning_dialog.setIcon(QMessageBox.Warning)
-            warning_dialog.setStandardButtons(QMessageBox.Ok)
-            warning_dialog.exec_()
-            return
-        else:
-            self.database.addTelemetry(name=name)
-            # TODO ERROR when adding telemetry : not recognizing 'name'
-            self.addTelemetryRow(name, description='')
-
-    def removeSelected(self):
-        states = [checkbox.isChecked() for checkbox in self.rowWidgets['SELECTION']]
-        telemetriesIndices = [i for i in range(len(states)) if states[i]]
-        if len(telemetriesIndices) != 0:
-            # -------- Removing selected units
-            telemetriesIndices.reverse()
-            for i in telemetriesIndices:
-                self.database.telemetryTypes.pop(i)
-            # -------- Refreshing Table
-            self.cleanTable()
-            self.fillTable()
-
-    def openTelemetryArguments(self, i):
-        if self.selectedTelemetryIndex is None or self.selectedTelemetryIndex != i:
-            # This part shows the Arguments widget
-            # TODO Create a Telemetry Argument Widget to the self.argumentsDockWidget
-            pass
-        else:
-            if self.argumentsDockWidget.isHidden():
-                self.argumentsDockWidget.show()
-            else:
-                self.argumentsDockWidget.hide()
+    def acceptNewTelecommand(self):
+        name = self.newTelecommandWindow.nameEdit.text()
+        pass
 
 
-class NewTelemetryWindow(QDialog):
+class NewTelecommandWindow(QDialog):
     def __init__(self, database):
         super().__init__()
         self.database = database
-        self.setWindowTitle('Add New Telemetry')
+        self.setWindowTitle('Add New Telecommand')
         # self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.resize(400, 100)
         self.dlgLayout = QVBoxLayout()

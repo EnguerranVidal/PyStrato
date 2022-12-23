@@ -23,6 +23,7 @@ from ecom.datatypes import TypeInfo, DefaultValueInfo
 # --------------------- Sources ----------------------- #
 from sources.common.FileHandling import load_format, save_format
 from sources.common.balloondata import BalloonPackageDatabase
+from sources.databases.telecommands import TelecommandsWidget
 from sources.databases.telemetries import TelemetriesWidget
 from sources.databases.units import UnitsWidget
 from sources.databases.configurations import ConfigurationsWidget
@@ -92,12 +93,12 @@ class PacketTabWidget(QMainWindow):
             if itemName == 'Telemetries':
                 self.setCentralWidget(TelemetriesWidget(database=self.databases[databaseName]))
             if itemName == 'Telecommands':
-                self.setCentralWidget(QWidget(self))
+                self.setCentralWidget(TelecommandsWidget(database=self.databases[databaseName]))
 
     def newFormat(self, name):
         databasePath = os.path.join(self.formatPath, name)
-        pass
         # self.databaseMenu.openComboBox.addItem(name)
+        pass
 
     def openFormat(self, path):
         # Loading Packet Database Folder

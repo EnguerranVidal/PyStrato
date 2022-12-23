@@ -211,6 +211,7 @@ class ConfigurationsWidget(QMainWindow):
             defaultValue = configTypeInfo.type(self.newConfigWindow.defaultValueEdit.text())
         baseTypeInfo = TypeInfo(TypeInfo.lookupBaseType(typeName), typeName, typeName)
         self.database.addConfiguration(name, baseTypeInfo, defaultValue)
+        # TODO ERROR when adding configuration : too many arguments
         self.addConfigurationRow(name, typeName, defaultValue, description='')
         self.newConfigWindow.close()
 
