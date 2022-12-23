@@ -23,6 +23,7 @@ from ecom.datatypes import TypeInfo, DefaultValueInfo
 # --------------------- Sources ----------------------- #
 from sources.common.FileHandling import load_format, save_format
 from sources.common.balloondata import BalloonPackageDatabase
+from sources.databases.telemetries import TelemetriesWidget
 from sources.databases.units import UnitsWidget
 from sources.databases.configurations import ConfigurationsWidget
 
@@ -89,7 +90,7 @@ class PacketTabWidget(QMainWindow):
             if itemName == 'Shared Data Types':
                 self.setCentralWidget(QWidget(self))
             if itemName == 'Telemetries':
-                self.setCentralWidget(QWidget(self))
+                self.setCentralWidget(TelemetriesWidget(database=self.databases[databaseName]))
             if itemName == 'Telecommands':
                 self.setCentralWidget(QWidget(self))
 

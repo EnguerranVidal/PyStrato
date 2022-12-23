@@ -52,7 +52,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
     def _saveTypes(self, typesFilePath):
         """
-        Save the shared datatype information.
+        Saves the shared datatype information.
 
         :param typesFilePath: The path to the shared data types file.
         """
@@ -110,7 +110,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
     def _saveConstants(self, sharedConstantsFilePath):
         """
-        Save the shared constants.
+        Saves the shared constants.
 
         :param sharedConstantsFilePath: The path to the shared constants file.
         """
@@ -134,7 +134,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
     def _saveConfigurations(self, configurationsFilePath):
         """
-        Save the secondary device configuration items.
+        Saves the secondary device configuration items.
 
         :param configurationsFilePath: The path to the configurations file.
         """
@@ -152,7 +152,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
     def _saveUnits(self, unitsFilePath):
         """
-        Save the unit types.
+        Saves the unit types.
 
         :param unitsFilePath: The path to the units file.
         """
@@ -170,7 +170,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
     def _saveTelecommands(self, telecommandsFilePath):
         """
-        Save the telecommands.
+        Saves the telecommands.
 
         :param telecommandsFilePath: The path to the file containing information about the telecommands.
         """
@@ -197,7 +197,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
     def _saveTelecommandArguments(self, telecommandsArgumentsFolder):
         """
-        Save the arguments for the telecommands.
+        Saves the arguments for the telecommands.
 
         :param telecommandsArgumentsFolder: The path to the folder containing the files where the telecommand
                                             arguments information is to be saved.
@@ -220,7 +220,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
     def _saveTelemetry(self, telemetriesFilePath):
         """
-        Save the telemetry types.
+        Saves the telemetry types.
 
         :param telemetriesFilePath: The path to the file containing information about the telemetry.
         """
@@ -237,7 +237,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
     def _saveTelemetryArguments(self, telemetryArgumentsFolder):
         """
-        Save the arguments for the telemetry types.
+        Saves the arguments for the telemetry types.
 
         :param telemetryArgumentsFolder: The path to the folder containing the files where the telemetry
                                          arguments information is going to be saved.
@@ -284,7 +284,8 @@ class BalloonPackageDatabase(CommunicationDatabase):
         for element in elements:
             elementEnum = element.id.__class__  # type: Type[Enum]
             break
-        else:             return
+        else:
+            return
         existingEnumNames = [config.name for config in elementEnum]
         existingEnumNames.append(name)
         elementEnum = Enum(elementEnum.__name__, existingEnumNames, start=0)
@@ -302,7 +303,3 @@ class BalloonPackageDatabase(CommunicationDatabase):
         else:
             newElements[replaceIndex] = newElement
         return newElements
-
-
-
-

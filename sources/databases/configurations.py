@@ -88,11 +88,11 @@ class ConfigurationsWidget(QMainWindow):
         states = [checkbox.isChecked() for checkbox in self.rowWidgets['SELECTION']]
         configIndices = [i for i in range(len(states)) if states[i]]
         if len(configIndices) != 0:
-            # Removing selected units
+            # -------- Removing selected units
             configIndices.reverse()
             for i in configIndices:
                 self.database.configurations.pop(i)
-            # Refreshing Table
+            # -------- Refreshing Table
             self.cleanTable()
             self.fillTable()
 
