@@ -16,16 +16,17 @@ from sources.common.Widgets import *
 
 from sources.databases.general import PacketTabWidget
 from sources.common.GraphWidgets import GraphTabWidget
+from sources.displays.general import DisplayTabWidget
 
 
 ######################## CLASSES ########################
 class PyGS(QMainWindow):
     def __init__(self, path):
         super().__init__()
-        self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "formats")
-        self.data_path = os.path.join(self.current_dir, "data")
-        self.backup_path = os.path.join(self.data_path, "backups")
+        self.currentDir = path
+        self.formatPath = os.path.join(self.currentDir, "formats")
+        self.dataPath = os.path.join(self.currentDir, "data")
+        self.backupPath = os.path.join(self.dataPath, "backups")
         # Main Window Settings
         self.setGeometry(500, 500, 1000, 600)
         self.setWindowTitle('Weather Balloon Ground Station')
@@ -80,13 +81,15 @@ class PyGS(QMainWindow):
         self.generalTabWidget.setTabPosition(self.generalTabWidget.West)
 
         # Packet Tab Widget -----------------------------------------
-        self.packetTabWidget = PacketTabWidget(self.current_dir)
-        self.graphsTabWidget = GraphTabWidget(self.current_dir)
+        self.packetTabWidget = PacketTabWidget(self.currentDir)
+        self.graphsTabWidget = GraphTabWidget(self.currentDir)
+        self.displayTabWidget = DisplayTabWidget(self.currentDir)
         self.graphWidgetsList = []
 
         # Adding Tabs to Main Widget -------------------------------
         self.generalTabWidget.addTab(self.graphsTabWidget, 'Graphs')
         self.generalTabWidget.addTab(self.packetTabWidget, 'Packets')
+        self.generalTabWidget.addTab(self.displayTabWidget, 'Display')
         self.setCentralWidget(self.generalTabWidget)
 
     def _createToolBars(self):
@@ -252,12 +255,12 @@ class PyGS(QMainWindow):
         self.helpMenu.addAction(self.githubAct)
 
     def _checkEnvironment(self):
-        if not os.path.exists(self.format_path):
-            os.mkdir(self.format_path)
-        if not os.path.exists(self.data_path):
-            os.mkdir(self.data_path)
-        if not os.path.exists(self.backup_path):
-            os.mkdir(self.backup_path)
+        if not os.path.exists(self.formatPath):
+            os.mkdir(self.formatPath)
+        if not os.path.exists(self.dataPath):
+            os.mkdir(self.dataPath)
+        if not os.path.exists(self.backupPath):
+            os.mkdir(self.backupPath)
 
     def center(self):
         frameGeometry = self.frameGeometry()
@@ -332,11 +335,11 @@ class PyGS(QMainWindow):
         self.newGraphWindow.close()
 
     def openFormatTab(self):
-        if os.path.exists(self.format_path):
-            path = QFileDialog.getExistingDirectory(self, "Select Directory", self.format_path)
+        if os.path.exists(self.formatPath):
+            path = QFileDialog.getExistingDirectory(self, "Select Directory", self.formatPath)
         else:
             path = QFileDialog.getExistingDirectory(self, "Select Directory")
-        if os.path.abspath(path) not in [os.path.abspath(self.format_path), os.path.abspath(self.current_dir)]:
+        if os.path.abspath(path) not in [os.path.abspath(self.formatPath), os.path.abspath(self.currentDir)]:
             self.packetTabWidget.openFormat(path)
             self.addToRecent(path)
 
@@ -375,7 +378,7 @@ class PyGS(QMainWindow):
         self.packetTabWidget.closeFormat()
 
     def openTrackedFormats(self):
-        self.trackedFormatsWindow = TrackedBalloonsWindow(self.current_dir)
+        self.trackedFormatsWindow = TrackedBalloonsWindow(self.currentDir)
         self.trackedFormatsWindow.buttons.accepted.connect(self.editTrackedFormats)
         self.trackedFormatsWindow.buttons.rejected.connect(self.trackedFormatsWindow.close)
         self.trackedFormatsWindow.show()
@@ -392,7 +395,7 @@ class PyGS(QMainWindow):
         # Verifying if chosen file is a format
         if check_format(path[0]):
             # Finally copy the file into our format repository
-            shutil.copy2(path[0], self.format_path)
+            shutil.copy2(path[0], self.formatPath)
         else:
             cancelling = MessageBox()
             cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
@@ -424,9 +427,9 @@ class PyGS(QMainWindow):
         button = msg.clickedButton()
         sb = msg.standardButton(button)
         if sb == QMessageBox.Yes:
-            serialPath = os.path.join(self.current_dir, "sources/SerialGS.py")
+            serialPath = os.path.join(self.currentDir, "sources/SerialGS.py")
             if os.path.exists(serialPath):
-                self.serial = SerialMonitor(self.current_dir)
+                self.serial = SerialMonitor(self.currentDir)
                 self.serialWindow.textedit.setDisabled(False)
                 self.serial.output.connect(self.onSerialOutput)
                 self.serial.progress.connect(self.newSerialData)
