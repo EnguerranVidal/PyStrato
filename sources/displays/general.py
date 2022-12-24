@@ -39,11 +39,11 @@ class DisplayTabWidget(QMainWindow):
         # self.graphCentralWindow = QCustomTabWidget()
         # self.setCentralWidget(self.graphCentralWindow)
 
-        dock_widget_1 = QDockWidget("Dock Widget 1")
-        dock_widget_2 = QDockWidget("Dock Widget 2")
-        dock_widget_3 = QDockWidget("Dock Widget 3")
-        dock_widget_4 = QDockWidget("Dock Widget 4")
-        dock_widget_5 = QDockWidget('bruh')
+        dock_widget_1 = HoverWidget("Dock Widget 1")
+        dock_widget_2 = HoverWidget("Dock Widget 2")
+        dock_widget_3 = HoverWidget('Dock Widget 3')
+        dock_widget_4 = HoverWidget("Dock Widget 4")
+        dock_widget_5 = HoverWidget('bruh')
 
         self.addDockWidget(Qt.TopDockWidgetArea, dock_widget_1)
         self.addDockWidget(Qt.RightDockWidgetArea, dock_widget_2)
@@ -51,24 +51,73 @@ class DisplayTabWidget(QMainWindow):
         self.addDockWidget(Qt.LeftDockWidgetArea, dock_widget_4)
         self.splitDockWidget(dock_widget_3, dock_widget_5, Qt.Horizontal)
 
-        dock_widget_1.setFrameStyle(QFrame.Box | QFrame.Raised)
-        dock_widget_2.setFrameStyle(QFrame.Box | QFrame.Raised)
-        dock_widget_3.setFrameStyle(QFrame.Box | QFrame.Raised)
-        dock_widget_4.setFrameStyle(QFrame.Box | QFrame.Raised)
-        dock_widget_5.setFrameStyle(QFrame.Box | QFrame.Raised)
-
         self.show()
 
 
-class CustomDockWidget(QDockWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.mainWindow = parent
-        self.setStyleSheet("border: 1px solid gray;")
+class HoverWidget(QDockWidget):
+    def __init__(self, name: str):
+        super().__init__()
+        self.setWindowTitle(name)
+        self.setStyleSheet('border: 2px solid grey;')
+        self.button = HoverButton(self)
+        self.button.setVisible(False)
+
+        # Create the central widget and add the button to it
+        centralWidget = QWidget()
+        layout = QVBoxLayout(centralWidget)
+        layout.addWidget(self.button)
+
+        # Set the central widget of the dock widget
+        self.setWidget(centralWidget)
+
+        # Set the size of the widget to be 500x500 pixels
+        self.resize(500, 500)
+
+    def enterEvent(self, event):
+        # Animate the button from the top of the widget to the top right corner
+        self.button.animation.setStartValue(self.button.pos())
+        self.button.animation.setEndValue(QPoint(self.width() - self.button.width(), 0))
+        self.button.animation.start()
+        self.button.setVisible(True)
+
+    def leaveEvent(self, event):
+        # Animate the button back to the top of the widget
+        self.button.animation.setStartValue(self.button.pos())
+        self.button.animation.setEndValue(QPoint(self.width() - self.button.width(), -self.button.height()))
+        self.button.animation.start()
+        self.button.setVisible(False)
 
     def closeEvent(self, event):
         super().closeEvent(event)
         del self
+
+
+class HoverButton(QPushButton):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Set the icon and icon size
+        self.setIcon(QIcon('sources/icons/stack-icon.svg'))
+        self.setIconSize(QSize(25, 25))
+
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.setStyleSheet('border: none;')
+        self.setAutoFillBackground(False)
+        self.setFlat(True)
+
+        # Create an animation to move the button
+        self.animation = QPropertyAnimation(self, b'pos')
+        self.animation.setDuration(250)
+        self.animation.setEasingCurve(QEasingCurve.OutQuad)
+
+        # Set the initial position of the button to be off the screen
+        self.move(self.parent().width() - self.width(), -self.height())
+
+    def setIconSize(self, size):
+        super().setIconSize(size)
+        self.setFixedSize(size)
+
+    def sizeHint(self):
+        return self.iconSize()
 
 
 class ContentStorage:
