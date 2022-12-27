@@ -15,6 +15,19 @@ from ecom.datatypes import TypeInfo, DefaultValueInfo
 from sources.common.balloondata import BalloonPackageDatabase
 
 
+def newTabNameGiving(nameList: list, addition: str = None):
+    if addition is not None:
+        baseName = 'New ' + addition
+    else:
+        baseName = 'New'
+    name = baseName
+    i = 0
+    while name in nameList:
+        i += 1
+        name = baseName + ' (' + str(i) + ')'
+    return name
+
+
 def testSaving(path):
     database = BalloonPackageDatabase(path)
 
@@ -57,7 +70,8 @@ def testSaving(path):
         default = DefaultValueInfo(int(x))
     else:
         default = None
-    database.units[unitName] = [Unit(TypeInfo.lookupBaseType(typeName), unitName, typeName, 'Some unit', default=default)]
+    database.units[unitName] = [
+        Unit(TypeInfo.lookupBaseType(typeName), unitName, typeName, 'Some unit', default=default)]
 
     ### EDITING UNITS ###
     unitName = 'ms'
@@ -71,7 +85,6 @@ def testSaving(path):
     for config in database.configurations:
         if not isinstance(config.defaultValue, config.type.type):
             print(f'Default value {config.defaultValue!r} for config {config.name} is not valid')
-
 
 
 def load_settings(path):

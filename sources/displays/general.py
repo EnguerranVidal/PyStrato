@@ -49,6 +49,13 @@ class DisplayTabWidget(QMainWindow):
 
         self.show()
 
+    def tabNamesList(self):
+        return [self.tabWidget.tabText(i) for i in range(self.tabWidget.count())]
+
+    def closeCurrentTab(self):
+        currentTabIndex = self.tabWidget.currentIndex()
+        self.tabWidget.removeTab(currentTabIndex)
+
     def onTabBarDoubleClicked(self, index):
         tabName = self.tabWidget.tabText(index)
         lineEdit = QLineEdit(tabName)
@@ -175,7 +182,7 @@ class HoverButton(QPushButton):
     def __init__(self, parent=None):
         super().__init__(parent)
         # Set the icon and icon size
-        self.setIcon(QIcon('sources/icons/stack-icon.svg'))
+        self.setIcon(QIcon('sources/icons/icons8-settings-96.png'))
         self.setIconSize(QSize(25, 25))
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)

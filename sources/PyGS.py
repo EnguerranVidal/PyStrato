@@ -11,7 +11,7 @@ from PyQt5.QtCore import QDateTime, QThread
 
 # --------------------- Sources ----------------------- #
 from sources.SerialGS import SerialMonitor
-from sources.common.FileHandling import load_settings, save_settings, check_format
+from sources.common.FileHandling import load_settings, save_settings, check_format, newTabNameGiving
 from sources.common.Widgets import *
 
 from sources.databases.general import PacketTabWidget
@@ -72,6 +72,7 @@ class PyGS(QMainWindow):
         self._generateUI()
         self._createActions()
         self._createMenuBar()
+        self._createToolBars()
 
         self.show()
 
@@ -90,14 +91,38 @@ class PyGS(QMainWindow):
         self.generalTabWidget.addTab(self.graphsTabWidget, 'Graphs')
         self.generalTabWidget.addTab(self.packetTabWidget, 'Packets')
         self.generalTabWidget.addTab(self.displayTabWidget, 'Display')
+
+        # TODO
+        self.generalTabWidget.currentChanged.connect(self.manageToolBars)
         self.setCentralWidget(self.generalTabWidget)
 
     def _createToolBars(self):
-        self.windowToolBar = QToolBar("Windows", self)
-        self.addToolBar(Qt.RightToolBarArea, self.windowToolBar)
-        self.windowToolBar.addAction(self.showFormatAct)
-        self.windowToolBar.addAction(self.showPlotAct)
-        self.windowToolBar.addAction(self.openMonitorAct)
+        # Databases Tool Bar ----------------------
+        self.databasesToolBar = QToolBar("Package", self)
+
+        # Displays Tool Bar ----------------------
+        self.displaysToolBar = QToolBar('Display', self)
+        self.displaysToolBar.addAction(self.newDisplayTabAct)
+        self.displaysToolBar.addAction(self.closeDisplayTabAct)
+        self.displaysToolBar.addSeparator()
+
+        # Managing ToolBar Appearance ----------------------
+        self.addToolBar(self.databasesToolBar)
+        self.addToolBar(self.displaysToolBar)
+        self.generalTabWidget.currentChanged.connect(self.manageToolBars)
+        self.manageToolBars(0)
+
+    def manageToolBars(self, index):
+        # Show the ToolBar based on the appearing tab
+        if index == 0:
+            self.databasesToolBar.hide()
+            self.displaysToolBar.show()
+        elif index == 1:
+            self.databasesToolBar.show()
+            self.displaysToolBar.hide()
+        elif index == 2:
+            self.databasesToolBar.hide()
+            self.displaysToolBar.show()
 
     def _createActions(self):
         # New Format
@@ -183,6 +208,21 @@ class PyGS(QMainWindow):
         self.githubAct = QAction('&Visit GitHub', self)
         self.githubAct.setStatusTip('Visit GitHub Page')
         self.githubAct.triggered.connect(self.openGithub)
+
+        # Display Graph Actions ---------------------------
+        # Add New Display Tab
+        self.newDisplayTabAct = QAction('&New Display Tab', self)
+        self.newDisplayTabAct.setIcon(QIcon('sources/icons/icons8-add-tab-64.png'))
+        self.newDisplayTabAct.setStatusTip('Create New Display Tab')
+        self.newDisplayTabAct.setShortcut('Ctrl+Shift+N')
+        self.newDisplayTabAct.triggered.connect(self.newDisplayTab)
+        # Close Display Tab
+        self.closeDisplayTabAct = QAction('&Close Display Tab', self)
+        self.closeDisplayTabAct.setIcon(QIcon('sources/icons/icons8-close-tab-64.png'))
+        self.closeDisplayTabAct.setStatusTip('Close Display Tab')
+        self.closeDisplayTabAct.setShortcut('Ctrl+Shift+X')
+        self.closeDisplayTabAct.triggered.connect(self.displayTabWidget.closeCurrentTab)
+
 
     def _createMenuBar(self):
         self.menubar = self.menuBar()
@@ -278,6 +318,10 @@ class PyGS(QMainWindow):
         name = self.newFormatWindow.nameEdit.text()
         self.packetTabWidget.newFormat(name)
         self.newFormatWindow.close()
+
+    def newDisplayTab(self):
+        name = newTabNameGiving(self.displayTabWidget.tabNamesList(), addition='Tab')
+        self.displayTabWidget.tabWidget.addTab(QMainWindow(), name)
 
     def newGraphTab(self):
         self.newGraphWindow = NewGraphWindow()
