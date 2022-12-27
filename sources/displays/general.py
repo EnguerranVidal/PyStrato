@@ -1,31 +1,20 @@
 ######################## IMPORTS ########################
-from dataclasses import dataclass
 import os
-import shutil
-import sys
-import time as t
-import subprocess
-from functools import partial
-import numpy as np
-from typing import Any, Optional, Type
+from typing import Optional
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-import pyqtgraph as pg
-from ecom.database import CommunicationDatabase
-from pyqtgraph.dockarea import Dock, DockArea
-import pyqtgraph.widgets.RemoteGraphicsView
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, load_format, retrieveCSVData
-from sources.common.Widgets import QCustomTabWidget
+from sources.common.FileHandling import load_settings
+from sources.common.Widgets import BasicDisplay
 from sources.common.balloondata import BalloonPackageDatabase
+from sources.displays.graphs import CustomGraph
 
 
 ######################## CLASSES ########################
-
 class DisplayTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
@@ -37,31 +26,43 @@ class DisplayTabWidget(QMainWindow):
         self.formats = {}
 
         # Central Widget -----------------------------------------------
-        # self.graphCentralWindow = QCustomTabWidget()
-        # self.setCentralWidget(self.graphCentralWindow)
+        self.tabWidget = QTabWidget(self)
+        self.setCentralWidget(self.tabWidget)
+        self.tabWidget.tabBarDoubleClicked.connect(self.onTabBarDoubleClicked)
 
-        dock_widget_1 = DisplayDockWidget("Dock Widget 1")
-        dock_widget_2 = DisplayDockWidget("Dock Widget 2")
-        dock_widget_3 = DisplayDockWidget('Dock Widget 3')
-        dock_widget_4 = DisplayDockWidget("Dock Widget 4")
-        dock_widget_5 = DisplayDockWidget('bruh')
+        # Add some tabs to the QTabWidget
+        self.tabWidget.addTab(QMainWindow(), "Tab 1")
+        self.tabWidget.addTab(QMainWindow(), "Tab 2")
 
-        self.addDockWidget(Qt.TopDockWidgetArea, dock_widget_1)
-        self.addDockWidget(Qt.RightDockWidgetArea, dock_widget_2)
-        self.addDockWidget(Qt.BottomDockWidgetArea, dock_widget_3)
-        self.addDockWidget(Qt.LeftDockWidgetArea, dock_widget_4)
-        self.splitDockWidget(dock_widget_3, dock_widget_5, Qt.Horizontal)
+        tabWidget1 = self.tabWidget.widget(0)
+        dock_widget_1 = DisplayDockWidget("Dock Widget 1", widget=CustomGraph())
+        dock_widget_2 = DisplayDockWidget("Dock Widget 2", widget=CustomGraph())
+        dock_widget_3 = DisplayDockWidget('Dock Widget 3', widget=CustomGraph())
+        dock_widget_4 = DisplayDockWidget("Dock Widget 4", widget=CustomGraph())
+        dock_widget_5 = DisplayDockWidget('bruh', widget=CustomGraph())
+
+        tabWidget1.addDockWidget(Qt.TopDockWidgetArea, dock_widget_1)
+        tabWidget1.addDockWidget(Qt.RightDockWidgetArea, dock_widget_2)
+        tabWidget1.addDockWidget(Qt.BottomDockWidgetArea, dock_widget_3)
+        tabWidget1.addDockWidget(Qt.LeftDockWidgetArea, dock_widget_4)
+        tabWidget1.splitDockWidget(dock_widget_3, dock_widget_5, Qt.Horizontal)
 
         self.show()
 
+    def onTabBarDoubleClicked(self, index):
+        tabName = self.tabWidget.tabText(index)
+        lineEdit = QLineEdit(tabName)
+        self.tabWidget.setTabText(index, '')
+        tabBar = self.tabWidget.tabBar()
+        tabBar.setTabButton(index, tabBar.ButtonPosition.LeftSide, lineEdit)
+        lineEdit.setFocus()
+        lineEdit.selectAll()
+        lineEdit.returnPressed.connect(lambda: self.renameTab(lineEdit, index))
 
-class BasicDisplay(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.settingsWidget = QWidget()
-
-    def applyChanges(self, editWidget):
-        pass
+    def renameTab(self, lineEdit, index):
+        tabBar = self.tabWidget.tabBar()
+        self.tabWidget.setTabText(index, lineEdit.text())
+        tabBar.setTabButton(index, tabBar.ButtonPosition.LeftSide, None)
 
 
 class DisplayDockWidget(QDockWidget):
@@ -76,7 +77,7 @@ class DisplayDockWidget(QDockWidget):
         self.parametersEditWindow.accepted.connect(self.applySettingsChanges)
 
         self.setWindowTitle(name)
-        self.button = HoverButton(self)
+        self.button = HoverButton(self.display)
         self.button.setVisible(False)
         self.button.clicked.connect(self.openSettings)
 

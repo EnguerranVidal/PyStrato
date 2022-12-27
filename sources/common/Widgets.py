@@ -14,6 +14,13 @@ from sources.common.FileHandling import load_settings, save_settings
 
 
 ######################## CLASSES ########################
+class BasicDisplay(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.settingsWidget = QWidget()
+
+    def applyChanges(self, editWidget):
+        pass
 
 
 class SerialWindow(QWidget):

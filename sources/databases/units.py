@@ -158,7 +158,7 @@ class UnitsWidget(QMainWindow):
         stringTypes = ['char', 'bytes']
         for i in range(len(self.rowWidgets['DESCRIPTION'])):
             name = self.rowWidgets['UNIT NAME'][i].text()
-            unitType = self.rowWidgts['UNIT TYPE'][i].currentText()
+            unitType = self.rowWidgets['UNIT TYPE'][i].currentText()
             if unitType in intTypes:
                 pythonType = int
             elif unitType in floatTypes:

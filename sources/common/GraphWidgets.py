@@ -24,7 +24,6 @@ from sources.common.balloondata import BalloonPackageDatabase
 
 
 ######################## CLASSES ########################
-
 class GraphTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
