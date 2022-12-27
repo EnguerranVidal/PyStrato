@@ -7,6 +7,7 @@ import time as t
 import subprocess
 from functools import partial
 import numpy as np
+from typing import Any, Optional, Type
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
@@ -39,11 +40,11 @@ class DisplayTabWidget(QMainWindow):
         # self.graphCentralWindow = QCustomTabWidget()
         # self.setCentralWidget(self.graphCentralWindow)
 
-        dock_widget_1 = HoverWidget("Dock Widget 1")
-        dock_widget_2 = HoverWidget("Dock Widget 2")
-        dock_widget_3 = HoverWidget('Dock Widget 3')
-        dock_widget_4 = HoverWidget("Dock Widget 4")
-        dock_widget_5 = HoverWidget('bruh')
+        dock_widget_1 = DisplayDockWidget("Dock Widget 1")
+        dock_widget_2 = DisplayDockWidget("Dock Widget 2")
+        dock_widget_3 = DisplayDockWidget('Dock Widget 3')
+        dock_widget_4 = DisplayDockWidget("Dock Widget 4")
+        dock_widget_5 = DisplayDockWidget('bruh')
 
         self.addDockWidget(Qt.TopDockWidgetArea, dock_widget_1)
         self.addDockWidget(Qt.RightDockWidgetArea, dock_widget_2)
@@ -54,21 +55,34 @@ class DisplayTabWidget(QMainWindow):
         self.show()
 
 
-class HoverWidget(QDockWidget):
-    def __init__(self, name: str):
+class BasicDisplay(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.settingsWidget = QWidget()
+
+    def applyChanges(self, editWidget):
+        pass
+
+
+class DisplayDockWidget(QDockWidget):
+    def __init__(self, name: str, widget: Optional[BasicDisplay] = None):
         super().__init__()
+        if widget is None:
+            widget = BasicDisplay()
+        self.display = widget
+        self.setWidget(self.display)
+        self.parametersEditWindow = ParameterDialog(self)
+        self.parametersEditWindow.applied.connect(self.applySettingsChanges)
+        self.parametersEditWindow.accepted.connect(self.applySettingsChanges)
+
         self.setWindowTitle(name)
-        self.setStyleSheet('border: 2px solid grey;')
         self.button = HoverButton(self)
         self.button.setVisible(False)
+        self.button.clicked.connect(self.openSettings)
 
         # Create the central widget and add the button to it
-        centralWidget = QWidget()
-        layout = QVBoxLayout(centralWidget)
+        layout = QVBoxLayout(self.display)
         layout.addWidget(self.button)
-
-        # Set the central widget of the dock widget
-        self.setWidget(centralWidget)
 
         # Set the size of the widget to be 500x500 pixels
         self.resize(500, 500)
@@ -87,9 +101,73 @@ class HoverWidget(QDockWidget):
         self.button.animation.start()
         self.button.setVisible(False)
 
+    def openSettings(self):
+        self.parametersEditWindow = ParameterDialog(parent=self, editWidget=self.display.settingsWidget)
+        self.parametersEditWindow.applied.connect(self.applySettingsChanges)
+        self.parametersEditWindow.accepted.connect(self.applySettingsChanges)
+        self.parametersEditWindow.show()
+
+    def applySettingsChanges(self):
+        name = self.parametersEditWindow.nameEdit.text()
+        self.display.applyChanges(self.parametersEditWindow.editWidget)
+        self.setWindowTitle(name)
+
     def closeEvent(self, event):
         super().closeEvent(event)
         del self
+
+
+class ParameterDialog(QDialog):
+    accepted = pyqtSignal()
+    applied = pyqtSignal()
+    canceled = pyqtSignal()
+    typeChanged = pyqtSignal()
+
+    def __init__(self, parent=None, editWidget: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.setModal(True)
+        self.setWindowTitle('Display Settings')
+        if editWidget is None:
+            editWidget = QWidget(self)
+        self.editWidget = editWidget
+        form_layout = QFormLayout()
+
+        # Add a line edit to the form layout
+        self.nameEdit = QLineEdit()
+        self.nameEdit.setText(parent.windowTitle())
+        form_layout.addRow("Display Name :", self.nameEdit)
+
+        # Create the button layout
+        button_layout = QHBoxLayout()
+
+        # Add three buttons to the button layout
+        self.acceptButton = QPushButton("Accept")
+        self.applyButton = QPushButton("Apply")
+        self.cancelButton = QPushButton("Cancel")
+        self.acceptButton.clicked.connect(self.acceptedButtonClicked)
+        self.applyButton.clicked.connect(self.appliedButtonClicked)
+        self.cancelButton.clicked.connect(self.canceledButtonClicked)
+        button_layout.addWidget(self.acceptButton)
+        button_layout.addWidget(self.applyButton)
+        button_layout.addWidget(self.cancelButton)
+
+        # Add the form layout and button layout to the dialog
+        self.layout = QVBoxLayout()
+        self.layout.addLayout(form_layout)
+        self.layout.addWidget(self.editWidget)
+        self.layout.addLayout(button_layout)
+        self.setLayout(self.layout)
+
+    def acceptedButtonClicked(self):
+        self.accepted.emit()
+        self.close()
+
+    def appliedButtonClicked(self):
+        self.applied.emit()
+
+    def canceledButtonClicked(self):
+        self.canceled.emit()
+        self.close()
 
 
 class HoverButton(QPushButton):
