@@ -14,7 +14,7 @@ from sources.common.balloondata import BalloonPackageDatabase
 from sources.displays.graphs import CustomGraph
 
 
-######################## CLASSES ########################
+######################## CLASSES ########################a
 class DisplayTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
@@ -27,6 +27,7 @@ class DisplayTabWidget(QMainWindow):
 
         # Central Widget -----------------------------------------------
         self.tabWidget = QTabWidget(self)
+        self.tabWidget.setMovable(True)
         self.setCentralWidget(self.tabWidget)
         self.tabWidget.tabBarDoubleClicked.connect(self.onTabBarDoubleClicked)
 
@@ -79,7 +80,7 @@ class DisplayDockWidget(QDockWidget):
             widget = BasicDisplay()
         self.display = widget
         self.setWidget(self.display)
-        self.parametersEditWindow = ParameterDialog(self)
+        self.parametersEditWindow = ParameterDialog(parent=self)
         self.parametersEditWindow.applied.connect(self.applySettingsChanges)
         self.parametersEditWindow.accepted.connect(self.applySettingsChanges)
 
@@ -116,9 +117,31 @@ class DisplayDockWidget(QDockWidget):
         self.parametersEditWindow.show()
 
     def applySettingsChanges(self):
+        # Retrieving
         name = self.parametersEditWindow.nameEdit.text()
-        self.display.applyChanges(self.parametersEditWindow.editWidget)
+        floating = self.parametersEditWindow.floatingCheckbox.isChecked()
+        moving = self.parametersEditWindow.movingCheckBox.isChecked()
+        showTitleBar = self.parametersEditWindow.showTitleCheckBox.isChecked()
+        closable = self.parametersEditWindow.closableCheckbox.isChecked()
+
+        # Upper Layout Basic Properties
+        features = QDockWidget.NoDockWidgetFeatures
+        if moving:
+            features |= QDockWidget.DockWidgetMovable
+        if closable:
+            features |= QDockWidget.DockWidgetClosable
+        if floating:
+            features |= QDockWidget.DockWidgetFloatable
+
+        self.setFeatures(features)
         self.setWindowTitle(name)
+        if showTitleBar:
+            self.setTitleBarWidget(None)
+        else:
+            self.setTitleBarWidget(QWidget())
+
+        # Edit Contained Display Widget
+        self.display.applyChanges(self.parametersEditWindow.editWidget)
 
     def closeEvent(self, event):
         super().closeEvent(event)
@@ -131,23 +154,44 @@ class ParameterDialog(QDialog):
     canceled = pyqtSignal()
     typeChanged = pyqtSignal()
 
-    def __init__(self, parent=None, editWidget: Optional[QWidget] = None):
+    def __init__(self, parent: DisplayDockWidget = None, editWidget: Optional[BasicDisplay] = None):
         super().__init__(parent)
         self.setModal(True)
         self.setWindowTitle('Display Settings')
         if editWidget is None:
             editWidget = QWidget(self)
         self.editWidget = editWidget
-        form_layout = QFormLayout()
+        upperLayout = QGridLayout()
 
-        # Add a line edit to the form layout
+        # Basic Properties --------------------------------------
+        # Adding a Name Line Edit
+        nameLabel = QLabel('Display Name', self)
         self.nameEdit = QLineEdit()
         self.nameEdit.setText(parent.windowTitle())
-        form_layout.addRow("Display Name :", self.nameEdit)
+        upperLayout.addWidget(nameLabel, 0, 0, 1, 1)
+        upperLayout.addWidget(self.nameEdit, 0, 1, 1, 1)
 
-        # Create the button layout
-        button_layout = QHBoxLayout()
+        # Adding Checkboxes to make the Dock Widget
+        # Floating / Closable / Movable / With a TitleBar
+        titleBarShowing = parent.titleBarWidget() is None
+        floatable = parent.features() & QDockWidget.DockWidgetFloatable
+        movable = parent.features() & QDockWidget.DockWidgetMovable
+        closable = parent.features() & QDockWidget.DockWidgetClosable
+        self.floatingCheckbox = QCheckBox('Allow Floating')
+        self.floatingCheckbox.setChecked(floatable)
+        self.closableCheckbox = QCheckBox('Allow Closing')
+        self.closableCheckbox.setChecked(closable)
+        self.movingCheckBox = QCheckBox('Allow Moving')
+        self.movingCheckBox.setChecked(movable)
+        self.showTitleCheckBox = QCheckBox('Show TitleBar')
+        self.showTitleCheckBox.setChecked(titleBarShowing)
+        upperLayout.addWidget(self.showTitleCheckBox, 1, 0, 1, 1)
+        upperLayout.addWidget(self.closableCheckbox, 1, 1, 1, 1)
+        upperLayout.addWidget(self.movingCheckBox, 2, 0, 1, 1)
+        upperLayout.addWidget(self.floatingCheckbox, 2, 1, 1, 1)
 
+        # Final Buttons Layout --------------------------------------
+        buttonLayout = QHBoxLayout()
         # Add three buttons to the button layout
         self.acceptButton = QPushButton("Accept")
         self.applyButton = QPushButton("Apply")
@@ -155,15 +199,15 @@ class ParameterDialog(QDialog):
         self.acceptButton.clicked.connect(self.acceptedButtonClicked)
         self.applyButton.clicked.connect(self.appliedButtonClicked)
         self.cancelButton.clicked.connect(self.canceledButtonClicked)
-        button_layout.addWidget(self.acceptButton)
-        button_layout.addWidget(self.applyButton)
-        button_layout.addWidget(self.cancelButton)
+        buttonLayout.addWidget(self.acceptButton)
+        buttonLayout.addWidget(self.applyButton)
+        buttonLayout.addWidget(self.cancelButton)
 
         # Add the form layout and button layout to the dialog
         self.layout = QVBoxLayout()
-        self.layout.addLayout(form_layout)
+        self.layout.addLayout(upperLayout)
         self.layout.addWidget(self.editWidget)
-        self.layout.addLayout(button_layout)
+        self.layout.addLayout(buttonLayout)
         self.setLayout(self.layout)
 
     def acceptedButtonClicked(self):
