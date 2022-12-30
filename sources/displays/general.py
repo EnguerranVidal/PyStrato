@@ -80,10 +80,7 @@ class DisplayDockWidget(QDockWidget):
             widget = BasicDisplay()
         self.display = widget
         self.setWidget(self.display)
-        self.parametersEditWindow = ParameterDialog(parent=self)
-        self.parametersEditWindow.applied.connect(self.applySettingsChanges)
-        self.parametersEditWindow.accepted.connect(self.applySettingsChanges)
-
+        self.parametersEditWindow = None
         self.setWindowTitle(name)
         self.button = HoverButton(self.display)
         self.button.setVisible(False)
@@ -161,15 +158,15 @@ class ParameterDialog(QDialog):
         if editWidget is None:
             editWidget = QWidget(self)
         self.editWidget = editWidget
-        upperLayout = QGridLayout()
+        propertiesLayout = QGridLayout()
 
         # Basic Properties --------------------------------------
         # Adding a Name Line Edit
         nameLabel = QLabel('Display Name', self)
         self.nameEdit = QLineEdit()
         self.nameEdit.setText(parent.windowTitle())
-        upperLayout.addWidget(nameLabel, 0, 0, 1, 1)
-        upperLayout.addWidget(self.nameEdit, 0, 1, 1, 1)
+        propertiesLayout.addWidget(nameLabel, 0, 0, 1, 1)
+        propertiesLayout.addWidget(self.nameEdit, 0, 1, 1, 1)
 
         # Adding Checkboxes to make the Dock Widget
         # Floating / Closable / Movable / With a TitleBar
@@ -185,10 +182,10 @@ class ParameterDialog(QDialog):
         self.movingCheckBox.setChecked(movable)
         self.showTitleCheckBox = QCheckBox('Show TitleBar')
         self.showTitleCheckBox.setChecked(titleBarShowing)
-        upperLayout.addWidget(self.showTitleCheckBox, 1, 0, 1, 1)
-        upperLayout.addWidget(self.closableCheckbox, 1, 1, 1, 1)
-        upperLayout.addWidget(self.movingCheckBox, 2, 0, 1, 1)
-        upperLayout.addWidget(self.floatingCheckbox, 2, 1, 1, 1)
+        propertiesLayout.addWidget(self.showTitleCheckBox, 1, 0, 1, 1)
+        propertiesLayout.addWidget(self.closableCheckbox, 1, 1, 1, 1)
+        propertiesLayout.addWidget(self.movingCheckBox, 2, 0, 1, 1)
+        propertiesLayout.addWidget(self.floatingCheckbox, 2, 1, 1, 1)
 
         # Final Buttons Layout --------------------------------------
         buttonLayout = QHBoxLayout()
@@ -204,10 +201,12 @@ class ParameterDialog(QDialog):
         buttonLayout.addWidget(self.cancelButton)
 
         # Add the form layout and button layout to the dialog
-        self.layout = QVBoxLayout()
-        self.layout.addLayout(upperLayout)
-        self.layout.addWidget(self.editWidget)
-        self.layout.addLayout(buttonLayout)
+        self.layout = QGridLayout()
+        self.layout.addWidget(self.nameEdit, 0, 1, 1, 1)
+        self.layout.addWidget(nameLabel, 0, 0, 1, 1)
+        self.layout.addWidget(self.editWidget, 1, 0, 1, 2)
+        self.layout.addLayout(propertiesLayout, 2, 0, 1, 2)
+        self.layout.addLayout(buttonLayout, 3, 0, 1, 2)
         self.setLayout(self.layout)
 
     def acceptedButtonClicked(self):
