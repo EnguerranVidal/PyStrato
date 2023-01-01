@@ -42,7 +42,7 @@ class TelemetriesWidget(QMainWindow):
         self.buttonWidget = QWidget()
         self.buttonAddTelemetry = QPushButton('+ ADD TELEMETRY', self.buttonWidget)
         self.buttonDeleteTelemetry = QPushButton('', self.buttonWidget)
-        self.buttonDeleteTelemetry.setIcon(QIcon(QPixmap('sources/icons/delete-icon.svg')))
+        self.buttonDeleteTelemetry.setIcon(QIcon(QPixmap('sources/icons/light-theme/icons8-remove-96.png')))
         self.buttonLayout = QHBoxLayout(self.buttonWidget)
         self.buttonLayout.addWidget(self.buttonAddTelemetry)
         self.buttonLayout.addWidget(self.buttonDeleteTelemetry)

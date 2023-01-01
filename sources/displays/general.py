@@ -225,7 +225,7 @@ class HoverButton(QPushButton):
     def __init__(self, parent=None):
         super().__init__(parent)
         # Set the icon and icon size
-        self.setIcon(QIcon('sources/icons/icons8-settings-96.png'))
+        self.setIcon(QIcon('sources/icons/light-theme/icons8-tools-96.png'))
         self.setIconSize(QSize(25, 25))
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)

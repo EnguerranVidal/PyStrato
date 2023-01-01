@@ -24,13 +24,14 @@ class PyGS(QMainWindow):
     def __init__(self, path):
         super().__init__()
         self.currentDir = path
+        self.mainIcon = QIcon('sources/icons/light-theme/icons8-hot-air-balloon-96.png')
         self.formatPath = os.path.join(self.currentDir, "formats")
         self.dataPath = os.path.join(self.currentDir, "data")
         self.backupPath = os.path.join(self.dataPath, "backups")
         # Main Window Settings
         self.setGeometry(500, 500, 1000, 600)
         self.setWindowTitle('Weather Balloon Ground Station')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.setWindowIcon(self.mainIcon)
         self.settings = load_settings("settings")
         self.center()
         # Date&Time in StatusBar
@@ -128,16 +129,19 @@ class PyGS(QMainWindow):
         # New Format
         self.newFormatAction = QAction('&New Format', self)
         self.newFormatAction.setStatusTip('Create New Packet Format')
+        self.newFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-new-window-96.png'))
         self.newFormatAction.setShortcut('Ctrl+N')
         self.newFormatAction.triggered.connect(self.newFormatTab)
         # Open Format
         self.openFormatAction = QAction('&Open', self)
         self.openFormatAction.setStatusTip('Open Packet Format')
+        self.openFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-open-in-browser-96.png'))
         self.openFormatAction.setShortcut('Ctrl+O')
         self.openFormatAction.triggered.connect(self.openFormatTab)
         # Save Format
         self.saveFormatAction = QAction('&Save', self)
         self.saveFormatAction.setStatusTip('Save Packet Format')
+        self.saveFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-save-96.png'))
         self.saveFormatAction.setShortcut('Ctrl+S')
         self.saveFormatAction.triggered.connect(self.saveFormatTab)
         # Save As Format
@@ -147,14 +151,17 @@ class PyGS(QMainWindow):
         # Save All Formats
         self.saveAllFormatAction = QAction('&Save All', self)
         self.saveAllFormatAction.setStatusTip('Save All Packet Formats')
+        self.saveAllFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-save-all-96.png'))
         self.saveAllFormatAction.triggered.connect(self.saveAllFormatTab)
         # Close Format
         self.closeFormatAction = QAction('&Close', self)
         self.closeFormatAction.setStatusTip('Close Current Format')
+        self.closeFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-close-window-96.png'))
         self.closeFormatAction.triggered.connect(self.closeFormatTab)
         # Import Format
         self.importFormatAction = QAction('&Import Format', self)
         self.importFormatAction.setStatusTip('Import Format')
+        self.importFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-download-96.png'))
         self.importFormatAction.triggered.connect(self.importFormat)
         # Tracked Formats
         self.trackedFormatAction = QAction('&Tracked Formats', self)
@@ -197,32 +204,33 @@ class PyGS(QMainWindow):
         # Opening Serial Monitor
         self.openMonitorAct = QAction('&Open Serial Monitor', self)
         self.openMonitorAct.setShortcut('Ctrl+M')
-        self.openMonitorAct.setIcon(QIcon('sources/icons/Monitor.png'))
+        self.openMonitorAct.setIcon(QIcon('sources/icons/light-theme/icons8-monitor-96.png'))
         self.openMonitorAct.setStatusTip('Open Serial Monitor')
         self.openMonitorAct.triggered.connect(self.openSerialMonitor)
         # Toggle RSSI Acquirement
         self.rssiAct = QAction('&RSSI', self, checkable=True, checked=self.settings["RSSI"])
         self.rssiAct.setStatusTip('Toggle RSSI Retrieval')
+
         self.rssiAct.triggered.connect(self.setRssi)
         # Visit GitHub Page
         self.githubAct = QAction('&Visit GitHub', self)
+        self.githubAct.setIcon(QIcon('sources/icons/light-theme/icons8-github-96.png'))
         self.githubAct.setStatusTip('Visit GitHub Page')
         self.githubAct.triggered.connect(self.openGithub)
 
         # Display Graph Actions ---------------------------
         # Add New Display Tab
         self.newDisplayTabAct = QAction('&New Display Tab', self)
-        self.newDisplayTabAct.setIcon(QIcon('sources/icons/icons8-add-tab-64.png'))
+        self.newDisplayTabAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-folder-96.png'))
         self.newDisplayTabAct.setStatusTip('Create New Display Tab')
         self.newDisplayTabAct.setShortcut('Ctrl+Shift+N')
         self.newDisplayTabAct.triggered.connect(self.newDisplayTab)
         # Close Display Tab
         self.closeDisplayTabAct = QAction('&Close Display Tab', self)
-        self.closeDisplayTabAct.setIcon(QIcon('sources/icons/icons8-close-tab-64.png'))
+        self.closeDisplayTabAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-folder-96.png'))
         self.closeDisplayTabAct.setStatusTip('Close Display Tab')
         self.closeDisplayTabAct.setShortcut('Ctrl+Shift+X')
         self.closeDisplayTabAct.triggered.connect(self.displayTabWidget.closeCurrentTab)
-
 
     def _createMenuBar(self):
         self.menubar = self.menuBar()
@@ -337,7 +345,7 @@ class PyGS(QMainWindow):
             self.newPlotWindow.show()
         else:
             cancelling = MessageBox()
-            cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+            cancelling.setWindowIcon(self.mainIcon)
             cancelling.setWindowTitle("Error")
             cancelling.setText("No Graph tabs are\nset to add a plot too.")
             cancelling.setStandardButtons(QMessageBox.Ok)
@@ -352,7 +360,7 @@ class PyGS(QMainWindow):
             self.newPlotWindow.show()
         else:
             cancelling = MessageBox()
-            cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+            cancelling.setWindowIcon(self.mainIcon)
             cancelling.setWindowTitle("Error")
             cancelling.setText("No Graph tabs are\nset to add a plot too.")
             cancelling.setStandardButtons(QMessageBox.Ok)
@@ -442,7 +450,7 @@ class PyGS(QMainWindow):
             shutil.copy2(path[0], self.formatPath)
         else:
             cancelling = MessageBox()
-            cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+            cancelling.setWindowIcon(self.mainIcon)
             cancelling.setWindowTitle("Error")
             cancelling.setText("This file does not satisfy the required format.")
             cancelling.setStandardButtons(QMessageBox.Ok)
@@ -462,7 +470,7 @@ class PyGS(QMainWindow):
         message = "Port : " + self.settings["SELECTED_PORT"] + "  Baud : "
         message += self.settings["SELECTED_BAUD"] + "\nDo you wish to continue ?"
         msg = MessageBox()
-        msg.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        msg.setWindowIcon(self.mainIcon)
         msg.setWindowTitle("Running Warning")
         msg.setText(message)
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
@@ -480,7 +488,7 @@ class PyGS(QMainWindow):
                 self.serial.start()
             else:
                 cancelling = MessageBox()
-                cancelling.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+                cancelling.setWindowIcon(self.mainIcon)
                 cancelling.setWindowTitle("Error")
                 cancelling.setText("Serial.py not found.")
                 cancelling.setStandardButtons(QMessageBox.Ok)

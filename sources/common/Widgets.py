@@ -3,7 +3,7 @@ import os
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSlot, QTimer, QModelIndex, pyqtSignal
+from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import pyqtgraph as pg
 from pyqtgraph.dockarea import Dock, DockArea
@@ -20,6 +20,67 @@ class BasicDisplay(QWidget):
         self.settingsWidget = QWidget()
 
     def applyChanges(self, editWidget):
+        pass
+
+
+class ArgumentSelectorWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.settings = load_settings('settings')
+        # Set up combo box
+        self.comboBox = QComboBox()
+        self.comboBox.addItems(["Option 1", "Option 2", "Option 3"])
+
+        # Set up buttons and label
+        self.button1 = QPushButton()
+        self.button1.setStyleSheet("border: none;")
+        self.button1.setFlat(True)
+        self.button1.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.button1.setIcon(QIcon('sources/icons/light-theme/icons8-previous-96.png'))
+        self.button1.setIconSize(QSize(20, 20))
+        self.button2 = QPushButton()
+        self.button2.setStyleSheet("border: none;")
+        self.button2.setFlat(True)
+        self.button2.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.button2.setIcon(QIcon('sources/icons/light-theme/icons8-next-96.png'))
+        self.button2.setIconSize(QSize(20, 20))
+        self.label = QLabel("Label")
+        self.label.setAlignment(Qt.AlignCenter)
+
+        # Set up tree widget
+        self.treeWidget = QTreeWidget()
+        self.treeWidget.setHeaderLabels([])
+        self.treeWidget.setHeaderHidden(True)
+
+        # Set up layout
+        layout = QVBoxLayout()
+        topRowLayout = QHBoxLayout()
+        topRowLayout.addWidget(self.comboBox)
+        layout.addLayout(topRowLayout)
+        secondRowLayout = QHBoxLayout()
+        secondRowLayout.addWidget(self.button1)
+        secondRowLayout.addWidget(self.label)
+        secondRowLayout.addWidget(self.button2)
+        layout.addLayout(secondRowLayout)
+        layout.addWidget(self.treeWidget)
+        self.setLayout(layout)
+
+    def fillComboBox(self):
+        pass
+
+    def changeComboBox(self):
+        pass
+
+    def previousTelemetry(self):
+        pass
+
+    def nextTelemetry(self):
+        pass
+
+    def fillTreeWidget(self):
+        pass
+
+    def itemSelected(self):
         pass
 
 

@@ -40,7 +40,7 @@ class ConfigurationsWidget(QMainWindow):
         self.buttonWidget = QWidget()
         self.buttonAddConfig = QPushButton('+ ADD CONFIG', self.buttonWidget)
         self.buttonDeleteConfig = QPushButton('', self.buttonWidget)
-        self.buttonDeleteConfig.setIcon(QIcon(QPixmap('sources/icons/delete-icon.svg')))
+        self.buttonDeleteConfig.setIcon(QIcon(QPixmap('sources/icons/light-theme/icons8-remove-96.png')))
         self.buttonLayout = QHBoxLayout(self.buttonWidget)
         self.buttonLayout.addWidget(self.buttonAddConfig)
         self.buttonLayout.addWidget(self.buttonDeleteConfig)

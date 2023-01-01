@@ -39,7 +39,7 @@ class UnitsWidget(QMainWindow):
         self.buttonWidget = QWidget()
         self.buttonAddUnit = QPushButton('+ ADD UNIT', self.buttonWidget)
         self.buttonDeleteUnit = QPushButton('', self.buttonWidget)
-        self.buttonDeleteUnit.setIcon(QIcon(QPixmap('sources/icons/delete-icon.svg')))
+        self.buttonDeleteUnit.setIcon(QIcon(QPixmap('sources/icons/light-theme/icons8-remove-96.png')))
         self.buttonLayout = QHBoxLayout(self.buttonWidget)
         self.buttonLayout.addWidget(self.buttonAddUnit)
         self.buttonLayout.addWidget(self.buttonDeleteUnit)
