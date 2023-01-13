@@ -16,14 +16,14 @@ from sources.common.Widgets import BasicDisplay, ArgumentSelectorWidget
 
 ######################## CLASSES ########################
 class CustomGraph(BasicDisplay):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, path, parent=None):
+        super().__init__(path, parent)
         layout = QVBoxLayout(self)
         self.plotWidget = pg.PlotWidget(self)
         self.plotWidget.setBackground('w')
         layout.addWidget(self.plotWidget)
 
-        self.settingsWidget = CustomGraphEditDialog(self)
+        self.settingsWidget = CustomGraphEditDialog(self.currentDir, self)
 
         x_values = [1, 2, 3]
         y_values = [8, 5, 10]
@@ -35,12 +35,13 @@ class CustomGraph(BasicDisplay):
 
 
 class CustomGraphEditDialog(QWidget):
-    def __init__(self, parent: CustomGraph = None):
+    def __init__(self, path, parent: CustomGraph = None):
         super().__init__(parent)
+        self.currentDir = path
         # Create the curves Tab Widget
         self.tabWidget = QTabWidget()
-        self.tabWidget.addTab(CurveEditor(0, self), "Tab 1")
-        self.tabWidget.addTab(CurveEditor(1, self), "Tab 2")
+        self.tabWidget.addTab(CurveEditor(0, self.currentDir, self), "Tab 1")
+        self.tabWidget.addTab(CurveEditor(1, self.currentDir, self), "Tab 2")
         self.tabWidget.setMovable(True)
 
         # Create a custom color frame widget
@@ -61,8 +62,9 @@ class CustomGraphEditDialog(QWidget):
 
 
 class CurveEditor(QWidget):
-    def __init__(self, curveIndex: int, parent=None):
+    def __init__(self, curveIndex: int, path, parent=None):
         super().__init__(parent)
+        self.currentDir = path
         # TODO Finish Curve Editor
         # Retrieving Curve parameters from parent and index
 
@@ -99,13 +101,14 @@ class CurveEditor(QWidget):
         self.setLayout(layout)
 
     def openCurveArgumentSelector(self):
-        curveArgumentSelector = CurveArgumentSelector(self)
+        curveArgumentSelector = CurveArgumentSelector(self.currentDir, self)
         curveArgumentSelector.exec_()
-        self.lineEditY.setText(curveArgumentSelector.selectedArgument)
+        if curveArgumentSelector.selectedArgument is not None:
+            self.lineEditY.setText(curveArgumentSelector.selectedArgument)
 
 
 class ColorEditor(QGroupBox):
-    def __init__(self, name, color='#FFFFFF', parent=None):
+    def __init__(self, name, color='#ffffff', parent=None):
         super().__init__(parent)
         self.setTitle(name)
 
@@ -132,13 +135,17 @@ class ColorEditor(QGroupBox):
 
 
 class CurveArgumentSelector(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, path, parent=None):
         super().__init__(parent)
+        self.selectedArgument = None
+        self.currentDir = path
+        self.formatPath = os.path.join(self.currentDir, 'formats')
         # Set up label
         self.label = QLabel("Select an argument")
 
         # Set up item selection widget
-        self.itemSelectionWidget = ArgumentSelectorWidget()
+        self.itemSelectionWidget = ArgumentSelectorWidget(self.currentDir)
+        self.itemSelectionWidget.selection.connect(self.selectionMade)
 
         # Set up label and button for bottom row
         bottomRowLayout = QHBoxLayout()
@@ -153,12 +160,14 @@ class CurveArgumentSelector(QDialog):
         layout.addLayout(bottomRowLayout)
         self.setLayout(layout)
 
+    def selectionMade(self, argument):
+        self.selectedArgument = argument
+
 
 class SplitViewGraph(BasicDisplay):
     def __init__(self, parent=None):
         super().__init__(parent)
         # TODO SPLIT VIEW 2D GRAPH
-
 
 
 # TODO MULTI-CURVES 2D GRAPH

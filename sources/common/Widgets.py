@@ -11,39 +11,49 @@ import pyqtgraph.widgets.RemoteGraphicsView
 
 # --------------------- Sources ----------------------- #
 from sources.common.FileHandling import load_settings, save_settings
+from sources.common.balloondata import BalloonPackageDatabase
 
 
 ######################## CLASSES ########################
 class BasicDisplay(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, path, parent=None):
         super().__init__(parent)
         self.settingsWidget = QWidget()
+        self.currentDir = path
 
     def applyChanges(self, editWidget):
         pass
 
 
 class ArgumentSelectorWidget(QWidget):
-    def __init__(self, parent=None):
+    selection = pyqtSignal(str)
+
+    def __init__(self, path, parent=None, typeFilter=(int, float)):
         super().__init__(parent)
+        self.currentDir = path
+        self.typeFilter = typeFilter
+        self.formatPath = os.path.join(self.currentDir, "formats")
+        self.databases = None
         self.settings = load_settings('settings')
         # Set up combo box
         self.comboBox = QComboBox()
-        self.comboBox.addItems(["Option 1", "Option 2", "Option 3"])
+        self.fillComboBox()
+        self.comboBox.currentIndexChanged.connect(self.changeComboBox)
 
         # Set up buttons and label
-        self.button1 = QPushButton()
-        self.button1.setStyleSheet("border: none;")
-        self.button1.setFlat(True)
-        self.button1.setAttribute(Qt.WA_TransparentForMouseEvents)
-        self.button1.setIcon(QIcon('sources/icons/light-theme/icons8-previous-96.png'))
-        self.button1.setIconSize(QSize(20, 20))
-        self.button2 = QPushButton()
-        self.button2.setStyleSheet("border: none;")
-        self.button2.setFlat(True)
-        self.button2.setAttribute(Qt.WA_TransparentForMouseEvents)
-        self.button2.setIcon(QIcon('sources/icons/light-theme/icons8-next-96.png'))
-        self.button2.setIconSize(QSize(20, 20))
+        self.previousButton = QPushButton()
+        self.previousButton.setStyleSheet("border: none;")
+        self.previousButton.setFlat(True)
+        self.previousButton.setIcon(QIcon('sources/icons/light-theme/icons8-previous-96.png'))
+        self.previousButton.setIconSize(QSize(20, 20))
+        self.previousButton.clicked.connect(self.previousTelemetry)
+
+        self.nextButton = QPushButton()
+        self.nextButton.setStyleSheet("border: none;")
+        self.nextButton.setFlat(True)
+        self.nextButton.setIcon(QIcon('sources/icons/light-theme/icons8-next-96.png'))
+        self.nextButton.setIconSize(QSize(20, 20))
+        self.nextButton.clicked.connect(self.nextTelemetry)
         self.label = QLabel("Label")
         self.label.setAlignment(Qt.AlignCenter)
 
@@ -51,6 +61,9 @@ class ArgumentSelectorWidget(QWidget):
         self.treeWidget = QTreeWidget()
         self.treeWidget.setHeaderLabels([])
         self.treeWidget.setHeaderHidden(True)
+        self.treeWidget.setColumnCount(1)
+        self.treeWidget.itemSelectionChanged.connect(self.itemSelected)
+        self.treeItems = {}
 
         # Set up layout
         layout = QVBoxLayout()
@@ -58,30 +71,94 @@ class ArgumentSelectorWidget(QWidget):
         topRowLayout.addWidget(self.comboBox)
         layout.addLayout(topRowLayout)
         secondRowLayout = QHBoxLayout()
-        secondRowLayout.addWidget(self.button1)
+        secondRowLayout.addWidget(self.previousButton)
         secondRowLayout.addWidget(self.label)
-        secondRowLayout.addWidget(self.button2)
+        secondRowLayout.addWidget(self.nextButton)
+
         layout.addLayout(secondRowLayout)
         layout.addWidget(self.treeWidget)
         self.setLayout(layout)
 
+        self.changeComboBox()
+
     def fillComboBox(self):
-        pass
+        self.settings = load_settings('settings')
+        files = self.settings['FORMAT_FILES']
+        if len(files) == 1 and len(files[0]) == 0:
+            files = []
+        self.databases = {}
+        for file in files:
+            path = os.path.join(self.formatPath, file)
+            name, database = os.path.basename(path), BalloonPackageDatabase(path)
+            self.databases[name] = (database, 0)
+        self.comboBox.clear()
+        names = list(self.databases.keys())
+        if len(names) != 0:
+            for name in names:
+                self.comboBox.addItem(name)
 
     def changeComboBox(self):
-        pass
+        databaseName = self.comboBox.currentText()
+        if len(databaseName) != 0:
+            database, selectedIndex = self.databases[databaseName]
+            telemetries = {telemetry.id.name: telemetry.data for telemetry in database.telemetryTypes}
+            selectedTelemetry = list(telemetries.keys())[selectedIndex]
+            self.label.setText(selectedTelemetry)
+            self.fillTreeWidget(databaseName)
 
     def previousTelemetry(self):
-        pass
+        databaseName = self.comboBox.currentText()
+        if len(databaseName) != 0:
+            database, selectedIndex = self.databases[databaseName]
+            selectedIndex -= 1
+            if selectedIndex < 0:
+                selectedIndex = len(database.telemetryTypes) - 1
+            self.databases[databaseName] = (database, selectedIndex)
+            telemetries = {telemetry.id.name: telemetry.data for telemetry in database.telemetryTypes}
+            selectedTelemetry = list(telemetries.keys())[selectedIndex]
+            self.label.setText(selectedTelemetry)
+            self.fillTreeWidget(databaseName)
 
     def nextTelemetry(self):
-        pass
+        databaseName = self.comboBox.currentText()
+        if len(databaseName) != 0:
+            database, selectedIndex = self.databases[databaseName]
+            selectedIndex += 1
+            if selectedIndex == len(database.telemetryTypes):
+                selectedIndex = 0
+            self.databases[databaseName] = (database, selectedIndex)
+            telemetries = {telemetry.id.name: telemetry.data for telemetry in database.telemetryTypes}
+            selectedTelemetry = list(telemetries.keys())[selectedIndex]
+            self.label.setText(selectedTelemetry)
+            self.fillTreeWidget(databaseName)
 
-    def fillTreeWidget(self):
-        pass
+    def fillTreeWidget(self, databaseName: str):
+        self.treeItems = {}
+        self.treeWidget.clear()
+        database, selectedIndex = self.databases[databaseName]
+        telemetryName = database.telemetryTypes[selectedIndex].id.name
+        selectedTypes = database.nestedPythonTypes(telemetryName, searchedType=self.typeFilter)
+
+        def addGrandChildren():
+            pass
+
+        for name, value in selectedTypes.items():
+            if isinstance(value, dict):
+                item = QTreeWidgetItem(self.treeWidget, [name])
+                item.setDisabled(True)
+                self.treeItems[name] = (item, {})
+            elif isinstance(value, bool):
+                item = QTreeWidgetItem(self.treeWidget, [name])
+                item.setDisabled(not value)
+                self.treeItems[name] = item
 
     def itemSelected(self):
-        pass
+        currentItem = self.treeWidget.currentItem()
+        if not currentItem.isDisabled():
+            database = self.comboBox.currentText()
+            telemetry = self.label.text()
+            dataPoint = currentItem.text(0)
+            self.selection.emit('${}${}${}$'.format(database, telemetry, dataPoint))
 
 
 class SerialWindow(QWidget):

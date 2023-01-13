@@ -36,11 +36,11 @@ class DisplayTabWidget(QMainWindow):
         self.tabWidget.addTab(QMainWindow(), "Tab 2")
 
         tabWidget1 = self.tabWidget.widget(0)
-        dock_widget_1 = DisplayDockWidget("Dock Widget 1", widget=CustomGraph())
-        dock_widget_2 = DisplayDockWidget("Dock Widget 2", widget=CustomGraph())
-        dock_widget_3 = DisplayDockWidget('Dock Widget 3', widget=CustomGraph())
-        dock_widget_4 = DisplayDockWidget("Dock Widget 4", widget=CustomGraph())
-        dock_widget_5 = DisplayDockWidget('bruh', widget=CustomGraph())
+        dock_widget_1 = DisplayDockWidget("Dock Widget 1", widget=CustomGraph(path=self.currentDir))
+        dock_widget_2 = DisplayDockWidget("Dock Widget 2", widget=CustomGraph(path=self.currentDir))
+        dock_widget_3 = DisplayDockWidget('Dock Widget 3', widget=CustomGraph(path=self.currentDir))
+        dock_widget_4 = DisplayDockWidget("Dock Widget 4", widget=CustomGraph(path=self.currentDir))
+        dock_widget_5 = DisplayDockWidget('bruh', widget=CustomGraph(path=self.currentDir))
 
         tabWidget1.addDockWidget(Qt.TopDockWidgetArea, dock_widget_1)
         tabWidget1.addDockWidget(Qt.RightDockWidgetArea, dock_widget_2)
