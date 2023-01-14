@@ -86,7 +86,7 @@ class CurveEditor(QWidget):
         nameLabel = QLabel('Name: ')
         self.nameEdit = QLineEdit()
 
-        self.colorEditor = ColorEditor('Curve Color', color='#FFFFFF', parent=self)
+        self.colorEditor = ColorEditor('Curve Color', color='#ffffff', parent=self)
 
         layout = QGridLayout()
         layout.addWidget(nameLabel, 0, 0, 1, 1)
@@ -145,23 +145,61 @@ class CurveArgumentSelector(QDialog):
 
         # Set up item selection widget
         self.itemSelectionWidget = ArgumentSelectorWidget(self.currentDir)
-        self.itemSelectionWidget.selection.connect(self.selectionMade)
+        self.itemSelectionWidget.treeWidget.itemSelectionChanged.connect(self.selectionMade)
 
-        # Set up label and button for bottom row
+        # Set buttons for bottom row
         bottomRowLayout = QHBoxLayout()
-        self.bottomRowLabel = QLabel("Selected argument:")
         self.selectButton = QPushButton("Select")
-        bottomRowLayout.addWidget(self.bottomRowLabel)
+        self.cancelButton = QPushButton("Cancel")
         bottomRowLayout.addWidget(self.selectButton)
+        bottomRowLayout.addWidget(self.cancelButton)
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.label)
-        layout.addWidget(self.itemSelectionWidget)
-        layout.addLayout(bottomRowLayout)
-        self.setLayout(layout)
+        # Setting Up Selected Name and Info
+        self.selectionNameLabel = QLabel()
+        self.selectionInfoEdit = QLineEdit()
+        self.selectionInfoEdit.setReadOnly(True)
+        self.selectionInfoEdit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.selectionInfoEdit.setAlignment(Qt.AlignTop | Qt.AlignBottom)
 
-    def selectionMade(self, argument):
-        self.selectedArgument = argument
+        leftLayout = QVBoxLayout()
+        leftLayout.addWidget(self.label)
+        leftLayout.addWidget(self.itemSelectionWidget)
+        leftLayout.addLayout(bottomRowLayout)
+
+        # Set layout for label and lineedit
+        rightLayout = QVBoxLayout()
+        rightLayout.addWidget(self.selectionNameLabel, stretch=0)
+        rightLayout.addWidget(self.selectionInfoEdit, stretch=1)
+        rightLayout.setAlignment(self.selectionInfoEdit, Qt.AlignBottom)
+
+        mainLayout = QHBoxLayout()
+        mainLayout.addLayout(leftLayout)
+        mainLayout.addLayout(rightLayout)
+        mainLayout.setStretchFactor(leftLayout, 1)
+        mainLayout.setStretchFactor(rightLayout, 2)
+        self.setLayout(mainLayout)
+
+    def selectionMade(self):
+        currentItem = self.itemSelectionWidget.treeWidget.currentItem()
+
+        def getParentChain(item):
+            if item.parent():
+                parent = item.parent()
+                name = getParentChain(parent) + '/' + item.text(0)
+            else:
+                name = item.text(0)
+            return name
+
+        if not currentItem.isDisabled():
+            # Retrieving Data
+            database = self.itemSelectionWidget.comboBox.currentText()
+            telemetry = self.itemSelectionWidget.label.text()
+            treeChain = getParentChain(currentItem)
+            itemName = currentItem.text(0)
+            # Updating Value
+            self.selectionNameLabel.setText(itemName)
+            self.selectedArgument = '{}${}${}'.format(database, telemetry, treeChain)
+
 
 
 class SplitViewGraph(BasicDisplay):

@@ -26,7 +26,6 @@ class BasicDisplay(QWidget):
 
 
 class ArgumentSelectorWidget(QWidget):
-    selection = pyqtSignal(str)
 
     def __init__(self, path, parent=None, typeFilter=(int, float)):
         super().__init__(parent)
@@ -62,22 +61,20 @@ class ArgumentSelectorWidget(QWidget):
         self.treeWidget.setHeaderLabels([])
         self.treeWidget.setHeaderHidden(True)
         self.treeWidget.setColumnCount(1)
-        self.treeWidget.itemSelectionChanged.connect(self.itemSelected)
         self.treeItems = {}
 
-        # Set up layout
-        layout = QVBoxLayout()
+        # Set up Main Layout
+        mainLayout = QVBoxLayout()
         topRowLayout = QHBoxLayout()
         topRowLayout.addWidget(self.comboBox)
-        layout.addLayout(topRowLayout)
+        mainLayout.addLayout(topRowLayout)
         secondRowLayout = QHBoxLayout()
         secondRowLayout.addWidget(self.previousButton)
         secondRowLayout.addWidget(self.label)
         secondRowLayout.addWidget(self.nextButton)
-
-        layout.addLayout(secondRowLayout)
-        layout.addWidget(self.treeWidget)
-        self.setLayout(layout)
+        mainLayout.addLayout(secondRowLayout)
+        mainLayout.addWidget(self.treeWidget)
+        self.setLayout(mainLayout)
 
         self.changeComboBox()
 
@@ -139,26 +136,33 @@ class ArgumentSelectorWidget(QWidget):
         telemetryName = database.telemetryTypes[selectedIndex].id.name
         selectedTypes = database.nestedPythonTypes(telemetryName, searchedType=self.typeFilter)
 
-        def addGrandChildren():
-            pass
+        def addGrandChildren(treeItem, selectedDict):
+            for childName, childValue in selectedDict.items():
+                if isinstance(childValue, dict):
+                    child = QTreeWidgetItem(treeItem, [childName])
+                    disabled = not childValue
+                    child.setDisabled(disabled)
+                    treeItem.addChild(child)
+                    addGrandChildren(child, childValue)
+                elif isinstance(childValue, bool):
+                    child = QTreeWidgetItem(treeItem, [childName])
+                    disabled = not childValue
+                    child.setDisabled(disabled)
+                    treeItem.addChild(child)
+            return treeItem
 
         for name, value in selectedTypes.items():
             if isinstance(value, dict):
                 item = QTreeWidgetItem(self.treeWidget, [name])
+                self.treeWidget.addTopLevelItem(item)
                 item.setDisabled(True)
-                self.treeItems[name] = (item, {})
+                addGrandChildren(item, value)
             elif isinstance(value, bool):
                 item = QTreeWidgetItem(self.treeWidget, [name])
                 item.setDisabled(not value)
-                self.treeItems[name] = item
+                self.treeWidget.addTopLevelItem(item)
 
-    def itemSelected(self):
-        currentItem = self.treeWidget.currentItem()
-        if not currentItem.isDisabled():
-            database = self.comboBox.currentText()
-            telemetry = self.label.text()
-            dataPoint = currentItem.text(0)
-            self.selection.emit('${}${}${}$'.format(database, telemetry, dataPoint))
+
 
 
 class SerialWindow(QWidget):
