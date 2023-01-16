@@ -172,10 +172,6 @@ class PyGS(QMainWindow):
         self.exitAct.setShortcut('Ctrl+Q')
         self.exitAct.setStatusTip('Exit application')
         self.exitAct.triggered.connect(self.close)
-        # Change Header
-        self.changeHeaderAct = QAction('&Change Header', self)
-        self.changeHeaderAct.setStatusTip('Change Packets Header')
-        self.changeHeaderAct.triggered.connect(self.openChangeHeader)
         # Add New Graph Tab
         self.newGraphAction = QAction('&Add Graph Tab', self)
         self.newGraphAction.setStatusTip('Add New Graph Tab')
@@ -260,7 +256,6 @@ class PyGS(QMainWindow):
 
         ###  EDIT MENU  ###
         self.editMenu = self.menubar.addMenu('&Edit')
-        self.editMenu.addAction(self.changeHeaderAct)
 
         ###  WINDOW MENU  ###
         self.windowMenu = self.menubar.addMenu('&Window')

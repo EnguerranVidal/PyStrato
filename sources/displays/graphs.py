@@ -16,11 +16,11 @@ from sources.common.Widgets import BasicDisplay, ArgumentSelectorWidget
 
 ######################## CLASSES ########################
 class CustomGraph(BasicDisplay):
-    def __init__(self, path, parent=None):
+    def __init__(self, path, parent=None, backgroundColor='#ffffff'):
         super().__init__(path, parent)
         layout = QVBoxLayout(self)
         self.plotWidget = pg.PlotWidget(self)
-        self.plotWidget.setBackground('w')
+        self.plotWidget.setBackground(backgroundColor)
         layout.addWidget(self.plotWidget)
 
         self.settingsWidget = CustomGraphEditDialog(self.currentDir, self)
@@ -199,7 +199,6 @@ class CurveArgumentSelector(QDialog):
             # Updating Value
             self.selectionNameLabel.setText(itemName)
             self.selectedArgument = '{}${}${}'.format(database, telemetry, treeChain)
-
 
 
 class SplitViewGraph(BasicDisplay):

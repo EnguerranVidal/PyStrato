@@ -4,6 +4,7 @@ import os
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import *
 import pyqtgraph as pg
 from pyqtgraph.dockarea import Dock, DockArea
@@ -140,29 +141,31 @@ class ArgumentSelectorWidget(QWidget):
             for childName, childValue in selectedDict.items():
                 if isinstance(childValue, dict):
                     child = QTreeWidgetItem(treeItem, [childName])
-                    disabled = not childValue
-                    child.setDisabled(disabled)
                     treeItem.addChild(child)
+                    child.setFlags(child.flags() & ~Qt.ItemIsEnabled)
                     addGrandChildren(child, childValue)
                 elif isinstance(childValue, bool):
                     child = QTreeWidgetItem(treeItem, [childName])
-                    disabled = not childValue
-                    child.setDisabled(disabled)
                     treeItem.addChild(child)
+                    if value:
+                        child.setFlags(child.flags() & Qt.ItemIsEnabled)
+                    else:
+                        child.setFlags(child.flags() & ~Qt.ItemIsEnabled)
             return treeItem
 
         for name, value in selectedTypes.items():
             if isinstance(value, dict):
                 item = QTreeWidgetItem(self.treeWidget, [name])
                 self.treeWidget.addTopLevelItem(item)
-                item.setDisabled(True)
+                item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
                 addGrandChildren(item, value)
             elif isinstance(value, bool):
                 item = QTreeWidgetItem(self.treeWidget, [name])
-                item.setDisabled(not value)
                 self.treeWidget.addTopLevelItem(item)
-
-
+                if value:
+                    item.setFlags(item.flags() & Qt.ItemIsEnabled)
+                else:
+                    item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
 
 
 class SerialWindow(QWidget):
