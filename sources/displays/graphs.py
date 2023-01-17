@@ -10,8 +10,8 @@ from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
 from sources.common.FileHandling import load_settings
+from sources.common.Widgets import BasicDisplay, ArgumentSelector
 from sources.common.balloondata import BalloonPackageDatabase
-from sources.common.Widgets import BasicDisplay, ArgumentSelectorWidget
 
 
 ######################## CLASSES ########################
@@ -101,14 +101,14 @@ class CurveEditor(QWidget):
         self.setLayout(layout)
 
     def openCurveArgumentSelector(self):
-        curveArgumentSelector = CurveArgumentSelector(self.currentDir, self)
+        curveArgumentSelector = ArgumentSelector(self.currentDir, self)
         curveArgumentSelector.exec_()
         if curveArgumentSelector.selectedArgument is not None:
             self.lineEditY.setText(curveArgumentSelector.selectedArgument)
 
 
 class ColorEditor(QGroupBox):
-    def __init__(self, name, color='#ffffff', parent=None):
+    def __init__(self, name, color='#FFFFFF', parent=None):
         super().__init__(parent)
         self.setTitle(name)
 
@@ -132,73 +132,6 @@ class ColorEditor(QGroupBox):
         color = QColorDialog.getColor()
         self.colorButton.setStyleSheet(f"background-color: {color.name()};")
         self.colorLabel.setText(color.name())
-
-
-class CurveArgumentSelector(QDialog):
-    def __init__(self, path, parent=None):
-        super().__init__(parent)
-        self.selectedArgument = None
-        self.currentDir = path
-        self.formatPath = os.path.join(self.currentDir, 'formats')
-        # Set up label
-        self.label = QLabel("Select an argument")
-
-        # Set up item selection widget
-        self.itemSelectionWidget = ArgumentSelectorWidget(self.currentDir)
-        self.itemSelectionWidget.treeWidget.itemSelectionChanged.connect(self.selectionMade)
-
-        # Set buttons for bottom row
-        bottomRowLayout = QHBoxLayout()
-        self.selectButton = QPushButton("Select")
-        self.cancelButton = QPushButton("Cancel")
-        bottomRowLayout.addWidget(self.selectButton)
-        bottomRowLayout.addWidget(self.cancelButton)
-
-        # Setting Up Selected Name and Info
-        self.selectionNameLabel = QLabel()
-        self.selectionInfoEdit = QLineEdit()
-        self.selectionInfoEdit.setReadOnly(True)
-        self.selectionInfoEdit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.selectionInfoEdit.setAlignment(Qt.AlignTop | Qt.AlignBottom)
-
-        leftLayout = QVBoxLayout()
-        leftLayout.addWidget(self.label)
-        leftLayout.addWidget(self.itemSelectionWidget)
-        leftLayout.addLayout(bottomRowLayout)
-
-        # Set layout for label and lineedit
-        rightLayout = QVBoxLayout()
-        rightLayout.addWidget(self.selectionNameLabel, stretch=0)
-        rightLayout.addWidget(self.selectionInfoEdit, stretch=1)
-        rightLayout.setAlignment(self.selectionInfoEdit, Qt.AlignBottom)
-
-        mainLayout = QHBoxLayout()
-        mainLayout.addLayout(leftLayout)
-        mainLayout.addLayout(rightLayout)
-        mainLayout.setStretchFactor(leftLayout, 1)
-        mainLayout.setStretchFactor(rightLayout, 2)
-        self.setLayout(mainLayout)
-
-    def selectionMade(self):
-        currentItem = self.itemSelectionWidget.treeWidget.currentItem()
-
-        def getParentChain(item):
-            if item.parent():
-                parent = item.parent()
-                name = getParentChain(parent) + '/' + item.text(0)
-            else:
-                name = item.text(0)
-            return name
-
-        if not currentItem.isDisabled():
-            # Retrieving Data
-            database = self.itemSelectionWidget.comboBox.currentText()
-            telemetry = self.itemSelectionWidget.label.text()
-            treeChain = getParentChain(currentItem)
-            itemName = currentItem.text(0)
-            # Updating Value
-            self.selectionNameLabel.setText(itemName)
-            self.selectedArgument = '{}${}${}'.format(database, telemetry, treeChain)
 
 
 class SplitViewGraph(BasicDisplay):

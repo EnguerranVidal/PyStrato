@@ -25,7 +25,6 @@ class BasicDisplay(QWidget):
     def applyChanges(self, editWidget):
         pass
 
-
 class ArgumentSelectorWidget(QWidget):
 
     def __init__(self, path, parent=None, typeFilter=(int, float)):
@@ -166,6 +165,57 @@ class ArgumentSelectorWidget(QWidget):
                     item.setFlags(item.flags() & Qt.ItemIsEnabled)
                 else:
                     item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+
+
+class ArgumentSelector(QDialog):
+    def __init__(self, path, parent=None):
+        super().__init__(parent)
+        self.selectedArgument = None
+        self.currentDir = path
+        self.formatPath = os.path.join(self.currentDir, 'formats')
+        # Set up label
+        self.label = QLabel("Select an argument")
+
+        # Set up item selection widget
+        self.itemSelectionWidget = ArgumentSelectorWidget(self.currentDir)
+        self.itemSelectionWidget.treeWidget.itemSelectionChanged.connect(self.selectionMade)
+
+        # Set buttons for bottom row
+        bottomRowLayout = QHBoxLayout()
+        self.selectButton = QPushButton("Select")
+        self.cancelButton = QPushButton("Cancel")
+        bottomRowLayout.addWidget(self.selectButton)
+        bottomRowLayout.addWidget(self.cancelButton)
+
+        # Setting Up Selected Name
+        self.selectionNameLabel = QLabel()
+
+        mainLayout = QVBoxLayout()
+        mainLayout.addWidget(self.label)
+        mainLayout.addWidget(self.itemSelectionWidget)
+        mainLayout.addLayout(bottomRowLayout)
+        self.setLayout(mainLayout)
+
+    def selectionMade(self):
+        currentItem = self.itemSelectionWidget.treeWidget.currentItem()
+
+        def getParentChain(item):
+            if item.parent():
+                parent = item.parent()
+                name = getParentChain(parent) + '/' + item.text(0)
+            else:
+                name = item.text(0)
+            return name
+
+        if not currentItem.isDisabled():
+            # Retrieving Data
+            database = self.itemSelectionWidget.comboBox.currentText()
+            telemetry = self.itemSelectionWidget.label.text()
+            treeChain = getParentChain(currentItem)
+            itemName = currentItem.text(0)
+            # Updating Value
+            self.selectionNameLabel.setText(itemName)
+            self.selectedArgument = '{}${}${}'.format(database, telemetry, treeChain)
 
 
 class SerialWindow(QWidget):

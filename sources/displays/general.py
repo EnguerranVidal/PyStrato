@@ -14,7 +14,9 @@ from sources.common.balloondata import BalloonPackageDatabase
 from sources.displays.graphs import CustomGraph
 
 
-######################## CLASSES ########################a
+######################## CLASSES ########################
+
+
 class DisplayTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
@@ -247,7 +249,6 @@ class HoverButton(QPushButton):
 
     def sizeHint(self):
         return self.iconSize()
-
 
 class ContentStorage:
     def __init__(self, path):
