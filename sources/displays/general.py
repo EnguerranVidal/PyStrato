@@ -12,6 +12,7 @@ from sources.common.FileHandling import load_settings
 from sources.common.Widgets import BasicDisplay
 from sources.common.balloondata import BalloonPackageDatabase
 from sources.displays.graphs import CustomGraph
+from sources.displays.indicators import SingleIndicator
 
 
 ######################## CLASSES ########################
@@ -41,7 +42,7 @@ class DisplayTabWidget(QMainWindow):
         dock_widget_1 = DisplayDockWidget("Dock Widget 1", widget=CustomGraph(path=self.currentDir))
         dock_widget_2 = DisplayDockWidget("Dock Widget 2", widget=CustomGraph(path=self.currentDir))
         dock_widget_3 = DisplayDockWidget('Dock Widget 3', widget=CustomGraph(path=self.currentDir))
-        dock_widget_4 = DisplayDockWidget("Dock Widget 4", widget=CustomGraph(path=self.currentDir))
+        dock_widget_4 = DisplayDockWidget("Dock Widget 4", widget=SingleIndicator(path=self.currentDir))
         dock_widget_5 = DisplayDockWidget('bruh', widget=CustomGraph(path=self.currentDir))
 
         tabWidget1.addDockWidget(Qt.TopDockWidgetArea, dock_widget_1)

@@ -25,8 +25,8 @@ class BasicDisplay(QWidget):
     def applyChanges(self, editWidget):
         pass
 
-class ArgumentSelectorWidget(QWidget):
 
+class ArgumentSelectorWidget(QWidget):
     def __init__(self, path, parent=None, typeFilter=(int, float)):
         super().__init__(parent)
         self.currentDir = path
@@ -135,6 +135,7 @@ class ArgumentSelectorWidget(QWidget):
         database, selectedIndex = self.databases[databaseName]
         telemetryName = database.telemetryTypes[selectedIndex].id.name
         selectedTypes = database.nestedPythonTypes(telemetryName, searchedType=self.typeFilter)
+        # TODO : Add a retrieving unit thing here
 
         def addGrandChildren(treeItem, selectedDict):
             for childName, childValue in selectedDict.items():
@@ -171,6 +172,7 @@ class ArgumentSelector(QDialog):
     def __init__(self, path, parent=None):
         super().__init__(parent)
         self.selectedArgument = None
+        self.argumentUnit = None
         self.currentDir = path
         self.formatPath = os.path.join(self.currentDir, 'formats')
         # Set up label
@@ -216,6 +218,7 @@ class ArgumentSelector(QDialog):
             # Updating Value
             self.selectionNameLabel.setText(itemName)
             self.selectedArgument = '{}${}${}'.format(database, telemetry, treeChain)
+            self.argumentUnit = None
 
 
 class SerialWindow(QWidget):

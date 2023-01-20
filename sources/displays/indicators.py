@@ -19,11 +19,39 @@ from sources.displays.graphs import ColorEditor
 class SingleIndicator(BasicDisplay):
     def __init__(self, path, parent=None):
         super().__init__(path, parent)
+        self.indicatorLabel = QLabel('bruh')
         self.settingsWidget = SingleIndicatorEditDialog(self.currentDir, self)
-        self.indicatorLabel = QLabel()
+
+        gridLayout = QGridLayout()
+        gridLayout.addWidget(self.indicatorLabel)
+        self.setLayout(gridLayout)
 
     def applyChanges(self, editWidget):
-        pass
+        backgroundColor = editWidget.backgroundColor.colorLabel.text()
+        fontColor = editWidget.fontColor.colorLabel.text()
+        font = QFont(editWidget.fontModelComboBox.currentText())
+        fontSize = editWidget.fontSizeSpinBox.value()
+        font.setPixelSize(fontSize * QFontMetricsF(font).height() / font.pointSizeF())
+
+        self.indicatorLabel.setAutoFillBackground(True)
+        self.indicatorLabel.setFont(font)
+        self.indicatorLabel.setAutoFillBackground(True)
+        self.indicatorLabel.setFont(font)
+        self.indicatorLabel.setStyleSheet("background-color: " + backgroundColor + "; color: " + fontColor + ";")
+        bgColor = QColor(backgroundColor)
+
+        # Set the background color of the SingleIndicator widget
+        palette = self.palette()
+        palette.setColor(self.backgroundRole(), bgColor)
+        self.setPalette(palette)
+
+        # Text Alignment
+        if editWidget.positionLeftButton.isChecked():
+            self.indicatorLabel.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        elif editWidget.positionCenterButton.isChecked():
+            self.indicatorLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        elif editWidget.positionRightButton.isChecked():
+            self.indicatorLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
 
 class GridIndicator(BasicDisplay):
@@ -46,28 +74,96 @@ class SingleIndicatorEditDialog(QWidget):
         self.button.clicked.connect(self.openArgumentSelector)
 
         # Create the QLabel and set its text
-        self.label = QLabel("Label:")
+        self.label = QLabel("Value: ")
 
         # Create a layout and add the QLineEdit, QPushButton, and QLabel
-        valueLayout = QHBoxLayout(self)
+        valueLayout = QHBoxLayout()
         valueLayout.addWidget(self.label)
         valueLayout.addWidget(self.lineEdit)
         valueLayout.addWidget(self.button)
 
+        # Show Unit Checkbox
+        self.unitCheckbox = QCheckBox("Show Unit")
+
+        # Get the current font, font size, font color, and background color of the indicatorLabel
+        currentFont = parent.indicatorLabel.font()
+        currentFontSize = currentFont.pointSize()
+        currentFontColor = parent.indicatorLabel.palette().color(QPalette.WindowText)
+        currentBackgroundColor = parent.indicatorLabel.palette().color(QPalette.Window)
+
         # Colors (Font & Background)
-        colorLayout = QHBoxLayout(self)
-        self.fontColor = ColorEditor('Font Color', color='#000000', parent=self)
-        self.backgroundColor = ColorEditor('Background Color', color='#FFFFFF', parent=self)
-        colorLayout.addWidget(self.fontColor)
-        colorLayout.addWidget(self.backgroundColor)
+        colorLayout = QGridLayout()
+        self.fontColor = ColorEditor('Font Color', color=currentFontColor.name())
+        self.backgroundColor = ColorEditor('Background Color', color=currentBackgroundColor.name())
+        colorLayout.addWidget(self.fontColor, 0, 0)
+        colorLayout.addWidget(self.backgroundColor, 0, 1)
+        # Create a QSpinBox for selecting font size
+        fontSizeLabel = QLabel("Font Size:")
+        self.fontSizeSpinBox = QSpinBox()
+        self.fontSizeSpinBox.setRange(8, 72)
+        self.fontSizeSpinBox.setValue(currentFontSize)
+        self.fontSizeSpinBox.setSingleStep(2)
 
-        mainLayout = QVBoxLayout(self)
+        # --------- Positioning Buttons --------
+        self.positionButtonGroup = QButtonGroup(self)
+        # LEFT
+        self.positionLeftButton = QPushButton()
+        self.positionLeftButton.setIcon(QIcon('sources/icons/light-theme/icons8-align-left-96.png'))
+        self.positionLeftButton.setIconSize(QSize(20, 20))
+        self.positionLeftButton.setCheckable(True)
+        # CENTER
+        self.positionCenterButton = QPushButton()
+        self.positionCenterButton.setIcon(QIcon('sources/icons/light-theme/icons8-align-center-96.png'))
+        self.positionCenterButton.setIconSize(QSize(20, 20))
+        self.positionCenterButton.setCheckable(True)
+        # RIGHT
+        self.positionRightButton = QPushButton()
+        self.positionRightButton.setIcon(QIcon('sources/icons/light-theme/icons8-align-right-96.png'))
+        self.positionRightButton.setIconSize(QSize(20, 20))
+        self.positionRightButton.setCheckable(True)
+        # Button Group
+        self.positionButtonGroup.addButton(self.positionLeftButton)
+        self.positionButtonGroup.addButton(self.positionCenterButton)
+        self.positionButtonGroup.addButton(self.positionRightButton)
+        self.positionButtonGroup.setExclusive(True)
+        # Position in Layout
+        positionLayout = QHBoxLayout()
+        positionLayout.addWidget(self.positionLeftButton)
+        positionLayout.addWidget(self.positionCenterButton)
+        positionLayout.addWidget(self.positionRightButton)
+        # Check Alignment
+        alignment = parent.indicatorLabel.alignment()
+        if alignment & Qt.AlignLeft:
+            self.positionLeftButton.setChecked(True)
+        elif alignment & Qt.AlignHCenter:
+            self.positionCenterButton.setChecked(True)
+        elif alignment & Qt.AlignRight:
+            self.positionRightButton.setChecked(True)
+
+        # Create a QFontComboBox for selecting font model
+        fontModelLabel = QLabel("Font Model:")
+        self.fontModelComboBox = QFontComboBox()
+        self.fontModelComboBox.setCurrentFont(currentFont)
+
+        # Add the font size and font model widgets to a layout
+        fontLayout = QGridLayout()
+        fontLayout.addWidget(fontSizeLabel, 0, 0)
+        fontLayout.addWidget(self.fontSizeSpinBox, 0, 1)
+        fontLayout.addWidget(fontModelLabel, 1, 0)
+        fontLayout.addWidget(self.fontModelComboBox, 1, 1)
+
+        mainLayout = QVBoxLayout()
         mainLayout.addLayout(valueLayout)
-
+        mainLayout.addWidget(self.unitCheckbox)
+        mainLayout.addLayout(colorLayout)
+        mainLayout.addLayout(positionLayout)
+        mainLayout.addLayout(fontLayout)
         self.setLayout(mainLayout)
 
     def openArgumentSelector(self):
         curveArgumentSelector = ArgumentSelector(self.currentDir, self)
         curveArgumentSelector.exec_()
         if curveArgumentSelector.selectedArgument is not None:
+
             self.lineEdit.setText(curveArgumentSelector.selectedArgument)
+
