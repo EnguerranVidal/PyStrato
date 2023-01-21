@@ -1,3 +1,3 @@
 Name,Value,Type,Description
-SYNC_BYTE_1,170,uint8_t,The first byte of every message.
-SYNC_BYTE_2,85,uint8_t,The second byte of every message.
+SYNC_BYTE_1,170,uint8,The first byte of every message.
+SYNC_BYTE_2,85,uint8,The second byte of every message.

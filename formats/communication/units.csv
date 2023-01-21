@@ -1,2 +1,2 @@
 Name,Type,Description
-ms,uint32_t,A time in milliseconds.
+ms,uint32,A time in milliseconds.

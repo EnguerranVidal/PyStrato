@@ -6,6 +6,8 @@ import sys
 import time as t
 import subprocess
 from functools import partial
+from typing import Optional
+
 import numpy as np
 
 # ------------------- PyQt Modules -------------------- #
@@ -55,6 +57,8 @@ class PacketTabWidget(QMainWindow):
         self.databaseMenu.valuesListWidget.clear()
         # Loading New Values
         name = self.databaseMenu.openComboBox.currentText()
+        if not name:
+            return
         database: BalloonPackageDatabase = self.databases[name]
         if len(database.units) != 0:
             item = QListWidgetItem('Units')
@@ -71,7 +75,7 @@ class PacketTabWidget(QMainWindow):
         if len(database.telemetryTypes) != 0:
             item = QListWidgetItem('Telemetries')
             self.databaseMenu.valuesListWidget.addItem(item)
-        if len(database.telecommands) != 0:
+        if len(database.telecommandTypes) != 0:
             item = QListWidgetItem('Telecommands')
             self.databaseMenu.valuesListWidget.addItem(item)
 
@@ -110,60 +114,50 @@ class PacketTabWidget(QMainWindow):
 
     def saveFormat(self, path=None):
         name = self.databaseMenu.openComboBox.currentText()
-        if len(name) != 0:
-            if path is None:
-                path = self.databases[name]['PATH']
-            else:
-                self.databases[name]['PATH'] = path
-            formatLine = self.databases[name]
-            formatLine['NAME'] = name
-            save_format(formatLine, path)
+        if name:
+            self._saveDatabase(self.databases[name], path=path)
 
     def saveAllFormats(self):
         n = self.databaseMenu.openComboBox.count()
         for name in [self.databaseMenu.openComboBox.itemText(i) for i in range(n)]:
-            save_format(self.databases[name], self.databases[name]['PATH'])
+            self._saveDatabase(self.databases[name])
 
-    def closeFormat(self):
-        name = self.databaseMenu.openComboBox.currentText()
-        print(name)
-        if name != '':
-            path = self.databases[name]['PATH']
-            name, formatLine = load_format(path)
-            if formatLine != self.databases[name]:
-                messageBox = QMessageBox()
-                title = "Close Format"
-                message = "WARNING !\n\nIf you close without saving, any changes made to the format" \
-                          "will be lost.\n\nSave format before closing?"
-                reply = messageBox.question(self, title, message, messageBox.Yes | messageBox.No |
-                                            messageBox.Cancel, messageBox.Cancel)
-                if reply == messageBox.Yes or reply == messageBox.No:
-                    if reply == messageBox.Yes:
-                        save_format(self.databases[name], path)
-                    index = self.databaseMenu.openComboBox.currentIndex()
-                    self.databaseMenu.openComboBox.removeItem(index)
-                    self.databaseMenu.openComboBox.setCurrentIndex(0)
-                    self.comboBoxChanged()
+    @staticmethod
+    def _saveDatabase(database: BalloonPackageDatabase, path: Optional[str] = None):
+        if path is None:
+            path = database.path
+        database.save(path)
 
-    def closeAllFormat(self):
-        n = self.databaseMenu.openComboBox.count()
-        names = [self.databaseMenu.openComboBox.itemText(i) for i in range(n)]
-        changes = []
-        for i in range(n):
-            name, formatLine = load_format(self.databases[names[i]]['PATH'])
-            changes.append(formatLine != self.databases[name])
-        if True in changes:
+    def _closeDatabase(self, index: int):
+        name = self.databaseMenu.openComboBox.itemText(index)
+        if not name:
+            return
+        database = self.databases[name]
+        referenceDatabase = BalloonPackageDatabase(database.path)
+        if database != referenceDatabase:  # If changes
             messageBox = QMessageBox()
             title = "Close Format"
-            message = "WARNING !\n\nIf you quit without saving, any changes made to the balloonFormats" \
-                      "will be lost.\n\nSave format before quitting?"
+            message = f'WARNING !\n\nIf you close without saving, any changes made to {name}' \
+                      'will be lost.\n\nSave format before closing?'
             reply = messageBox.question(self, title, message, messageBox.Yes | messageBox.No |
                                         messageBox.Cancel, messageBox.Cancel)
-            if reply == messageBox.Yes or reply == messageBox.No:
-                if reply == messageBox.Yes:
-                    for i in range(n):
-                        save_format(self.databases[names[i]], self.databases[names[i]]['PATH'])
-                self.databaseMenu.openComboBox.clear()
+            if reply != messageBox.Yes and reply != messageBox.No:  # Cancel
+                return
+            if reply == messageBox.Yes:  # Yes Pressed
+                self._saveDatabase(database)
+        self.databaseMenu.openComboBox.removeItem(index)
+        if self.databaseMenu.openComboBox.count() != 0:
+            self.databaseMenu.openComboBox.setCurrentIndex(0)
+        self.comboBoxChanged()
+
+    def closeFormat(self):
+        index = self.databaseMenu.openComboBox.currentIndex()
+        if index != -1:
+            self._closeDatabase(index)
+
+    def closeAllFormat(self):
+        for i in range(self.databaseMenu.openComboBox.count()):
+            self._closeDatabase(0)
 
 
 class DatabaseMenu(QWidget):

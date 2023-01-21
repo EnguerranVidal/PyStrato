@@ -2,17 +2,17 @@
   "TelemetryMessageHeader": {
     "__doc__": "The header of a message for the ground station.",
     "sync byte 1": {
-      "__type__": "uint8_t",
+      "__type__": "uint8",
       "__value__": "SYNC_BYTE_1",
       "__doc__": "The first synchronisation byte."
     },
     "sync byte 2": {
-      "__type__": "uint8_t",
+      "__type__": "uint8",
       "__value__": "SYNC_BYTE_2",
       "__doc__": "The second synchronisation byte."
     },
     "checksum": {
-      "__type__": "uint16_t",
+      "__type__": "uint16",
       "__doc__": "The checksum of the message.\nThe two sync bytes and the checksum are not included in the checksum, but the telemetry data is included."
     },
     "type": {
@@ -22,7 +22,7 @@
   },
   "LogLevel": {
     "__doc__": "The level of a telemetry message.",
-    "__type__": "uint8_t",
+    "__type__": "uint8",
     "__values__": {
       "LOG_DEBUG": {
         "__doc__": "A verbose logging message that should only be send during debugging."

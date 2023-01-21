@@ -7,10 +7,8 @@ import pandas as pd
 import numpy as np
 import time
 
-from enum import Enum
-
 from ecom.database import CommunicationDatabase, Unit, Configuration
-from ecom.datatypes import TypeInfo, DefaultValueInfo
+from ecom.datatypes import TypeInfo, DefaultValueInfo, EnumType
 
 from sources.common.balloondata import BalloonPackageDatabase
 
@@ -45,7 +43,7 @@ def testSaving(path):
         return
     existingEnumNames = [config.name for config in configEnum]
     existingEnumNames.append(newConfigName)
-    configEnum = Enum(configEnum.__name__, existingEnumNames, start=0)
+    configEnum = EnumType(configEnum.__name__, existingEnumNames, start=0)
     newConfigs = [
         dataclasses.replace(config, id=configId)
         for config, configId in zip(database.configurations, configEnum)

@@ -1,5 +1,5 @@
 Name,Type,Description
 time,ms,The time the message was generated in milliseconds since the boot.
 type,MessageType,The type of the message.
-size,uint16_t,The size of the message in bytes.
+size,uint16,The size of the message in bytes.
 message,char[.size],The message text.

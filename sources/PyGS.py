@@ -497,6 +497,12 @@ class PyGS(QMainWindow):
             time.sleep(0.5)
             self.serialWindow.textedit.setDisabled(True)
 
+    def startSerialSimulation(self):
+        pass
+
+    def stopSerialSimulation(self):
+        pass
+
     def newSerialData(self, content):
         self.graphsTabWidget.updateTabGraphs(content)
 
@@ -532,17 +538,32 @@ class PyGS(QMainWindow):
             self.recentMenu.setDisabled(True)
         else:
             self.recentMenu.setDisabled(False)
+        index = self.packetTabWidget.databaseMenu.openComboBox.currentIndex()
+        anyDatabaseChanges = False
+        currentDatabaseChanges = False
+        for i, database in enumerate(self.packetTabWidget.databases.values()):
+            referenceDatabase = BalloonPackageDatabase(database.path)
+            if referenceDatabase != database:
+                anyDatabaseChanges = True
+                if i == index:
+                    currentDatabaseChanges = True
+                if i >= index:
+                    break
+
         # SAVE AND CLOSE ACTIONS
-        if len(list(self.packetTabWidget.databases.keys())) == 0:
+        if not self.packetTabWidget.databases:
             self.saveFormatAction.setDisabled(True)
             self.saveAllFormatAction.setDisabled(True)
             self.saveAsFormatAction.setDisabled(True)
             self.closeFormatAction.setDisabled(True)
 
         else:
-            self.saveFormatAction.setDisabled(False)
-            self.saveAllFormatAction.setDisabled(False)
-            self.saveAsFormatAction.setDisabled(False)
+            # Enabled if any changes done on currently edited database
+            self.saveFormatAction.setDisabled(not currentDatabaseChanges)
+            self.saveAsFormatAction.setDisabled(not currentDatabaseChanges)
+            # Enabled if any changes done to any database
+            self.saveAllFormatAction.setDisabled(not anyDatabaseChanges)
+            # Others
             self.closeFormatAction.setDisabled(False)
 
     def populateRecentMenu(self):

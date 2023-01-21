@@ -16,12 +16,12 @@ GPS failed init wait time,ms,1000,The time in milliseconds to wait to retry a fa
 landed max attitude,meter,1000,The attitude in meters given by GPS below which the FFU can be considered to be landed.
 landed max attitude change,meter,10,The maximum change in attitude read by GPS below which the FFU is allowed to be considered landed.
 stable attitude landed duration,ms,1000,"The duration in milliseconds for which the attitude read by GBS has to be stable, in order for the FFU to be considered landed."
-detumble controller p,int16_t,300,The proportional gain of the detumble controller.
-detumble controller i,int16_t,0,The integral gain of the detumble controller.
-detumble controller d,int16_t,0,The derivative gain of the detumble controller.
-orientation controller p,int16_t,10,The proportional gain of the orientation controller.
-orientation controller i,int16_t,0,The integral gain of the orientation controller.
-orientation controller d,int16_t,100,The derivative gain of the orientation controller.
+detumble controller p,int16,300,The proportional gain of the detumble controller.
+detumble controller i,int16,0,The integral gain of the detumble controller.
+detumble controller d,int16,0,The derivative gain of the detumble controller.
+orientation controller p,int16,10,The proportional gain of the orientation controller.
+orientation controller i,int16,0,The integral gain of the orientation controller.
+orientation controller d,int16,100,The derivative gain of the orientation controller.
 use motor speeds for controller,bool,false,Whether to use the motor speeds in the controllers.
 heartbeat period,ms,1000,How much time should pass between heartbeat messages in milliseconds.
 pre launch IMU calibration time,ms,5000,The time in milliseconds after pre launch start when the IMU calibration should happen.
@@ -34,3 +34,4 @@ eject ADCS start wait time,ms,1000,The time in milliseconds to wait after ejecti
 IMU status check interval,ms,500,The interval in which the status of the IMUs is checked.
 SD Card check interval,ms,5000,The time between successive checks of the SD-Cards in milliseconds.
 initial telemetry delay,ms,50,An initial delay to wait after boot before generating telemetry.
+log file path,char[64],/data/log,The path on the SD-Card at which to store the log file.

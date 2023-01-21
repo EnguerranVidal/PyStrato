@@ -1,2 +1,2 @@
 Name,Type,Default,Description
-imu,uint8_t,,The IMU to calibrate.
+imu,uint8,,The IMU to calibrate.

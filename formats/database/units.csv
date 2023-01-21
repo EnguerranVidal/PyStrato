@@ -6,7 +6,7 @@ bar,float,Pressure.
 meter,double,A distance in meter.
 deg,double,An angle in degrees.
 sec,double,A time in seconds.
-ms,uint32_t,A time in milliseconds.
+ms,uint32,A time in milliseconds.
 celsius,float,A temperature in °C.
 mps2,float,An acceleration in meters per seconds squared.
 microTesla,float,Magnetic field strength in micro tesla.

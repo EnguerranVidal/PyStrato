@@ -1,54 +1,43 @@
 {
-  "TelecommandData": {
-    "__doc__": "A telecommand send from the base.",
-    "counter": {
-      "__type__": "uint8_t",
-      "__doc__": "A number identifying this command."
-    },
-    "command": {
-      "__type__": "Telecommand",
-      "__doc__": "The type of telecommand."
-    },
-    "data": {
-      "__type__": "bytes[MAX_TELECOMMAND_DATA_SIZE]",
-      "__doc__": "The argument data for this command."
-    }
-  },
-  "GroundStationMessage": {
-    "__doc__": "A message from the base.",
+  "TelecommandMessageHeader": {
+    "__doc__": "The header of a telecommand send from the base.",
     "sync byte 1": {
-      "__type__": "uint8_t",
+      "__type__": "uint8",
       "__value__": "SYNC_BYTE_1",
       "__doc__": "The first synchronisation byte."
     },
     "sync byte 2": {
-      "__type__": "uint8_t",
+      "__type__": "uint8",
       "__value__": "SYNC_BYTE_2",
       "__doc__": "The second synchronisation byte."
     },
-    "telecommand": {
-      "__type__": "TelecommandData",
-      "__doc__": "The telecommand that is send with this message."
-    },
     "checksum": {
-      "__type__": "uint16_t",
+      "__type__": "uint16",
       "__doc__": "The checksum of the message.\nThe two sync bytes and the checksum itself are not included in the checksum."
+    },
+    "counter": {
+      "__type__": "uint8",
+      "__doc__": "A number identifying this command."
+    },
+    "type": {
+      "__type__": "Telecommand",
+      "__doc__": "The type of telecommand."
     }
   },
   "TelemetryMessageHeader": {
     "__doc__": "The header of a message for the base.",
     "sync byte 1": {
-      "__type__": "uint8_t",
+      "__type__": "uint8",
       "__value__": "SYNC_BYTE_1",
       "__doc__": "The first synchronisation byte."
     },
     "sync byte 2": {
-      "__type__": "uint8_t",
+      "__type__": "uint8",
       "__value__": "SYNC_BYTE_2",
       "__doc__": "The second synchronisation byte."
     },
     "checksum": {
-      "__type__": "uint16_t",
+      "__type__": "uint16",
       "__doc__": "The checksum of the message.\nThe two sync bytes and the checksum are not included in the checksum, but the telemetry data is included."
     },
     "type": {
@@ -65,7 +54,7 @@
   },
   "SystemState": {
     "__doc__": "Possible states of the system.",
-    "__type__": "uint8_t",
+    "__type__": "uint8",
     "__values__": {
       "STATE_IDLE": {
         "__doc__": "The system is inactive and waiting for a new command."
@@ -92,7 +81,7 @@
   },
   "RecoveryState": {
     "__doc__": "State of the recovery subsystem.",
-    "__type__": "uint8_t",
+    "__type__": "uint8",
     "__values__": {
       "RECOVERY_START": {
         "__doc__": "The system is in startup and waiting for ejection."
@@ -116,7 +105,7 @@
   },
   "MessageType": {
     "__doc__": "A type of a telemetry message.",
-    "__type__": "uint8_t",
+    "__type__": "uint8",
     "__values__": {
       "DEBUG_MESSAGE": {
         "__doc__": "A verbose message that will only be sent if the testing pin is set."
@@ -134,7 +123,7 @@
   },
   "AdcsMode": {
     "__doc__": "The modes the ADCS can run in.",
-    "__type__": "uint8_t",
+    "__type__": "uint8",
     "__values__": {
       "MODE_OFF": {
         "__doc__": "The ADCS system is off. The motors are not commanded."
@@ -164,9 +153,9 @@
   },
   "Vec3Int32": {
     "__doc__": "A three dimensional vector with 32 bit numbers.",
-    "roll": "int32_t",
-    "pitch": "int32_t",
-    "yaw": "int32_t"
+    "roll": "int32",
+    "pitch": "int32",
+    "yaw": "int32"
   },
   "Vec3Int32WithTime": {
     "__doc__": "A three dimensional vector with a timestamp.",

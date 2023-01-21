@@ -136,7 +136,6 @@ class ArgumentSelectorWidget(QWidget):
         database, selectedIndex = self.databases[databaseName]
         telemetryName = database.telemetryTypes[selectedIndex].id.name
         self.selectedTypes, self.selectedUnits = database.nestedPythonTypes(telemetryName, searchedType=self.typeFilter)
-        # TODO : Add a retrieving unit thing here
 
         def addGrandChildren(treeItem, selectedDict):
             for childName, childValue in selectedDict.items():

@@ -103,7 +103,7 @@ class CurveEditor(QWidget):
 
     def openCurveArgumentSelector(self):
         self.curveArgumentSelector = ArgumentSelector(self.currentDir, self)
-        self.curveArgumentSelector.selected.connect(self.on_argument_selected)
+        self.curveArgumentSelector.selected.connect(self.argumentSelected)
         self.curveArgumentSelector.exec_()
     
     def argumentSelected(self):

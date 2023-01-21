@@ -7,7 +7,7 @@ motor controller temperature,celsius,The temperature read from the thermal senso
 motor bracket temperature,celsius,The temperature read from the thermal sensor which close to the motor bracket in °C.
 retention wall temperature,celsius,The temperature read from the thermal sensor which close to the retention wall in °C.
 recovery wall temperature,celsius,The temperature read from the thermal sensor which close to the recovery wall in °C.
-primary imu temperature,int8_t (celsius),The temperature of the primary IMU in °C.
-secondary imu temperature,int8_t (celsius),The temperature of the secondary IMU in °C.
+primary imu temperature,int8 (celsius),The temperature of the primary IMU in °C.
+secondary imu temperature,int8 (celsius),The temperature of the secondary IMU in °C.
 motor current,Vec3F,The current drawn by the motors in ampere.
 secondary imu rotation,Vec3F,The rotations in radians per seconds measured by the secondary IMU.

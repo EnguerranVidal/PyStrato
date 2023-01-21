@@ -4,53 +4,68 @@ import os
 import csv
 import shutil
 from enum import Enum
-from typing import Any, Optional, Type
+from tempfile import TemporaryDirectory
+from typing import Optional, Type, Any
 
-from ecom.database import CommunicationDatabase, CommunicationDatabaseError, Unit, ConfigurationValueResponse, \
-    ConfigurationValueArgument, Configuration, Telecommand
-from ecom.datatypes import TypeInfo, StructType
-from ecom.parser import TelemetryResponse, TelemetryResponseType
+from ecom.database import CommunicationDatabase, CommunicationDatabaseError, Unit, ConfigurationValueResponseType, \
+    ConfigurationValueDatapoint, Configuration, TelecommandType
+from ecom.datatypes import TypeInfo, StructType, EnumType
+
+from ecom.message import TelemetryType
+
+
+class EComValueJsonEncoder(json.JSONEncoder):
+    """ A json encoder that allows writing ECom values. """
+    def default(self, x):
+        if isinstance(x, bytes):
+            return x.decode('utf-8')
+        if isinstance(x, Enum):
+            return x.name
+        return super().default(x)
 
 
 class BalloonPackageDatabase(CommunicationDatabase):
     """ The shared communication database for balloon packages. Contains all information about the telecommunication.
     """
 
-    def __eq__(self, other: CommunicationDatabase):
-        print('----')
-        print(self._units == other.units)
-        print(self._constants == other.constants)
-        print(self._typeMapping == other.dataTypes)
-        print(self._telecommands == other.telecommands)
-        print(self._telemetryTypes == other.telemetryTypes)
-        print(self._configurations == other.configurations)
-        print('----')
+    def __init__(self, dataDirectory: str):
+        super().__init__(dataDirectory)
+        self._path = dataDirectory
 
-        return isinstance(other, CommunicationDatabase) and \
-            self._units == other.units and \
-            self._constants == other.constants and \
-            self._typeMapping == other.dataTypes and \
-            self._telecommands == other.telecommands and \
-            self._telemetryTypes == other.telemetryTypes and \
-            self._configurations == other.configurations
+    @property
+    def path(self) -> str:
+        return self._path
 
-    def save(self, dataDirectory):
-        # TODO Script to create a quick copy of the database to avoid corruption from errors in the saving process
-        # ------ Remove All Files
-        try:
-            shutil.rmtree(dataDirectory)
-        except FileNotFoundError:
-            pass
-        os.makedirs(dataDirectory, exist_ok=True)
-        self._saveUnits(os.path.join(dataDirectory, 'units.csv'))
-        self._saveConstants(os.path.join(dataDirectory, 'sharedConstants.csv'))
-        self._saveConfigurations(os.path.join(dataDirectory, 'configuration.csv'))
-        self._saveTelemetry(os.path.join(dataDirectory, 'telemetry.csv'))
-        self._saveTelemetryArguments(os.path.join(dataDirectory, 'telemetryArguments'))
-        self._saveTypes(os.path.join(dataDirectory, 'sharedDataTypes.json'))
+    def save(self, dataDirectory: str):
+        with TemporaryDirectory() as tempDirPath:
+            self._saveUnits(os.path.join(tempDirPath, 'units.csv'))
+            self._saveConstants(os.path.join(tempDirPath, 'sharedConstants.csv'))
+            self._saveConfigurations(os.path.join(tempDirPath, 'configuration.csv'))
+            self._saveTelemetry(os.path.join(tempDirPath, 'telemetry.csv'))
+            self._saveTelemetryArguments(os.path.join(tempDirPath, 'telemetryArguments'))
+            self._saveTypes(os.path.join(tempDirPath, 'sharedDataTypes.json'))
 
-        self._saveTelecommands(os.path.join(dataDirectory, 'commands.csv'))
-        self._saveTelecommandArguments(os.path.join(dataDirectory, 'commandArguments'))
+            self._saveTelecommands(os.path.join(tempDirPath, 'commands.csv'))
+            self._saveTelecommandArguments(os.path.join(tempDirPath, 'commandArguments'))
+            tempDataDir = dataDirectory + '.backup'
+            while os.path.exists(tempDataDir):
+                tempDataDir = tempDataDir + '.backup'
+            try:
+                shutil.move(dataDirectory, tempDataDir)
+            except FileNotFoundError:
+                pass
+            try:
+                shutil.move(tempDirPath, dataDirectory)
+            except IOError:
+                try:
+                    shutil.move(tempDataDir, dataDirectory)
+                except FileNotFoundError:
+                    pass
+                raise
+            try:
+                shutil.rmtree(tempDataDir)
+            except FileNotFoundError:
+                pass
 
     def _saveTypes(self, typesFilePath):
         """
@@ -60,16 +75,11 @@ class BalloonPackageDatabase(CommunicationDatabase):
         """
         types = self._serializeDataTypes()
         with open(typesFilePath, 'w', encoding='utf-8') as outputFile:
-            json.dump(types, outputFile, indent=2, ensure_ascii=True)
+            json.dump(types, outputFile, indent=2, ensure_ascii=True, cls=EComValueJsonEncoder)
 
     def nestedPythonTypes(self, telemetryName: str, searchedType=int):
-        telemetryNames = [telemetry.id.name for telemetry in self.telemetryTypes]
-        try:
-            telemetryIndex = telemetryNames.index(telemetryName)
-        except ValueError:
-            print(telemetryName, ' is not recognized as a known telemetry name.')
-
-        dataPoints = {dataPoint.name: dataPoint.type for dataPoint in self.telemetryTypes[telemetryIndex].data}
+        telemetryType = self.getTelemetryByName(telemetryName)
+        dataPoints = {dataPoint.name: dataPoint.type for dataPoint in telemetryType.data}
         dataTypeNames = [name for name, typInfo in self.dataTypes.items()]
         dataUnits = [unitName for unitName, unit in self.units.items()]
 
@@ -111,6 +121,10 @@ class BalloonPackageDatabase(CommunicationDatabase):
                 selectedTypes[dataName] = issubclass(dataType.type, searchedType)
                 selectedUnits[dataName] = None
         return selectedTypes, selectedUnits
+
+    @staticmethod
+    def serializeValue(value: Any) -> str:
+        return json.dumps(value, cls=EComValueJsonEncoder)
 
     def _serializeDataTypes(self):
         types = {}
@@ -184,7 +198,8 @@ class BalloonPackageDatabase(CommunicationDatabase):
                 csvWriter.writerow(['Name', 'Value', 'Type', 'Description'])
                 for constantName, constant in self.constants.items():
                     if constantName not in autogeneratedConstantNames:
-                        csvWriter.writerow([constantName, constant[0], constant[2].baseTypeName, constant[1]])
+                        csvWriter.writerow([constantName, constant.value,
+                                            constant.type.baseTypeName, constant.description])
         except IOError as error:
             raise CommunicationDatabaseError(f'Error writing {sharedConstantsFilePath}: {error}')
 
@@ -202,7 +217,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
                 csvWriter.writerow(['Name', 'Type', 'Default Value', 'Description'])
                 for configuration in self.configurations:
                     csvWriter.writerow([configuration.name, self._getTypeName(configuration.type),
-                                        json.dumps(configuration.defaultValue), configuration.description])
+                                        self.serializeValue(configuration.defaultValue), configuration.description])
         except IOError as error:
             raise CommunicationDatabaseError(f'Error writing {configurationsFilePath}: {error}')
 
@@ -230,23 +245,23 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
         :param telecommandsFilePath: The path to the file containing information about the telecommands.
         """
-        if not self.telecommands:
+        if not self.telecommandTypes:
             return
         try:
             with open(telecommandsFilePath, "w", newline='', encoding='utf-8') as file:
                 csvWriter = csv.writer(file)
                 csvWriter.writerow(['Name', 'Debug', 'Description', 'Response name',
                                     'Response type', 'Response description'])
-                for telecommand in self.telecommands:
+                for telecommand in self.telecommandTypes:
                     responseName, responseType, responseDescription = '', '', ''
                     if telecommand.response:
                         responseName = telecommand.response.name
                         responseDescription = telecommand.response.description
-                        if isinstance(telecommand.response, ConfigurationValueResponse):
+                        if isinstance(telecommand.response, ConfigurationValueResponseType):
                             responseType = 'config?'
                         else:
                             responseType = self._getTypeName(telecommand.response.typeInfo)
-                    csvWriter.writerow([telecommand.name, str(telecommand.isDebug).lower(), telecommand.description,
+                    csvWriter.writerow([telecommand.id.name, str(telecommand.isDebug).lower(), telecommand.description,
                                         responseName, responseType, responseDescription])
         except IOError as error:
             raise CommunicationDatabaseError(f'Error writing {telecommandsFilePath}: {error}')
@@ -259,19 +274,19 @@ class BalloonPackageDatabase(CommunicationDatabase):
                                             arguments information is to be saved.
         """
         os.makedirs(telecommandsArgumentsFolder, exist_ok=True)
-        for telecommand in self.telecommands:
-            filePath = os.path.join(telecommandsArgumentsFolder, telecommand.name + '.csv')
-            if not telecommand.arguments:
+        for telecommand in self.telecommandTypes:
+            filePath = os.path.join(telecommandsArgumentsFolder, telecommand.id.name + '.csv')
+            if not telecommand.data:
                 continue
             with open(filePath, "w", newline='', encoding='utf-8') as file:
                 csvWriter = csv.writer(file)
                 csvWriter.writerow(['Name', 'Type', 'Default', 'Description'])
-                for argument in telecommand.arguments:
-                    if isinstance(argument, ConfigurationValueArgument):
+                for argument in telecommand.data:
+                    if isinstance(argument, ConfigurationValueDatapoint):
                         dataPointType = 'config?'
                     else:
-                        dataPointType = self._getTypeName(argument.typeInfo)
-                    default = '' if argument.default is None else json.dumps(argument.default)
+                        dataPointType = self._getTypeName(argument.type)
+                    default = '' if argument.default is None else self.serializeValue(argument.default)
                     csvWriter.writerow([argument.name, dataPointType, default, argument.description])
 
     def _saveTelemetry(self, telemetriesFilePath):
@@ -323,17 +338,17 @@ class BalloonPackageDatabase(CommunicationDatabase):
     def getTypeName(self, typeInfo):
         return self._getTypeName(typeInfo)
 
-    def addConfiguration(self, name: str, replaceIndex: Optional[int] = None,  **kwargs):
+    def addConfiguration(self, name: str, replaceIndex: Optional[int] = None, **kwargs):
         self._configurations = self._editElement(
             name, self._configurations, Configuration, replaceIndex=replaceIndex, **kwargs)
 
     def addTelecommand(self, name: str, replaceIndex: Optional[int] = None,  **kwargs):
-        self._telecommands = self._editElement(
-            name, self._telecommands, Telecommand, replaceIndex=replaceIndex, **kwargs)
+        self._telecommandTypes = self._editElement(
+            name, self._telecommandTypes, TelecommandType, replaceIndex=replaceIndex, **kwargs)
 
     def addTelemetry(self, name: str, replaceIndex: Optional[int] = None,  **kwargs):
         self._telemetryTypes = self._editElement(
-            name, self._telemetryTypes, TelemetryResponseType, replaceIndex=replaceIndex, **kwargs)
+            name, self._telemetryTypes, TelemetryType, replaceIndex=replaceIndex, **kwargs)
 
     @staticmethod
     def _editElement(name: str, elements, typeClass, replaceIndex: Optional[int] = None, **kwargs):
@@ -344,7 +359,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
             return
         existingEnumNames = [config.name for config in elementEnum]
         existingEnumNames.append(name)
-        elementEnum = Enum(elementEnum.__name__, existingEnumNames, start=0)
+        elementEnum = EnumType(elementEnum.__name__, existingEnumNames, start=0)
         newElements = [
             dataclasses.replace(element, id=elementId)
             for element, elementId in zip(elements, elementEnum)

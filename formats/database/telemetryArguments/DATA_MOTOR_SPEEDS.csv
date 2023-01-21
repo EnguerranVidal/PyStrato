@@ -1,3 +1,3 @@
 Name,Type,Description
-motor speed count,uint8_t,The number of motor speeds in this telemetry package.
+motor speed count,uint8,The number of motor speeds in this telemetry package.
 motor speeds,Vec3FWithTime[.motor speed count],The speed of the motors in rotations per minute since the last telemetry package.

@@ -1,5 +1,5 @@
 Name,Value,Type,Description
-SYNC_BYTE_1,170,uint8_t,The first byte of every message between the secondary device and the base.
-SYNC_BYTE_2,85,uint8_t,The second byte of every message between the secondary device and the base.
-RESET_CHIP_VERIFICATION_CODE,23780,uint32_t,Verification code to reset the chip.
-SET_FLIGHT_VERIFICATION_CODE,36134,uint32_t,Verification code to set the flight state.
+SYNC_BYTE_1,170,uint8,The first byte of every message between the secondary device and the base.
+SYNC_BYTE_2,85,uint8,The second byte of every message between the secondary device and the base.
+RESET_CHIP_VERIFICATION_CODE,23780,uint32,Verification code to reset the chip.
+SET_FLIGHT_VERIFICATION_CODE,36134,uint32,Verification code to set the flight state.

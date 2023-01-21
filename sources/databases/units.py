@@ -20,9 +20,6 @@ class UnitsWidget(QMainWindow):
         self.newUnitWindow = None
         self.headerWidget = None
         self.database = database
-        self.baseTypesValues = ['int8_t', 'uint8_t', 'bool', 'int16_t', 'uint16_t',
-                                'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'float',
-                                'double', 'char', 'bytes']
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
         self.centralWidget = QWidget(self)
@@ -56,7 +53,7 @@ class UnitsWidget(QMainWindow):
         self.fillTable()
         self.show()
 
-    def addUnitRow(self, name='', unitType='int8_t', description=''):
+    def addUnitRow(self, name='', unitType=TypeInfo.BaseType.INT8.value, description=''):
         self.rowWidgets['SELECTION'].append(self.generateCheckBox())
         self.rowWidgets['UNIT NAME'].append(self.generateLabel(name))
         self.rowWidgets['UNIT TYPE'].append(self.generateComboBox(unitType))
@@ -139,7 +136,7 @@ class UnitsWidget(QMainWindow):
                 self.newUnitWindow.close()
                 # TODO : Add Variant creation
         else:
-            unitType = TypeInfo(TypeInfo.lookupBaseType(typeName), typeName, typeName)
+            unitType = TypeInfo(TypeInfo.lookupBaseType(typeName).type, typeName, typeName)
             self.database.units[name] = [Unit.fromTypeInfo(name, unitType, '')]
             self.addUnitRow(name=name, unitType=typeName, description='')
             self.newUnitWindow.close()
@@ -153,20 +150,10 @@ class UnitsWidget(QMainWindow):
                                                                    description=description)
 
     def unitTypeChanged(self):
-        intTypes = ['int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'int64_t', 'uint64_t']
-        floatTypes = ['float', 'double']
-        stringTypes = ['char', 'bytes']
         for i in range(len(self.rowWidgets['DESCRIPTION'])):
             name = self.rowWidgets['UNIT NAME'][i].text()
             unitType = self.rowWidgets['UNIT TYPE'][i].currentText()
-            if unitType in intTypes:
-                pythonType = int
-            elif unitType in floatTypes:
-                pythonType = float
-            elif unitType in stringTypes:
-                pythonType = str
-            else:
-                pythonType = bool
+            pythonType = TypeInfo.lookupBaseType(unitType).type
             self.database.units[name][0] = dataclasses.replace(self.database.units[name][0],
                                                                type=pythonType, baseTypeName=unitType)
 
@@ -176,15 +163,14 @@ class NewUnitWindow(QDialog):
         super().__init__(parent)
         self.setWindowTitle('Add New Unit')
         # self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
-        unitTypes = ['int8_t', 'uint8_t', 'bool', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t',
-                     'int64_t', 'uint64_t', 'float', 'double', 'char', 'bytes']
+        unitTypes = [baseType.value for baseType in TypeInfo.BaseType]
         self.resize(400, 100)
         self.dlgLayout = QVBoxLayout()
         self.formLayout = QFormLayout()
         self.nameEdit = QLineEdit()
         self.comboBox = QComboBox()
         self.comboBox.addItems(unitTypes)
-        self.comboBox.setCurrentIndex(unitTypes.index('int8_t'))
+        self.comboBox.setCurrentIndex(0)
         self.formLayout.addRow('Name:', self.nameEdit)
         self.formLayout.addRow('Type:', self.comboBox)
         self.dlgLayout.addLayout(self.formLayout)

@@ -3,6 +3,7 @@ import json
 import os
 import dataclasses
 from ecom.database import Unit
+from enum import Enum
 from ecom.datatypes import TypeInfo, DefaultValueInfo
 
 # ------------------- PyQt Modules -------------------- #
@@ -21,9 +22,7 @@ class ConfigurationsWidget(QMainWindow):
         self.newConfigWindow = None
         self.configTypeSelector = None
         self.database = database
-        self.basicTypes = ['int8_t', 'uint8_t', 'bool', 'int16_t', 'uint16_t',
-                           'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'float',
-                           'double', 'char', 'bytes']
+        self.basicTypes = [baseType.value for baseType in TypeInfo.BaseType]
         self.rowWidgets = {'SELECTION': [], 'CONFIG NAME': [], 'CONFIG TYPE': [],
                            'DEFAULT VALUE': [], 'DESCRIPTION': []}
         self.centralWidget = QWidget(self)
@@ -53,7 +52,7 @@ class ConfigurationsWidget(QMainWindow):
         self.fillTable()
         self.show()
 
-    def addConfigurationRow(self, name='', configType='int8_t', defaultValue='', description=''):
+    def addConfigurationRow(self, name='', configType=TypeInfo.BaseType.INT8.value, defaultValue='', description=''):
         newRowCount = len(self.rowWidgets['SELECTION']) + 1
         self.rowWidgets['SELECTION'].append(self.generateCheckBox())
         self.rowWidgets['CONFIG NAME'].append(self.generateLabel(name))
@@ -105,9 +104,7 @@ class ConfigurationsWidget(QMainWindow):
         typeButton.clicked.connect(lambda: self.openAvailableTypes(i))
         return typeButton
 
-    def generateDefaultEdit(self, configType='int8_t', defaultValue=''):
-        intTypes = ['int8_t', 'uint8_t', 'int16_t', 'uint16_t', 'int32_t', 'uint32_t', 'int64_t', 'uint64_t']
-        floatTypes = ['float', 'double']
+    def generateDefaultEdit(self, configType=TypeInfo.BaseType.INT8.value, defaultValue=''):
         if configType not in self.basicTypes:  # Must be in Units... Hopefully...
             unitList = [unitName for unitName, unitVariants in self.database.units.items()]
             if configType not in unitList:  # Unknown Unit
@@ -209,8 +206,8 @@ class ConfigurationsWidget(QMainWindow):
             defaultValue = self.newConfigWindow.defaultValueEdit.currentText() == 'true'
         else:
             defaultValue = configTypeInfo.type(self.newConfigWindow.defaultValueEdit.text())
-        baseTypeInfo = TypeInfo(TypeInfo.lookupBaseType(typeName), typeName, typeName)
-        self.database.addConfiguration(name, baseTypeInfo, defaultValue)
+        baseTypeInfo = TypeInfo(type=TypeInfo.lookupBaseType(typeName).type, name=typeName, baseTypeName=typeName)
+        self.database.addConfiguration(name, type=baseTypeInfo, defaultValue=defaultValue)
         # TODO ERROR when adding configuration : too many arguments
         self.addConfigurationRow(name, typeName, defaultValue, description='')
         self.newConfigWindow.close()
@@ -231,9 +228,11 @@ class ConfigurationsWidget(QMainWindow):
         ### ADD ROWS ###
         for configuration in self.database.configurations:
             typeName = self.database.getTypeName(configuration.type)
-            defaultValue = json.dumps(configuration.defaultValue)
+            defaultValue = self.database.serializeValue(configuration.defaultValue)
             self.addConfigurationRow(name=configuration.name, configType=typeName,
                                      defaultValue=defaultValue, description=configuration.description)
+
+
 
 
 class ConfigTypeSelector(QWidget):
@@ -241,9 +240,7 @@ class ConfigTypeSelector(QWidget):
         super(QWidget, self).__init__()
         self.database = database
         self.setWindowTitle('Selecting Configuration Type or Unit')
-        self.basicTypes = ['int8_t', 'uint8_t', 'bool', 'int16_t', 'uint16_t',
-                           'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'float',
-                           'double', 'char', 'bytes']
+        self.basicTypes = [baseType.value for baseType in TypeInfo.BaseType]
         self.basicTypesList = QListWidget()
         self.basicTypesLabel = QLabel('Basic Types')
         self.unitsList = QListWidget()
@@ -296,9 +293,7 @@ class ConfigTypeSelector(QWidget):
 class NewConfigWindow(QDialog):
     def __init__(self, database):
         super().__init__()
-        self.basicTypes = ['int8_t', 'uint8_t', 'bool', 'int16_t', 'uint16_t',
-                           'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'float',
-                           'double', 'char', 'bytes']
+        self.basicTypes = [baseType.value for baseType in TypeInfo.BaseType]
         self.database = database
         self.configTypeSelector = None
         self.setWindowTitle('Add New Configuration')
@@ -308,7 +303,7 @@ class NewConfigWindow(QDialog):
         self.formWidget = QWidget(self)
         self.formLayout = QFormLayout()
         self.nameEdit = QLineEdit()
-        self.typePushButton = QPushButton('int8_t')
+        self.typePushButton = QPushButton(self.basicTypes[0])
         self.typePushButton.clicked.connect(self.openAvailableTypes)
         self.defaultValueEdit = QLineEdit()
         self.formLayout.addRow('Name:', self.nameEdit)
@@ -339,7 +334,7 @@ class NewConfigWindow(QDialog):
         self.formLayout.addWidget(self.defaultValueEdit)
         self.configTypeSelector.close()
 
-    def generateDefaultEdit(self, configType='int8_t', defaultValue=''):
+    def generateDefaultEdit(self, configType=TypeInfo.BaseType.INT8.value, defaultValue=''):
         if configType not in self.basicTypes:  # Must be in Units... Hopefully...
             unitList = [unitName for unitName, unitVariants in self.database.units.items()]
             if configType not in unitList:  # Unknown Unit
