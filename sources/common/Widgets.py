@@ -29,6 +29,8 @@ class BasicDisplay(QWidget):
 class ArgumentSelectorWidget(QWidget):
     def __init__(self, path, parent=None, typeFilter=(int, float)):
         super().__init__(parent)
+        self.selectedUnits = {}
+        self.selectedTypes = {}
         self.currentDir = path
         self.typeFilter = typeFilter
         self.formatPath = os.path.join(self.currentDir, "formats")
@@ -130,11 +132,10 @@ class ArgumentSelectorWidget(QWidget):
             self.fillTreeWidget(databaseName)
 
     def fillTreeWidget(self, databaseName: str):
-        self.treeItems = {}
         self.treeWidget.clear()
         database, selectedIndex = self.databases[databaseName]
         telemetryName = database.telemetryTypes[selectedIndex].id.name
-        selectedTypes = database.nestedPythonTypes(telemetryName, searchedType=self.typeFilter)
+        self.selectedTypes, self.selectedUnits = database.nestedPythonTypes(telemetryName, searchedType=self.typeFilter)
         # TODO : Add a retrieving unit thing here
 
         def addGrandChildren(treeItem, selectedDict):
@@ -153,7 +154,7 @@ class ArgumentSelectorWidget(QWidget):
                         child.setFlags(child.flags() & ~Qt.ItemIsEnabled)
             return treeItem
 
-        for name, value in selectedTypes.items():
+        for name, value in self.selectedTypes.items():
             if isinstance(value, dict):
                 item = QTreeWidgetItem(self.treeWidget, [name])
                 self.treeWidget.addTopLevelItem(item)
@@ -169,6 +170,8 @@ class ArgumentSelectorWidget(QWidget):
 
 
 class ArgumentSelector(QDialog):
+    selected = pyqtSignal()
+
     def __init__(self, path, parent=None):
         super().__init__(parent)
         self.selectedArgument = None
@@ -186,6 +189,8 @@ class ArgumentSelector(QDialog):
         bottomRowLayout = QHBoxLayout()
         self.selectButton = QPushButton("Select")
         self.cancelButton = QPushButton("Cancel")
+        self.selectButton.clicked.connect(self.selectedPushed)
+        self.cancelButton.clicked.connect(self.cancelPushed)
         bottomRowLayout.addWidget(self.selectButton)
         bottomRowLayout.addWidget(self.cancelButton)
 
@@ -198,27 +203,46 @@ class ArgumentSelector(QDialog):
         mainLayout.addLayout(bottomRowLayout)
         self.setLayout(mainLayout)
 
+    def selectedPushed(self):
+        if self.selectedArgument is not None:
+            self.selected.emit()
+            self.close()
+
+    def cancelPushed(self):
+        self.close()
+
     def selectionMade(self):
         currentItem = self.itemSelectionWidget.treeWidget.currentItem()
 
-        def getParentChain(item):
-            if item.parent():
-                parent = item.parent()
-                name = getParentChain(parent) + '/' + item.text(0)
-            else:
-                name = item.text(0)
-            return name
+        def getAncestors(item):
+            ancestors = [item.text(0)]
+            while item.parent():
+                ancestors.append(item.parent().text(0))
+                item = item.parent()
+            return ancestors
+
+        def getUnit(level, keys):
+            for key in keys:
+                if key in level:
+                    level = level[key]
+                else:
+                    return None
+            return level
 
         if not currentItem.isDisabled():
             # Retrieving Data
             database = self.itemSelectionWidget.comboBox.currentText()
             telemetry = self.itemSelectionWidget.label.text()
-            treeChain = getParentChain(currentItem)
+            itemAncestors = getAncestors(currentItem)
+            unitName = getUnit(self.itemSelectionWidget.selectedUnits, itemAncestors)
             itemName = currentItem.text(0)
             # Updating Value
             self.selectionNameLabel.setText(itemName)
-            self.selectedArgument = '{}${}${}'.format(database, telemetry, treeChain)
-            self.argumentUnit = None
+            self.selectedArgument = '{}${}${}'.format(database, telemetry, '/'.join(itemAncestors))
+            if unitName is not None:
+                self.argumentUnit = self.itemSelectionWidget.databases[database][0].units[unitName][0]
+            else:
+                self.argumentUnit = None
 
 
 class SerialWindow(QWidget):

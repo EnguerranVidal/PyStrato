@@ -63,6 +63,8 @@ class GridIndicator(BasicDisplay):
 class SingleIndicatorEditDialog(QWidget):
     def __init__(self, path, parent: SingleIndicator = None):
         super().__init__(parent)
+        self.curveArgumentSelector = None
+        self.selectedUnit = None
         self.currentDir = path
 
         # Create the QLineEdit and set its placeholder text
@@ -161,9 +163,16 @@ class SingleIndicatorEditDialog(QWidget):
         self.setLayout(mainLayout)
 
     def openArgumentSelector(self):
-        curveArgumentSelector = ArgumentSelector(self.currentDir, self)
-        curveArgumentSelector.exec_()
-        if curveArgumentSelector.selectedArgument is not None:
+        self.curveArgumentSelector = ArgumentSelector(self.currentDir, self)
+        self.curveArgumentSelector.selected.connect(self.on_argument_selected)
+        self.curveArgumentSelector.exec_()
 
-            self.lineEdit.setText(curveArgumentSelector.selectedArgument)
-
+    def argumentSelected(self):
+        self.selectedUnit = self.curveArgumentSelector.argumentUnit
+        if self.selectedUnit is None:
+            self.unitCheckbox.setEnabled(False)
+            self.unitCheckbox.setChecked(False)
+        else:
+            self.unitCheckbox.setEnabled(True)
+            self.unitCheckbox.setChecked(True)
+        self.lineEdit.setText(self.curveArgumentSelector.selectedArgument)

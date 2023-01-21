@@ -64,6 +64,7 @@ class CustomGraphEditDialog(QWidget):
 class CurveEditor(QWidget):
     def __init__(self, curveIndex: int, path, parent=None):
         super().__init__(parent)
+        self.curveArgumentSelector = None
         self.currentDir = path
         # TODO Finish Curve Editor
         # Retrieving Curve parameters from parent and index
@@ -101,10 +102,12 @@ class CurveEditor(QWidget):
         self.setLayout(layout)
 
     def openCurveArgumentSelector(self):
-        curveArgumentSelector = ArgumentSelector(self.currentDir, self)
-        curveArgumentSelector.exec_()
-        if curveArgumentSelector.selectedArgument is not None:
-            self.lineEditY.setText(curveArgumentSelector.selectedArgument)
+        self.curveArgumentSelector = ArgumentSelector(self.currentDir, self)
+        self.curveArgumentSelector.selected.connect(self.on_argument_selected)
+        self.curveArgumentSelector.exec_()
+    
+    def argumentSelected(self):
+        self.lineEditY.setText(self.curveArgumentSelector.selectedArgument)
 
 
 class ColorEditor(QGroupBox):

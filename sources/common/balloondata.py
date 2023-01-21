@@ -71,33 +71,46 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
         dataPoints = {dataPoint.name: dataPoint.type for dataPoint in self.telemetryTypes[telemetryIndex].data}
         dataTypeNames = [name for name, typInfo in self.dataTypes.items()]
-        units = [unitName for unitName, unit in self.units.items()]
+        dataUnits = [unitName for unitName, unit in self.units.items()]
 
         def retrieveDataTypes(dataTypeInfo):
-            selection = {}
+            types = {}
+            units = {}
             if issubclass(dataTypeInfo.type, Enum):  # Enumerations
-                selection = issubclass(dataTypeInfo.type, searchedType)
+                types = issubclass(dataTypeInfo.type, searchedType)
             elif issubclass(dataTypeInfo.type, StructType):  # Structs
                 for name, child in dataTypeInfo.type:
                     if child.baseTypeName not in self.dataTypes:
-                        selection[name] = retrieveDataTypes(child)
+                        types[name], units[name] = retrieveDataTypes(child)
                     else:
-                        selection[name] = issubclass(child.type, searchedType)
+                        types[name] = issubclass(child.type, searchedType)
+
+                        if child.baseTypeName in dataUnits:
+                            units[name] = child.baseTypeName
+                        else:
+                            units[name] = None
             else:
-                selection = issubclass(dataTypeInfo.type, searchedType)
-            return selection
+                types = issubclass(dataTypeInfo.type, searchedType)
+                if dataTypeInfo.baseTypeName in dataUnits:
+                    units = dataTypeInfo.baseTypeName
+                else:
+                    units = None
+            return types, units
 
         selectedTypes = {}
+        selectedUnits = {}
         for dataName, dataType in dataPoints.items():
             if dataType.name in dataTypeNames:
                 typeInfo = self.dataTypes[dataType.name]
-                selectedTypes[dataName] = retrieveDataTypes(typeInfo)
+                selectedTypes[dataName], selectedUnits[dataName] = retrieveDataTypes(typeInfo)
 
-            elif dataType.name in units:
+            elif dataType.name in dataUnits:
                 selectedTypes[dataName] = issubclass(self.units[dataType.name][0].type, searchedType)
+                selectedUnits[dataName] = dataType.name
             else:
                 selectedTypes[dataName] = issubclass(dataType.type, searchedType)
-        return selectedTypes
+                selectedUnits[dataName] = None
+        return selectedTypes, selectedUnits
 
     def _serializeDataTypes(self):
         types = {}
