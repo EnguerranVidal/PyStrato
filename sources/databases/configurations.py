@@ -159,6 +159,7 @@ class ConfigurationsWidget(QMainWindow):
         self.database.configurations[i] = dataclasses.replace(self.database.configurations[i], type=typeInfo)
         config = self.database.configurations[i]
         compatible = self.compatibleDefaultValue()
+        # TODO for ranges in default value, look at SerialGS.py SerialEmulator min/max values
         if not compatible:
             defaultValue = typeInfo.type()
             self.database.configurations[i] = dataclasses.replace(

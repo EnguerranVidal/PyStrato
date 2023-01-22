@@ -497,10 +497,10 @@ class PyGS(QMainWindow):
             time.sleep(0.5)
             self.serialWindow.textedit.setDisabled(True)
 
-    def startSerialSimulation(self):
+    def startSerialEmulator(self):
         pass
 
-    def stopSerialSimulation(self):
+    def stopSerialEmulator(self):
         pass
 
     def newSerialData(self, content):
