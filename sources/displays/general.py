@@ -12,7 +12,7 @@ from sources.common.FileHandling import load_settings
 from sources.common.Widgets import BasicDisplay
 from sources.common.balloondata import BalloonPackageDatabase
 from sources.displays.graphs import CustomGraph
-from sources.displays.indicators import SingleIndicator
+from sources.displays.indicators import SingleIndicator, GridIndicator
 
 
 ######################## CLASSES ########################
@@ -39,10 +39,10 @@ class DisplayTabWidget(QMainWindow):
         self.tabWidget.addTab(QMainWindow(), "Tab 2")
 
         tabWidget1 = self.tabWidget.widget(0)
-        dock_widget_1 = DisplayDockWidget("Dock Widget 1", widget=CustomGraph(path=self.currentDir))
+        dock_widget_1 = DisplayDockWidget("Grid", widget=GridIndicator(path=self.currentDir))
         dock_widget_2 = DisplayDockWidget("Dock Widget 2", widget=CustomGraph(path=self.currentDir))
         dock_widget_3 = DisplayDockWidget('Dock Widget 3', widget=CustomGraph(path=self.currentDir))
-        dock_widget_4 = DisplayDockWidget("Dock Widget 4", widget=SingleIndicator(path=self.currentDir))
+        dock_widget_4 = DisplayDockWidget("Single", widget=SingleIndicator(path=self.currentDir))
         dock_widget_5 = DisplayDockWidget('bruh', widget=CustomGraph(path=self.currentDir))
 
         tabWidget1.addDockWidget(Qt.TopDockWidgetArea, dock_widget_1)
@@ -112,6 +112,7 @@ class DisplayDockWidget(QDockWidget):
 
     def openSettings(self):
         self.parametersEditWindow = ParameterDialog(parent=self, editWidget=self.display.settingsWidget)
+        self.display.settingsWidget.show()
         self.parametersEditWindow.applied.connect(self.applySettingsChanges)
         self.parametersEditWindow.accepted.connect(self.applySettingsChanges)
         self.parametersEditWindow.show()
