@@ -7,4 +7,4 @@ pandas~=1.4.1
 qtwidgets~=0.18
 pygame~=2.1.2
 requests~=2.28.1
-git+https://gitlab.com/team-aster/software/ecom
+git+https://gitlab.com/team-aster/software/ecom@feature/py_to_py_communication
