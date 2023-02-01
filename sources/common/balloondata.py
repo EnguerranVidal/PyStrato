@@ -227,6 +227,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
             'DEFAULT_CONFIGURATION',
             'MAX_TELECOMMAND_DATA_SIZE',
             'MAX_TELECOMMAND_RESPONSE_SIZE',
+            'MAX_CONFIG_VALUE_SIZE',
         ]
         if not self.constants:
             return
