@@ -12,7 +12,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.balloondata import BalloonPackageDatabase
+from sources.common.balloondata import BalloonPackageDatabase, serializeTypedValue
 
 
 ######################## CLASSES ########################
@@ -229,7 +229,7 @@ class ConfigurationsWidget(QMainWindow):
         ### ADD ROWS ###
         for configuration in self.database.configurations:
             typeName = self.database.getTypeName(configuration.type)
-            defaultValue = self.database.serializeValue(configuration.defaultValue)
+            defaultValue = serializeTypedValue(configuration.defaultValue, configuration.type.type)
             self.addConfigurationRow(name=configuration.name, configType=typeName,
                                      defaultValue=defaultValue, description=configuration.description)
 
