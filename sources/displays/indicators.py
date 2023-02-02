@@ -242,9 +242,9 @@ class GridIndicatorEditDialog(QWidget):
         self.mainWidget = QStackedWidget(self)
 
         # Label Editors
-        editor = LabelEditor(self.currentDir, self)
-        editor.goBackToGrid.connect(self.openGridEditor)
-        self.labelEditors = {(0, 0): editor}  # type: Dict[tuple[int, int], LabelEditor]
+        initialEditor = LabelEditor(self.currentDir, self)
+        initialEditor.goBackToGrid.connect(self.openGridEditor)
+        self.labelEditors = {(0, 0): initialEditor}  # type: Dict[tuple[int, int], LabelEditor]
         self.nbRows = 1
         self.nbColumns = 1
 
@@ -284,6 +284,7 @@ class GridIndicatorEditDialog(QWidget):
                     editor = LabelEditor(self.currentDir, self)
                     editor.goBackToGrid.connect(self.openGridEditor)
                     self.labelEditors[(row, column)] = editor
+            self.nbColumns = newColumnCount
         self.gridEditor.updateGrid()
 
     def openGridEditor(self):
@@ -326,7 +327,7 @@ class GridEditor(QWidget):
             for column in range(columns):
                 button = QPushButton()
                 button.setFixedSize(50, 50)
-                button.clicked.connect(lambda: self.gridButtonPressed(row, column))
+                button.clicked.connect(lambda *args, rowArg=row, columnArg=column: self.gridButtonPressed(rowArg, columnArg))
                 if self.editWidget.labelEditors[(row, column)].status:
                     palette = button.palette()
                     palette.setColor(QPalette.Button, Qt.red)
@@ -337,6 +338,7 @@ class GridEditor(QWidget):
 
     def gridButtonPressed(self, row, column):
         self.openLabelEditor.emit(row, column)
+
 
 
 class LabelEditor(QWidget):
@@ -353,6 +355,7 @@ class LabelEditor(QWidget):
         # Create the QLineEdit and set its placeholder text
         self.lineEdit = QLineEdit()
         self.lineEdit.setPlaceholderText("Enter value here")
+
 
         # Create the QPushButton and set its text
         self.button = QPushButton("Select value")
