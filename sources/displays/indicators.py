@@ -1,5 +1,6 @@
 ######################## IMPORTS ########################
 import os
+import copy
 from typing import List, Dict, Any, Optional, Generic, Type, Callable, Union
 import pyqtgraph as pg
 
@@ -177,25 +178,44 @@ class SingleIndicatorEditDialog(QWidget):
 class GridIndicator(BasicDisplay):
     def __init__(self, path, parent=None):
         super().__init__(path, parent)
-
+        self.bgColor = None
         self.labelGridLayout = QGridLayout()
         self.setLayout(self.labelGridLayout)
         self.settingsWidget = GridIndicatorEditDialog(self.currentDir, self)
+        # self.indicators = [[LabeledIndicator(self.currentDir, self.settingsWidget.labelEditors[0][0])]]
 
-    def fillGrid(self):
-        rows = self.parentWidget.rowSpinBox.value()
-        columns = self.parentWidget.columnSpinBox.value()
-        while self.grid.count() > 0:
-            widget = self.grid.itemAt(0).widget()
-            self.grid.removeWidget(widget)
+        self.fillGrid()
+
+    def fillGrid(self, editWidget=None):
+        if editWidget is None:
+            editWidget = self.settingsWidget
+        rows = editWidget.rowSpinBox.value()
+        columns = editWidget.columnSpinBox.value()
+        # Removing Old Widgets
+        while self.labelGridLayout.count() > 0:
+            widget = self.labelGridLayout.itemAt(0).widget()
+            self.labelGridLayout.removeWidget(widget)
             widget.setParent(None)
+        # Adding New Widgets
+        for i in range(rows):
+            for j in range(columns):
+                pass
+
+    def applyChanges(self, editWidget=None):
+        if editWidget is None:
+            editWidget = self.settingsWidget
+        backgroundColor = editWidget.backgroundColor.colorLabel.text()
+        self.bgColor = QColor(backgroundColor)
+
+        # Fill Grid
+        self.fillGrid(editWidget)
 
 
 class GridIndicatorEditDialog(QWidget):
     def __init__(self, path, parent: GridIndicator = None):
-        super().__init__(parent)
+        super().__init__()
+        self.selectedEditor = None
         self.currentDir = path
-        self.labelEditors = [[None]]  # type: List[List]
         self.columnSpinBox = QSpinBox()
         self.rowSpinBox = QSpinBox()
 
@@ -219,31 +239,72 @@ class GridIndicatorEditDialog(QWidget):
         self.spinBoxWidget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         # ------------- CENTRAL WIDGET ------------- #
-        self.gridEditor = GridEditor(self)
-        self.columnSpinBox.valueChanged.connect(self.gridEditor.updateGrid)
-        self.rowSpinBox.valueChanged.connect(self.gridEditor.updateGrid)
+        self.mainWidget = QStackedWidget(self)
 
-        # Main Window
-        self.mainWidget = QMainWindow()
-        self.mainWidget.setCentralWidget(self.gridEditor)
+        # Label Editors
+        editor = LabelEditor(self.currentDir, self)
+        editor.goBackToGrid.connect(self.openGridEditor)
+        self.labelEditors = {(0, 0): editor}  # type: Dict[tuple[int, int], LabelEditor]
+        self.nbRows = 1
+        self.nbColumns = 1
+
+        # Grid Editor
+        self.gridEditor = GridEditor(self)
+        self.gridEditor.openLabelEditor.connect(self.openLabelEditor)
+        self.columnSpinBox.valueChanged.connect(self.updateGridEditor)
+        self.rowSpinBox.valueChanged.connect(self.updateGridEditor)
+        self.mainWidget.addWidget(self.gridEditor)
+
+        # Create Background color selector
+        currentBackgroundColor = parent.palette().color(QPalette.Window)
+        self.backgroundColor = ColorEditor('Background Color', color=currentBackgroundColor.name())
 
         # Create the main layout and add the spin box layout
         self.mainLayout = QGridLayout()
         self.mainLayout.addWidget(self.spinBoxWidget, 0, 0, Qt.AlignLeft)
         self.mainLayout.addWidget(self.mainWidget, 1, 0, Qt.AlignCenter)
+        self.mainLayout.addWidget(self.backgroundColor, 2, 0, Qt.AlignCenter)
         self.setLayout(self.mainLayout)
 
         self.hide()
 
-    def openLabelEditor(self, i: int, j: int):
-        self.mainWidget.setCentralWidget(LabelEditor)
+    def updateGridEditor(self):
+        if self.rowSpinBox.value() > self.nbRows:  # Row Addition
+            newRowCount = self.rowSpinBox.value()
+            for row in range(self.nbRows, newRowCount):
+                for column in range(self.nbColumns):
+                    editor = LabelEditor(self.currentDir, self)
+                    editor.goBackToGrid.connect(self.openGridEditor)
+                    self.labelEditors[(row, column)] = editor
+            self.nbRows = newRowCount
+        if self.columnSpinBox.value() > self.nbColumns:  # Column Addition
+            newColumnCount = self.columnSpinBox.value()
+            for row in range(self.nbRows):
+                for column in range(self.nbColumns, newColumnCount):
+                    editor = LabelEditor(self.currentDir, self)
+                    editor.goBackToGrid.connect(self.openGridEditor)
+                    self.labelEditors[(row, column)] = editor
+        self.gridEditor.updateGrid()
+
+    def openGridEditor(self):
+        self.gridEditor.updateGrid()
+        self.mainWidget.setCurrentIndex(0)
+
+    def openLabelEditor(self, row: int, column: int):
+        index = self.mainWidget.indexOf(self.labelEditors[(row, column)])
+        if self.mainWidget.indexOf(self.labelEditors[(row, column)]) == -1:  # Unopened LabelEditor
+            self.mainWidget.addWidget(self.labelEditors[(row, column)])
+            index = self.mainWidget.indexOf(self.labelEditors[(row, column)])
+        self.mainWidget.setCurrentIndex(index)
 
 
 class GridEditor(QWidget):
+    openLabelEditor = pyqtSignal(int, int)
+
     def __init__(self, parent: GridIndicatorEditDialog = None):
         super().__init__(parent)
         # Create the grid layout
-        self.parentWidget = parent
+        self.editWidget = parent
         self.grid = QGridLayout()
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         # Set the grid layout as the widget inside the scroll area
@@ -251,8 +312,8 @@ class GridEditor(QWidget):
         self.updateGrid()
 
     def updateGrid(self):
-        rows = self.parentWidget.rowSpinBox.value()
-        columns = self.parentWidget.columnSpinBox.value()
+        rows = self.editWidget.rowSpinBox.value()
+        columns = self.editWidget.columnSpinBox.value()
         while self.grid.count() > 0:
             widget = self.grid.itemAt(0).widget()
             self.grid.removeWidget(widget)
@@ -265,17 +326,29 @@ class GridEditor(QWidget):
             for column in range(columns):
                 button = QPushButton()
                 button.setFixedSize(50, 50)
+                button.clicked.connect(lambda: self.gridButtonPressed(row, column))
+                if self.editWidget.labelEditors[(row, column)].status:
+                    palette = button.palette()
+                    palette.setColor(QPalette.Button, Qt.red)
+                    # button.setAutoFillBackground(True)
+                    button.setPalette(palette)
                 self.grid.addWidget(button, row, column)
         self.setFixedSize(columns * 50 + 20, rows * 50 + 20)
 
+    def gridButtonPressed(self, row, column):
+        self.openLabelEditor.emit(row, column)
+
 
 class LabelEditor(QWidget):
-    def __init__(self, path, label: QLabel = None):
-        super().__init__()
+    goBackToGrid = pyqtSignal()
+
+    def __init__(self, path, parent, status=False):
+        super().__init__(parent)
         self.nameLineEdit = None
         self.currentDir = path
         self.curveArgumentSelector = None
         self.selectedUnit = None
+        self.status = status
 
         # Create the QLineEdit and set its placeholder text
         self.lineEdit = QLineEdit()
@@ -295,6 +368,7 @@ class LabelEditor(QWidget):
         valueLayout.addWidget(self.button)
 
         # Get the current font, font size, font color, and background color of the indicatorLabel
+        label = QLabel()
         currentFont = label.font()
         currentFontSize = currentFont.pointSize()
         currentFontColor = label.palette().color(QPalette.WindowText)
@@ -363,15 +437,18 @@ class LabelEditor(QWidget):
         self.topLayout = QHBoxLayout()
         # Create the return button and set its icon
         self.returnButton = QPushButton()
-        self.returnButton.setFlat(True)
         self.returnButton.setIcon(QIcon('sources/icons/light-theme/icons8-back-96'))
         self.returnButton.setIconSize(QSize(20, 20))
+        self.returnButton.setStyleSheet("background-color: transparent;")
+        self.returnButton.clicked.connect(self.returnButtonPressed)
         # Create the name valueLabel and set its text
         self.nameLabel = QLabel("Indicator")
         self.nameLabel.setAlignment(Qt.AlignCenter)
         self.nameLabel.mouseDoubleClickEvent = self.onNameLabelDoubleClick
         # Create the checkbox
         self.checkbox = QCheckBox()
+        self.checkbox.setChecked(status)
+        self.checkbox.stateChanged.connect(self.statusChange)
         # Add the widgets to the top layout
         self.topLayout.addWidget(self.returnButton)
         self.topLayout.addWidget(self.nameLabel)
@@ -387,6 +464,12 @@ class LabelEditor(QWidget):
         mainLayout.addLayout(fontLayout)
         self.setLayout(mainLayout)
 
+    def statusChange(self, state):
+        if state == Qt.Checked:
+            self.status = True
+        else:
+            self.status = False
+
     def onNameLabelDoubleClick(self, event):
         self.nameLineEdit = QLineEdit()
         self.nameLineEdit.setText(self.nameLabel.text())
@@ -401,9 +484,27 @@ class LabelEditor(QWidget):
         self.nameLineEdit.hide()
         self.nameLabel.show()
 
+    def returnButtonPressed(self):
+        self.goBackToGrid.emit()
+
+    def openArgumentSelector(self):
+        self.curveArgumentSelector = ArgumentSelector(self.currentDir, self)
+        self.curveArgumentSelector.selected.connect(self.argumentSelected)
+        self.curveArgumentSelector.exec_()
+
+    def argumentSelected(self):
+        self.selectedUnit = self.curveArgumentSelector.argumentUnit
+        if self.selectedUnit is None:
+            self.unitCheckbox.setEnabled(False)
+            self.unitCheckbox.setChecked(False)
+        else:
+            self.unitCheckbox.setEnabled(True)
+            self.unitCheckbox.setChecked(True)
+        self.lineEdit.setText(self.curveArgumentSelector.selectedArgument)
+
 
 class LabeledIndicator(QGroupBox):
-    def __init__(self, name: str, editor: LabelEditor, parent: GridIndicator = None):
+    def __init__(self, name: str, editor: LabelEditor = None, parent: GridIndicator = None):
         super().__init__(parent)
         self.setTitle(name)
         self.parentWidget = parent

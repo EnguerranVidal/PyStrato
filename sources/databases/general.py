@@ -18,7 +18,6 @@ import pyqtgraph as pg
 from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.widgets.RemoteGraphicsView
 
-from qtwidgets import Toggle, AnimatedToggle
 from ecom.database import Unit
 from ecom.datatypes import TypeInfo, DefaultValueInfo
 
@@ -178,48 +177,3 @@ class DatabaseMenu(QWidget):
         layout.addRow(self.nbLabel)
         layout.setVerticalSpacing(0)
         self.setLayout(layout)
-
-
-class ValuePacketWidget(QWidget):
-    def __init__(self):
-        super(QWidget, self).__init__()
-        # Sign ---------------------------------------------
-        self.signToggle = Toggle()
-        # Total Digits -------------------------------------
-        self.totalSlider = QSlider(Qt.Vertical)
-        self.totalSlider.setSingleStep(1)
-        self.totalSlider.setTickInterval(1)
-        self.totalSlider.setRange(0, 10)
-        self.totalSlider.setTickPosition(QSlider.TicksLeft)
-        self.totalLabel = QLabel('Total')
-        # Float Digits -------------------------------------
-        self.floatSlider = QSlider(Qt.Vertical)
-        self.floatSlider.setSingleStep(1)
-        self.floatSlider.setTickInterval(1)
-        self.floatSlider.setRange(0, 10)
-        self.floatSlider.setTickPosition(QSlider.TicksLeft)
-        self.floatLabel = QLabel('Float')
-        # Value Unit
-        self.unitEdit = QLineEdit()
-        self.nameEdit = QLineEdit()
-
-        self.formLayout = QFormLayout()
-        self.formLayout.addRow('Name:', self.nameEdit)
-        self.formLayout.addRow('Unit:', self.unitEdit)
-        self.formLayout.addRow('Sign', self.signToggle)
-        self.leftContainer = QWidget()
-        self.leftContainer.setLayout(self.formLayout)
-
-        self.rightLayout = QGridLayout()
-        self.rightLayout.addWidget(self.totalLabel, 0, 0)
-        self.rightLayout.addWidget(self.totalSlider, 1, 0)
-        self.rightLayout.addWidget(self.floatLabel, 0, 1)
-        self.rightLayout.addWidget(self.floatSlider, 1, 1)
-        self.rightContainer = QWidget()
-        self.rightContainer.setLayout(self.rightLayout)
-
-        self.layout = QHBoxLayout()
-        self.layout.addWidget(self.leftContainer)
-        self.layout.addWidget(self.rightContainer)
-
-        self.setLayout(self.layout)
