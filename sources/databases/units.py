@@ -148,6 +148,7 @@ class UnitsWidget(QMainWindow):
             for j in range(len(self.database.units[name])):
                 self.database.units[name][j] = dataclasses.replace(self.database.units[name][j],
                                                                    description=description)
+            self.database.replaceType(self.database.units[name][0].type, name)
 
     def unitTypeChanged(self):
         for i in range(len(self.rowWidgets['DESCRIPTION'])):
@@ -156,6 +157,7 @@ class UnitsWidget(QMainWindow):
             pythonType = TypeInfo.lookupBaseType(unitType).type
             self.database.units[name][0] = dataclasses.replace(self.database.units[name][0],
                                                                type=pythonType, baseTypeName=unitType)
+            self.database.replaceType(self.database.units[name][0].type, name)
 
 
 class NewUnitWindow(QDialog):
