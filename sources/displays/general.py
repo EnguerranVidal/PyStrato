@@ -9,7 +9,7 @@ from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
 from sources.common.FileHandling import load_settings
-from sources.common.Widgets import BasicDisplay
+from sources.common.Widgets import BasicDisplay, ContentStorage
 from sources.common.balloondata import BalloonPackageDatabase
 from sources.displays.graphs import CustomGraph
 from sources.displays.indicators import SingleIndicator, GridIndicator
@@ -33,6 +33,7 @@ class DisplayTabWidget(QMainWindow):
         self.tabWidget.setMovable(True)
         self.setCentralWidget(self.tabWidget)
         self.tabWidget.tabBarDoubleClicked.connect(self.onTabBarDoubleClicked)
+        self.tabWidget.currentChanged.connect(self.tabChanged)
 
         # Add some tabs to the QTabWidget
         self.tabWidget.addTab(QMainWindow(), "Tab 1")
@@ -43,13 +44,11 @@ class DisplayTabWidget(QMainWindow):
         dock_widget_2 = DisplayDockWidget("Dock Widget 2", widget=CustomGraph(path=self.currentDir))
         dock_widget_3 = DisplayDockWidget('Dock Widget 3', widget=CustomGraph(path=self.currentDir))
         dock_widget_4 = DisplayDockWidget("Single", widget=SingleIndicator(path=self.currentDir))
-        dock_widget_5 = DisplayDockWidget('bruh', widget=CustomGraph(path=self.currentDir))
 
         tabWidget1.addDockWidget(Qt.TopDockWidgetArea, dock_widget_1)
         tabWidget1.addDockWidget(Qt.RightDockWidgetArea, dock_widget_2)
         tabWidget1.addDockWidget(Qt.BottomDockWidgetArea, dock_widget_3)
         tabWidget1.addDockWidget(Qt.LeftDockWidgetArea, dock_widget_4)
-        tabWidget1.splitDockWidget(dock_widget_3, dock_widget_5, Qt.Horizontal)
 
         self.show()
 
@@ -59,6 +58,9 @@ class DisplayTabWidget(QMainWindow):
     def closeCurrentTab(self):
         currentTabIndex = self.tabWidget.currentIndex()
         self.tabWidget.removeTab(currentTabIndex)
+
+    def addNewTab(self):
+        self.tabWidget.addTab(QMainWindow(), "New Tab")
 
     def onTabBarDoubleClicked(self, index):
         tabName = self.tabWidget.tabText(index)
@@ -74,6 +76,21 @@ class DisplayTabWidget(QMainWindow):
         tabBar = self.tabWidget.tabBar()
         self.tabWidget.setTabText(index, lineEdit.text())
         tabBar.setTabButton(index, tabBar.ButtonPosition.LeftSide, None)
+
+    def tabChanged(self):
+        currentIndex = self.tabWidget.currentIndex()
+        if currentIndex != -1:
+            tab = self.tabWidget.widget(currentIndex)
+            for widget in tab.findChildren(QDockWidget):
+                widget.display.updateContent(self.content)
+
+    def updateTabDisplays(self, content):
+        self.content.append(content)
+        currentIndex = self.tabWidget.currentIndex()
+        if currentIndex != -1:
+            tab = self.tabWidget.widget(currentIndex)
+            for widget in tab.findChildren(QDockWidget):
+                widget.display.updateContent(self.content)
 
 
 class DisplayDockWidget(QDockWidget):
@@ -251,29 +268,3 @@ class HoverButton(QPushButton):
 
     def sizeHint(self):
         return self.iconSize()
-
-class ContentStorage:
-    def __init__(self, path):
-        self.settings = load_settings('settings')
-        self.currentDir = path
-        self.storage = {}
-
-    def fill(self):
-        self.settings = load_settings('settings')
-        paths = self.settings['FORMAT_FILES']
-        for path in paths:
-            path = os.path.join(self.currentDir, 'formats', path)
-            if os.path.isdir(path):
-                name, database = os.path.basename(path), BalloonPackageDatabase(path)
-                self.storage[name] = {
-                    telemetryType.id.name: {
-                        dataPoint.name: []
-                        for dataPoint in telemetryType.data
-                    }
-                    for telemetryType in database.telemetryTypes
-                }
-
-    def append(self, content):
-        packageStorage = self.storage[content['parser']][content['type']]
-        for key, value in content['data'].items():
-            packageStorage[key].append(value)

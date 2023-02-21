@@ -2,6 +2,8 @@
 import os
 import copy
 from typing import List, Dict, Any, Optional, Generic, Type, Callable, Union
+from functools import reduce
+import operator
 import pyqtgraph as pg
 
 # ------------------- PyQt Modules -------------------- #
@@ -54,11 +56,23 @@ class SingleIndicator(BasicDisplay):
         elif editWidget.positionRightButton.isChecked():
             self.indicatorLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
+    def updateContent(self, content=None):
+        self.generalSettings = load_settings('settings')
+        if content is None:
+            return
+        # If content is there, retrieve the Argument
+        argumentMapping = self.settingsWidget.lineEdit.text().split('$')
+        if argumentMapping != ['']:  # There is an argument in the parameters
+            argumentUnit = self.settingsWidget.selectedUnit
+            value = reduce(operator.getitem, argumentMapping, content.storage)
+            if len(value) > 0:
+                self.indicatorLabel.setText(str(value[-1]))
+
 
 class SingleIndicatorEditDialog(QWidget):
     def __init__(self, path, parent: SingleIndicator = None):
         super().__init__(parent)
-        self.curveArgumentSelector = None
+        self.valueArgumentSelector = None
         self.selectedUnit = None
         self.currentDir = path
 
@@ -159,19 +173,19 @@ class SingleIndicatorEditDialog(QWidget):
         self.hide()
 
     def openArgumentSelector(self):
-        self.curveArgumentSelector = ArgumentSelector(self.currentDir, self)
-        self.curveArgumentSelector.selected.connect(self.argumentSelected)
-        self.curveArgumentSelector.exec_()
+        self.valueArgumentSelector = ArgumentSelector(self.currentDir, self)
+        self.valueArgumentSelector.selected.connect(self.argumentSelected)
+        self.valueArgumentSelector.exec_()
 
     def argumentSelected(self):
-        self.selectedUnit = self.curveArgumentSelector.argumentUnit
+        self.selectedUnit = self.valueArgumentSelector.argumentUnit
         if self.selectedUnit is None:
             self.unitCheckbox.setEnabled(False)
             self.unitCheckbox.setChecked(False)
         else:
             self.unitCheckbox.setEnabled(True)
             self.unitCheckbox.setChecked(True)
-        self.lineEdit.setText(self.curveArgumentSelector.selectedArgument)
+        self.lineEdit.setText(self.valueArgumentSelector.selectedArgument)
 
 
 ############################## GRID INDICATOR ##############################
@@ -182,7 +196,7 @@ class GridIndicator(BasicDisplay):
         self.labelGridLayout = QGridLayout()
         self.setLayout(self.labelGridLayout)
         self.settingsWidget = GridIndicatorEditDialog(self.currentDir, self)
-        # self.indicators = [[LabeledIndicator(self.currentDir, self.settingsWidget.labelEditors[0][0])]]
+        # self.indicators = {(0, 0): LabeledIndicator(self.currentDir, self.settingsWidget.labelEditors[(0, 0)])}
 
         self.fillGrid()
 
@@ -327,7 +341,8 @@ class GridEditor(QWidget):
             for column in range(columns):
                 button = QPushButton()
                 button.setFixedSize(50, 50)
-                button.clicked.connect(lambda *args, rowArg=row, columnArg=column: self.gridButtonPressed(rowArg, columnArg))
+                button.clicked.connect(lambda *args, rowArg=row, columnArg=column:
+                                       self.gridButtonPressed(rowArg, columnArg))
                 if self.editWidget.labelEditors[(row, column)].status:
                     palette = button.palette()
                     palette.setColor(QPalette.Button, Qt.red)
@@ -338,7 +353,6 @@ class GridEditor(QWidget):
 
     def gridButtonPressed(self, row, column):
         self.openLabelEditor.emit(row, column)
-
 
 
 class LabelEditor(QWidget):
@@ -355,7 +369,6 @@ class LabelEditor(QWidget):
         # Create the QLineEdit and set its placeholder text
         self.lineEdit = QLineEdit()
         self.lineEdit.setPlaceholderText("Enter value here")
-
 
         # Create the QPushButton and set its text
         self.button = QPushButton("Select value")

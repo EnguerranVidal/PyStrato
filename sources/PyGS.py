@@ -504,7 +504,7 @@ class PyGS(QMainWindow):
         pass
 
     def newSerialData(self, content):
-        self.graphsTabWidget.updateTabGraphs(content)
+        self.displayTabWidget.updateTabDisplays(content)
 
     def onSerialOutput(self, newLine):
         needScrolling = False

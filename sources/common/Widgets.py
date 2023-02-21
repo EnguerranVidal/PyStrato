@@ -19,11 +19,43 @@ from sources.common.balloondata import BalloonPackageDatabase
 class BasicDisplay(QWidget):
     def __init__(self, path, parent=None):
         super().__init__(parent)
+        self.generalSettings = load_settings('settings')
         self.settingsWidget = QWidget()
         self.currentDir = path
+        self.display = None
 
     def applyChanges(self, editWidget):
         pass
+
+    def updateContent(self, content):
+        pass
+
+
+class ContentStorage:
+    def __init__(self, path):
+        self.settings = load_settings('settings')
+        self.currentDir = path
+        self.storage = {}
+
+    def fill(self):
+        self.settings = load_settings('settings')
+        paths = self.settings['FORMAT_FILES']
+        for path in paths:
+            path = os.path.join(self.currentDir, 'formats', path)
+            if os.path.isdir(path):
+                name, database = os.path.basename(path), BalloonPackageDatabase(path)
+                self.storage[name] = {
+                    telemetryType.id.name: {
+                        dataPoint.name: []
+                        for dataPoint in telemetryType.data
+                    }
+                    for telemetryType in database.telemetryTypes
+                }
+
+    def append(self, content):
+        packageStorage = self.storage[content['parser']][content['type']]
+        for key, value in content['data'].items():
+            packageStorage[key].append(value)
 
 
 class ArgumentSelectorWidget(QWidget):
@@ -237,7 +269,7 @@ class ArgumentSelector(QDialog):
             itemName = currentItem.text(0)
             # Updating Value
             self.selectionNameLabel.setText(itemName)
-            self.selectedArgument = '{}${}${}'.format(database, telemetry, '/'.join(itemAncestors))
+            self.selectedArgument = '{}${}${}'.format(database, telemetry, '$'.join(itemAncestors))
             if unitName is not None:
                 self.argumentUnit = self.itemSelectionWidget.databases[database][0].units[unitName][0]
             else:
