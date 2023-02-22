@@ -17,7 +17,7 @@ from sources.common.balloondata import BalloonPackageDatabase
 
 
 ######################## CLASSES ########################
-class CustomGraph(BasicDisplay):
+class MultiCurveGraph(BasicDisplay):
     def __init__(self, path, parent=None, backgroundColor='#ffffff'):
         super().__init__(path, parent)
         self.curveProperties = []
@@ -65,7 +65,7 @@ class CustomGraph(BasicDisplay):
 
 
 class CustomGraphEditDialog(QWidget):
-    def __init__(self, path, graph: CustomGraph = None):
+    def __init__(self, path, graph: MultiCurveGraph = None):
         super().__init__(parent=graph)
         self.currentDir = path
         # Central Editing Widget for curves

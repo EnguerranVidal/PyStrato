@@ -8,16 +8,14 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings
+from sources.common.FileHandling import load_settings, newTabNameGiving
 from sources.common.Widgets import BasicDisplay, ContentStorage
 from sources.common.balloondata import BalloonPackageDatabase
-from sources.displays.graphs import CustomGraph
+from sources.displays.graphs import MultiCurveGraph
 from sources.displays.indicators import SingleIndicator, GridIndicator
 
 
 ######################## CLASSES ########################
-
-
 class DisplayTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
@@ -35,32 +33,16 @@ class DisplayTabWidget(QMainWindow):
         self.tabWidget.tabBarDoubleClicked.connect(self.onTabBarDoubleClicked)
         self.tabWidget.currentChanged.connect(self.tabChanged)
 
-        # Add some tabs to the QTabWidget
-        self.tabWidget.addTab(QMainWindow(), "Tab 1")
-        self.tabWidget.addTab(QMainWindow(), "Tab 2")
-
-        tabWidget1 = self.tabWidget.widget(0)
-        dock_widget_1 = DisplayDockWidget("Grid", widget=GridIndicator(path=self.currentDir))
-        dock_widget_2 = DisplayDockWidget("Dock Widget 2", widget=CustomGraph(path=self.currentDir))
-        dock_widget_3 = DisplayDockWidget('Dock Widget 3', widget=CustomGraph(path=self.currentDir))
-        dock_widget_4 = DisplayDockWidget("Single", widget=SingleIndicator(path=self.currentDir))
-
-        tabWidget1.addDockWidget(Qt.TopDockWidgetArea, dock_widget_1)
-        tabWidget1.addDockWidget(Qt.RightDockWidgetArea, dock_widget_2)
-        tabWidget1.addDockWidget(Qt.BottomDockWidgetArea, dock_widget_3)
-        tabWidget1.addDockWidget(Qt.LeftDockWidgetArea, dock_widget_4)
-
         self.show()
-
-    def tabNamesList(self):
-        return [self.tabWidget.tabText(i) for i in range(self.tabWidget.count())]
 
     def closeCurrentTab(self):
         currentTabIndex = self.tabWidget.currentIndex()
         self.tabWidget.removeTab(currentTabIndex)
 
     def addNewTab(self):
-        self.tabWidget.addTab(QMainWindow(), "New Tab")
+        tabNames = [self.tabWidget.tabText(i) for i in range(self.tabWidget.count())]
+        newTabName = newTabNameGiving(tabNames, addition='Tab')
+        self.tabWidget.addTab(QMainWindow(), newTabName)
 
     def onTabBarDoubleClicked(self, index):
         tabName = self.tabWidget.tabText(index)
@@ -91,6 +73,27 @@ class DisplayTabWidget(QMainWindow):
             tab = self.tabWidget.widget(currentIndex)
             for widget in tab.findChildren(QDockWidget):
                 widget.display.updateContent(self.content)
+
+    def addSimpleIndicator(self):
+        currentTabWidget = self.tabWidget.currentWidget()
+        widgetNames = [dock.objectName() for dock in currentTabWidget.findChildren(QDockWidget)]
+        newIndicatorName = newTabNameGiving(widgetNames, addition='Indicator')
+        newDockWidget = DisplayDockWidget(newIndicatorName, widget=SingleIndicator(path=self.currentDir))
+        currentTabWidget.addDockWidget(Qt.LeftDockWidgetArea, newDockWidget)
+
+    def addGridIndicator(self):
+        currentTabWidget = self.tabWidget.currentWidget()
+        widgetNames = [dock.objectName() for dock in currentTabWidget.findChildren(QDockWidget)]
+        newIndicatorName = newTabNameGiving(widgetNames, addition='Grid')
+        newDockWidget = DisplayDockWidget(newIndicatorName, widget=GridIndicator(path=self.currentDir))
+        currentTabWidget.addDockWidget(Qt.LeftDockWidgetArea, newDockWidget)
+
+    def addMultiCurveGraph(self):
+        currentTabWidget = self.tabWidget.currentWidget()
+        widgetNames = [dock.objectName() for dock in currentTabWidget.findChildren(QDockWidget)]
+        newIndicatorName = newTabNameGiving(widgetNames, addition='Graph')
+        newDockWidget = DisplayDockWidget(newIndicatorName, widget=MultiCurveGraph(path=self.currentDir))
+        currentTabWidget.addDockWidget(Qt.LeftDockWidgetArea, newDockWidget)
 
 
 class DisplayDockWidget(QDockWidget):

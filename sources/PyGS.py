@@ -33,7 +33,7 @@ class PyGS(QMainWindow):
         self.setWindowTitle('Weather Balloon Ground Station')
         self.setWindowIcon(self.mainIcon)
         self.settings = load_settings("settings")
-        self.center()
+        self._center()
         # Date&Time in StatusBar
         self.datetime = QDateTime.currentDateTime()
         self.dateLabel = QLabel(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
@@ -89,25 +89,40 @@ class PyGS(QMainWindow):
         self.graphWidgetsList = []
 
         # Adding Tabs to Main Widget -------------------------------
-        self.generalTabWidget.addTab(self.graphsTabWidget, 'Graphs')
-        self.generalTabWidget.addTab(self.packetTabWidget, 'Packets')
         self.generalTabWidget.addTab(self.displayTabWidget, 'Display')
+        self.generalTabWidget.addTab(self.packetTabWidget, 'Packets')
+
 
         # TODO
         self.generalTabWidget.currentChanged.connect(self.manageToolBars)
         self.setCentralWidget(self.generalTabWidget)
 
     def _createToolBars(self):
-        # Databases Tool Bar ----------------------
+        ########### DATABASES ###########
         self.databasesToolBar = QToolBar("Package", self)
 
-        # Displays Tool Bar ----------------------
+        ########### DISPLAYS ###########
         self.displaysToolBar = QToolBar('Display', self)
         self.displaysToolBar.addAction(self.newDisplayTabAct)
         self.displaysToolBar.addAction(self.closeDisplayTabAct)
         self.displaysToolBar.addSeparator()
+        # Indicators
+        indicatorToolButton = QToolButton()
+        indicatorToolButton.setDefaultAction(self.newSimpleIndicatorAct)
+        indicatorSubMenu = QMenu()
+        indicatorSubMenu.addAction(self.newSimpleIndicatorAct)
+        indicatorSubMenu.addAction(self.newGridIndicatorAct)
+        indicatorToolButton.setMenu(indicatorSubMenu)
+        self.displaysToolBar.addWidget(indicatorToolButton)
+        # Graphs
+        graphToolButton = QToolButton()
+        graphToolButton.setDefaultAction(self.newMultiCurveAct)
+        graphSubMenu = QMenu()
+        graphSubMenu.addAction(self.newMultiCurveAct)
+        graphToolButton.setMenu(graphSubMenu)
+        self.displaysToolBar.addWidget(graphToolButton)
 
-        # Managing ToolBar Appearance ----------------------
+        ########### APPEARANCE ###########
         self.addToolBar(self.databasesToolBar)
         self.addToolBar(self.displaysToolBar)
         self.generalTabWidget.currentChanged.connect(self.manageToolBars)
@@ -126,6 +141,7 @@ class PyGS(QMainWindow):
             self.displaysToolBar.show()
 
     def _createActions(self):
+        ########### FORMATS ###########
         # New Format
         self.newFormatAction = QAction('&New Format', self)
         self.newFormatAction.setStatusTip('Create New Packet Format')
@@ -172,18 +188,37 @@ class PyGS(QMainWindow):
         self.exitAct.setShortcut('Ctrl+Q')
         self.exitAct.setStatusTip('Exit application')
         self.exitAct.triggered.connect(self.close)
-        # Add New Graph Tab
-        self.newGraphAction = QAction('&Add Graph Tab', self)
-        self.newGraphAction.setStatusTip('Add New Graph Tab')
-        self.newGraphAction.triggered.connect(self.newGraphTab)
-        # Add New Basic TimeAxis Plot
-        self.newBasicPlotAction = QAction('&DateTime Plot', self)
-        self.newBasicPlotAction.setStatusTip('Add New DateTime Plot')
-        self.newBasicPlotAction.triggered.connect(self.newBasicPlot)
-        # Add New Remote Plot
-        self.newRemotePlotAction = QAction('&Remote Plot', self)
-        self.newRemotePlotAction.setStatusTip('Add New Remote Plot')
-        self.newRemotePlotAction.triggered.connect(self.newRemotePlot)
+
+        ########### DISPLAYS ###########
+        # Add New Display Tab
+        self.newDisplayTabAct = QAction('&New Display Tab', self)
+        self.newDisplayTabAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-folder-96.png'))
+        self.newDisplayTabAct.setStatusTip('Create New Display Tab')
+        self.newDisplayTabAct.setShortcut('Ctrl+Shift+N')
+        self.newDisplayTabAct.triggered.connect(self.displayTabWidget.addNewTab)
+        # Close Display Tab
+        self.closeDisplayTabAct = QAction('&Close Display Tab', self)
+        self.closeDisplayTabAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-folder-96.png'))
+        self.closeDisplayTabAct.setStatusTip('Close Display Tab')
+        self.closeDisplayTabAct.setShortcut('Ctrl+Shift+X')
+        self.closeDisplayTabAct.triggered.connect(self.displayTabWidget.closeCurrentTab)
+        # Add Simple Indicator
+        self.newSimpleIndicatorAct = QAction('&New Simple Indicator', self)
+        self.newSimpleIndicatorAct.setIcon(QIcon('sources/icons/light-theme/icons8-full-screen-96.png'))
+        self.newSimpleIndicatorAct.setStatusTip('Add New Simple Indicator')
+        self.newSimpleIndicatorAct.triggered.connect(self.displayTabWidget.addSimpleIndicator)
+        # Add Grid Indicator
+        self.newGridIndicatorAct = QAction('&New Grid Indicator', self)
+        self.newGridIndicatorAct.setIcon(QIcon('sources/icons/light-theme/icons8-four-squares-96.png'))
+        self.newGridIndicatorAct.setStatusTip('Add New Grid Simple Indicator')
+        self.newGridIndicatorAct.triggered.connect(self.displayTabWidget.addGridIndicator)
+        # Add MultiCurve Graph
+        self.newMultiCurveAct = QAction('&New MultiCurve Graph', self)
+        self.newMultiCurveAct.setIcon(QIcon('sources/icons/light-theme/icons8-combo-chart-96.png'))
+        self.newMultiCurveAct.setStatusTip('Add New MultiCurve Graph')
+        self.newMultiCurveAct.triggered.connect(self.displayTabWidget.addMultiCurveGraph)
+
+        ########### TOOLS ###########
         # Toggle Autoscale
         self.autoscaleAct = QAction('&Autoscale', self, checkable=True, checked=self.settings["AUTOSCALE"])
         self.autoscaleAct.setStatusTip("Toggle Graphs' Autoscale")
@@ -206,27 +241,14 @@ class PyGS(QMainWindow):
         # Toggle RSSI Acquirement
         self.rssiAct = QAction('&RSSI', self, checkable=True, checked=self.settings["RSSI"])
         self.rssiAct.setStatusTip('Toggle RSSI Retrieval')
-
         self.rssiAct.triggered.connect(self.setRssi)
+
+        ########### HELP ###########
         # Visit GitHub Page
         self.githubAct = QAction('&Visit GitHub', self)
         self.githubAct.setIcon(QIcon('sources/icons/light-theme/icons8-github-96.png'))
         self.githubAct.setStatusTip('Visit GitHub Page')
         self.githubAct.triggered.connect(self.openGithub)
-
-        # Display Graph Actions ---------------------------
-        # Add New Display Tab
-        self.newDisplayTabAct = QAction('&New Display Tab', self)
-        self.newDisplayTabAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-folder-96.png'))
-        self.newDisplayTabAct.setStatusTip('Create New Display Tab')
-        self.newDisplayTabAct.setShortcut('Ctrl+Shift+N')
-        self.newDisplayTabAct.triggered.connect(self.newDisplayTab)
-        # Close Display Tab
-        self.closeDisplayTabAct = QAction('&Close Display Tab', self)
-        self.closeDisplayTabAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-folder-96.png'))
-        self.closeDisplayTabAct.setStatusTip('Close Display Tab')
-        self.closeDisplayTabAct.setShortcut('Ctrl+Shift+X')
-        self.closeDisplayTabAct.triggered.connect(self.displayTabWidget.closeCurrentTab)
 
     def _createMenuBar(self):
         self.menubar = self.menuBar()
@@ -259,13 +281,6 @@ class PyGS(QMainWindow):
 
         ###  WINDOW MENU  ###
         self.windowMenu = self.menubar.addMenu('&Window')
-        self.manageGraphsMenu = QMenu('&Graph Tab', self)
-        self.manageGraphsMenu.addAction(self.newGraphAction)
-        self.addPlotMenu = QMenu('&Add New Plot', self)
-        self.addPlotMenu.addAction(self.newRemotePlotAction)
-        self.addPlotMenu.addAction(self.newBasicPlotAction)
-        self.manageGraphsMenu.addMenu(self.addPlotMenu)
-        self.windowMenu.addMenu(self.manageGraphsMenu)
         self.windowMenu.addSeparator()
         self.windowMenu.addAction(self.autoscaleAct)
 
@@ -305,7 +320,7 @@ class PyGS(QMainWindow):
         if not os.path.exists(self.backupPath):
             os.mkdir(self.backupPath)
 
-    def center(self):
+    def _center(self):
         frameGeometry = self.frameGeometry()
         screenCenter = QDesktopWidget().availableGeometry().center()
         frameGeometry.moveCenter(screenCenter)
@@ -321,65 +336,6 @@ class PyGS(QMainWindow):
         name = self.newFormatWindow.nameEdit.text()
         self.packetTabWidget.newFormat(name)
         self.newFormatWindow.close()
-
-    def newDisplayTab(self):
-        name = newTabNameGiving(self.displayTabWidget.tabNamesList(), addition='Tab')
-        self.displayTabWidget.tabWidget.addTab(QMainWindow(), name)
-
-    def newGraphTab(self):
-        self.newGraphWindow = NewGraphWindow()
-        self.newGraphWindow.buttons.accepted.connect(self.createNewGraphTab)
-        self.newGraphWindow.buttons.rejected.connect(self.newGraphWindow.close)
-        self.newGraphWindow.show()
-
-    def newRemotePlot(self):
-        if self.graphsTabWidget.graphCentralWindow.count() > 0:
-            self.newPlotWindow = NewPlotWindow()
-            self.newPlotWindow.buttons.accepted.connect(self.createNewRemotePlot)
-            self.newPlotWindow.buttons.rejected.connect(self.newPlotWindow.close)
-            self.newPlotWindow.show()
-        else:
-            cancelling = MessageBox()
-            cancelling.setWindowIcon(self.mainIcon)
-            cancelling.setWindowTitle("Error")
-            cancelling.setText("No Graph tabs are\nset to add a plot too.")
-            cancelling.setStandardButtons(QMessageBox.Ok)
-            cancelling.setStyleSheet("QLabel{min-width: 200px;}")
-            cancelling.exec_()
-
-    def newBasicPlot(self):
-        if self.graphsTabWidget.graphCentralWindow.count() > 0:
-            self.newPlotWindow = NewPlotWindow()
-            self.newPlotWindow.buttons.accepted.connect(self.createNewBasicPlot)
-            self.newPlotWindow.buttons.rejected.connect(self.newPlotWindow.close)
-            self.newPlotWindow.show()
-        else:
-            cancelling = MessageBox()
-            cancelling.setWindowIcon(self.mainIcon)
-            cancelling.setWindowTitle("Error")
-            cancelling.setText("No Graph tabs are\nset to add a plot too.")
-            cancelling.setStandardButtons(QMessageBox.Ok)
-            cancelling.setStyleSheet("QLabel{min-width: 200px;}")
-            cancelling.exec_()
-
-    def createNewRemotePlot(self):
-        currentIndex = self.graphsTabWidget.graphCentralWindow.currentIndex()
-        name = self.newPlotWindow.nameEdit.text()
-        widget = self.graphsTabWidget.graphCentralWindow.widget(currentIndex)
-        widget.addDockRemote(name)
-        self.newPlotWindow.close()
-
-    def createNewBasicPlot(self):
-        currentIndex = self.graphsTabWidget.graphCentralWindow.currentIndex()
-        name = self.newPlotWindow.nameEdit.text()
-        widget = self.graphsTabWidget.graphCentralWindow.widget(currentIndex)
-        widget.addDockDateTime(name)
-        self.newPlotWindow.close()
-
-    def createNewGraphTab(self):
-        name = self.newGraphWindow.nameEdit.text()
-        self.graphsTabWidget.addDockTab(name)
-        self.newGraphWindow.close()
 
     def openFormatTab(self):
         if os.path.exists(self.formatPath):
@@ -450,16 +406,6 @@ class PyGS(QMainWindow):
             cancelling.setText("This file does not satisfy the required format.")
             cancelling.setStandardButtons(QMessageBox.Ok)
             cancelling.exec_()
-
-    def openChangeHeader(self):
-        self.changeHeaderWindow = HeaderChangeWindow()
-        acceptButton = QPushButton('Create', self.changeHeaderWindow)
-        acceptButton.clicked.connect(self.acceptChangeHeader)
-        self.changeHeaderWindow.dlgLayout.addWidget(acceptButton)
-        self.changeHeaderWindow.show()
-
-    def acceptChangeHeader(self):
-        pass
 
     def startSerial(self):
         message = "Port : " + self.settings["SELECTED_PORT"] + "  Baud : "
