@@ -7,10 +7,10 @@ import pandas as pd
 import numpy as np
 import time
 
-from ecom.database import CommunicationDatabase, Unit, Configuration
+from ecom.database import Unit, Configuration
 from ecom.datatypes import TypeInfo, DefaultValueInfo, EnumType
 
-from sources.common.balloondata import BalloonPackageDatabase
+from sources.databases.balloondata import BalloonPackageDatabase
 
 
 def newTabNameGiving(nameList: list, addition: str = None):

@@ -1,6 +1,4 @@
 ######################## IMPORTS ########################
-import os
-from typing import Optional
 import pyqtgraph as pg
 from functools import reduce
 import operator
@@ -13,7 +11,6 @@ from PyQt5.QtGui import *
 # --------------------- Sources ----------------------- #
 from sources.common.FileHandling import load_settings
 from sources.common.Widgets import BasicDisplay, ArgumentSelector
-from sources.common.balloondata import BalloonPackageDatabase
 
 
 ######################## CLASSES ########################

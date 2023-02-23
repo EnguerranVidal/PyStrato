@@ -1,10 +1,7 @@
 ######################## IMPORTS ########################
-import os
-import copy
-from typing import List, Dict, Any, Optional, Generic, Type, Callable, Union
+from typing import Dict
 from functools import reduce
 import operator
-import pyqtgraph as pg
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
@@ -14,7 +11,6 @@ from PyQt5.QtGui import *
 # --------------------- Sources ----------------------- #
 from sources.common.FileHandling import load_settings
 from sources.common.Widgets import BasicDisplay, ArgumentSelector
-from sources.common.balloondata import BalloonPackageDatabase
 from sources.displays.graphs import ColorEditor
 
 
@@ -22,12 +18,18 @@ from sources.displays.graphs import ColorEditor
 class SingleIndicator(BasicDisplay):
     def __init__(self, path, parent=None):
         super().__init__(path, parent)
-        self.indicatorLabel = QLabel('bruh')
+        self.indicatorLabel = QLabel('')
         self.settingsWidget = SingleIndicatorEditDialog(self.currentDir, self)
 
         gridLayout = QGridLayout()
         gridLayout.addWidget(self.indicatorLabel)
         self.setLayout(gridLayout)
+
+        self.lastValue = None
+        self.unitTypeInfo = None
+        self.unitSymbol = None
+        self.showUnit = None
+        self.argument = None
 
     def applyChanges(self, editWidget):
         backgroundColor = editWidget.backgroundColor.colorLabel.text()
@@ -56,17 +58,31 @@ class SingleIndicator(BasicDisplay):
         elif editWidget.positionRightButton.isChecked():
             self.indicatorLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
+        self.showUnit = editWidget.unitCheckbox.isChecked()
+        self.unitTypeInfo = editWidget.selectedUnit
+        self.unitSymbol = None
+        self.argument = editWidget.lineEdit.text()
+
+        self.updateContent()
+
     def updateContent(self, content=None):
         self.generalSettings = load_settings('settings')
         if content is None:
             return
         # If content is there, retrieve the Argument
-        argumentMapping = self.settingsWidget.lineEdit.text().split('$')
+        argumentMapping = self.argument.split('$')
         if argumentMapping != ['']:  # There is an argument in the parameters
-            argumentUnit = self.settingsWidget.selectedUnit
             value = reduce(operator.getitem, argumentMapping, content.storage)
             if len(value) > 0:
-                self.indicatorLabel.setText(str(value[-1]))
+                displayedText = str(value[-1])
+                self.lastValue = value[-1]
+            elif issubclass(self.unitTypeInfo.type, float):
+                displayedText = '____.__'
+            else:
+                displayedText = '____'
+            if self.showUnit:
+                displayedText += ' ' + self.unitTypeInfo.name
+            self.indicatorLabel.setText(displayedText)
 
 
 class SingleIndicatorEditDialog(QWidget):
@@ -223,6 +239,9 @@ class GridIndicator(BasicDisplay):
 
         # Fill Grid
         self.fillGrid(editWidget)
+
+    def updateContent(self, content):
+        pass
 
 
 class GridIndicatorEditDialog(QWidget):

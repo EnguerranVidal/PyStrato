@@ -1,0 +1,50 @@
+Unit Name,Symbol,Description,Physical Value,Other Names
+Second,s,Time,Time,"second, sec, seconds"
+Millisecond,ms,Time,Time,"millisecond, msec"
+Microsecond,us,Time,Time,"microsecond, use, us"
+Nanosecond,ns,Time,Time,"nanosecond, nsec"
+Minute,min,Time,Time,"minute, Min, minutes"
+Hour,h,Time,Time,"hour, hours"
+Day,d,Time,Time,"day, days"
+Week,wk,Time,Time,"week, weeks"
+Month,mo,Time,Time,"month, months"
+Year,yr,Time,Time,"year, years"
+Meter,m,Length,Distance,"meter, meters"
+Kilometer,km,Length,Distance,"kilometer, kilometers, kmeters"
+Meter per second,m/s,Speed,Speed,"meter per second, mps"
+Kilometer per hour,km/h,Speed,Speed,"kilometer per hour, kph"
+Meter per second squared,m/s²,Acceleration,Acceleration,"meter per second squared, mps2, m/s^2"
+Gravity,g,Acceleration,Acceleration,gravity
+Newton,N,Force,Force,"newton, newtons"
+Mole,mol,Amount of substance,Quantity,"moles, mole"
+Parts per million,ppm,Concentration,Concentration,parts per million
+Parts per billion,ppb,Concentration,Concentration,parts per billion
+Percent,%,Concentration,Concentration,percent
+Celsius,°C,Temperature,Temperature,"celsius, C"
+Fahrenheit,°F,Temperature,Temperature,"fahrenheit, F"
+Kelvin,°K,Temperature,Temperature,"kelvin, K"
+Rankine,°R,Temperature,Temperature,"rankine, R"
+Pascal,Pa,Pressure,Pressure,"pascal, pa"
+Bar,bar,Pressure,Pressure,
+Millibar,mbar,Pressure,Pressure,"millibar, hectopascal, Hectopascal"
+Pound per square inch,psi,Pressure,Pressure,pound per square inch
+Degree,deg,Angle,Angle,"degree, degrees"
+Radian,rad,Angle,Angle,"radian, radians"
+Degree per second,deg/s,Angular Speed,Angular Speed,"dps, degree per second"
+Radian per second,rad/s,Angular Speed,Angular Speed,"rps, radian per second"
+Revolution per minute,rpm,Angular Speed,Angular Speed,revolution per minute
+Lux,lx,Illuminance,Illuminance,lux
+Foot-candle,fc,Illuminance,Illuminance,"foot candle, foot-candle"
+Volt,V,Voltage,Voltage,volt
+Millivolt,mV,Voltage,Voltage,millivolt
+Microvolt,uV,Voltage,Voltage,microvolt
+Ampere,A,Electric Current,Electric Current,ampere
+Milliampere,mA,Electric Current,Electric Current,milliampere
+Microampere,uA,Electric Current,Electric Current,microampere
+Ohm,Ω,Electric Resistance,Electric Resistance,ohm
+Hertz,Hz,Frequency,Frequency,hertz
+Kilohertz,kHz,Frequency,Frequency,kilohertz
+Megahertz,MHz,Frequency,Frequency,megahertz
+Tesla,T,Magnetic Field Strength,Magnetic Field Strength,tesla
+Millitesla,mT,Magnetic Field Strength,Magnetic Field Strength,"millitesla, milliTesla, mTesla"
+Microtesla,uT,Magnetic Field Strength,Magnetic Field Strength,"microtesla, microTesla, uTesla"

@@ -10,7 +10,6 @@ from PyQt5.QtGui import *
 # --------------------- Sources ----------------------- #
 from sources.common.FileHandling import load_settings, newTabNameGiving
 from sources.common.Widgets import BasicDisplay, ContentStorage
-from sources.common.balloondata import BalloonPackageDatabase
 from sources.displays.graphs import MultiCurveGraph
 from sources.displays.indicators import SingleIndicator, GridIndicator
 
@@ -26,7 +25,7 @@ class DisplayTabWidget(QMainWindow):
         self.settings = load_settings('settings')
         self.formats = {}
 
-        # Central Widget -----------------------------------------------
+        ######## CENTRAL WIDGET ########
         self.tabWidget = QTabWidget(self)
         self.tabWidget.setMovable(True)
         self.setCentralWidget(self.tabWidget)
@@ -108,12 +107,8 @@ class DisplayDockWidget(QDockWidget):
         self.button = HoverButton(self.display)
         self.button.setVisible(False)
         self.button.clicked.connect(self.openSettings)
-
-        # Create the central widget and add the button to it
         layout = QVBoxLayout(self.display)
         layout.addWidget(self.button)
-
-        # Set the size of the widget to be 500x500 pixels
         self.resize(500, 500)
 
     def enterEvent(self, event):

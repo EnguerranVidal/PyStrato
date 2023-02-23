@@ -1,8 +1,5 @@
 ######################## IMPORTS ########################
-import os
 import dataclasses
-from ecom.database import Unit
-from ecom.datatypes import TypeInfo, DefaultValueInfo
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
@@ -10,7 +7,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.balloondata import BalloonPackageDatabase
+from sources.databases.balloondata import BalloonPackageDatabase
 
 
 ######################## CLASSES ########################

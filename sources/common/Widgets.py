@@ -6,13 +6,10 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import *
-import pyqtgraph as pg
-from pyqtgraph.dockarea import Dock, DockArea
-import pyqtgraph.widgets.RemoteGraphicsView
 
 # --------------------- Sources ----------------------- #
 from sources.common.FileHandling import load_settings, save_settings
-from sources.common.balloondata import BalloonPackageDatabase
+from sources.databases.balloondata import BalloonPackageDatabase
 
 
 ######################## CLASSES ########################
