@@ -10,6 +10,7 @@ from PyQt5.QtGui import *
 # --------------------- Sources ----------------------- #
 from sources.common.FileHandling import load_settings, save_settings
 from sources.databases.balloondata import BalloonPackageDatabase
+from sources.databases.units import DefaultUnitsCatalogue
 
 
 ######################## CLASSES ########################
@@ -17,6 +18,7 @@ class BasicDisplay(QWidget):
     def __init__(self, path, parent=None):
         super().__init__(parent)
         self.generalSettings = load_settings('settings')
+        self.catalogue = DefaultUnitsCatalogue()
         self.settingsWidget = QWidget()
         self.currentDir = path
         self.display = None

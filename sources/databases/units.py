@@ -184,7 +184,7 @@ class NewUnitWindow(QDialog):
         self.setLayout(self.dlgLayout)
 
 
-class DefaultUnitsDatabase:
+class DefaultUnitsCatalogue:
     def __init__(self, path='sources//defaultUnits.csv'):
         self.csvPath = path
         if not os.path.exists(path):
@@ -229,11 +229,18 @@ class DefaultUnitsDatabase:
             return self.units[unitName]
         # Search in the other names column
         for unit in self.units.values():
-            if unitName in unit['Other Names']:
+            if unitName in unit[3]:
                 return unit
-            if unitName == unit['symbol']:
+            if unitName == unit[0]:
                 return unit
         return None
+
+    def getSymbol(self, unitName):
+        unit = self.find(unitName)
+        if unit is not None:
+            return unit[0]
+        else:
+            return None
 
     def feedDefaultValues(self):
         with open(self.csvPath, 'a', encoding='utf-8', newline='') as file:

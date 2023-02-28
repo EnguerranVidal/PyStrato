@@ -26,8 +26,7 @@ class SingleIndicator(BasicDisplay):
         self.setLayout(gridLayout)
 
         self.lastValue = None
-        self.unitTypeInfo = None
-        self.unitSymbol = None
+        self.argumentUnit = None
         self.showUnit = None
         self.argument = None
 
@@ -59,29 +58,37 @@ class SingleIndicator(BasicDisplay):
             self.indicatorLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         self.showUnit = editWidget.unitCheckbox.isChecked()
-        self.unitTypeInfo = editWidget.selectedUnit
-        self.unitSymbol = None
+        self.argumentUnit = editWidget.selectedUnit
         self.argument = editWidget.lineEdit.text()
 
         self.updateContent()
 
     def updateContent(self, content=None):
         self.generalSettings = load_settings('settings')
-        if content is None:
-            return
         # If content is there, retrieve the Argument
         argumentMapping = self.argument.split('$')
         if argumentMapping != ['']:  # There is an argument in the parameters
-            value = reduce(operator.getitem, argumentMapping, content.storage)
+            if content is None:
+                value = ''
+            else:
+                value = reduce(operator.getitem, argumentMapping, content.storage)
             if len(value) > 0:
                 displayedText = str(value[-1])
                 self.lastValue = value[-1]
-            elif issubclass(self.unitTypeInfo.type, float):
-                displayedText = '____.__'
+            if self.argumentUnit is not None:
+                if issubclass(self.argumentUnit.type, float):
+                    displayedText = '____.__'
+                else:
+                    displayedText = '____'
             else:
                 displayedText = '____'
+            self.lastValue = displayedText
             if self.showUnit:
-                displayedText += ' ' + self.unitTypeInfo.name
+                symbol = self.catalogue.getSymbol(self.argumentUnit.name)
+                if symbol is not None:
+                    displayedText += ' ' + symbol
+                else:
+                    displayedText += ' ' + self.argumentUnit.name
             self.indicatorLabel.setText(displayedText)
 
 
@@ -91,6 +98,7 @@ class SingleIndicatorEditDialog(QWidget):
         self.valueArgumentSelector = None
         self.selectedUnit = None
         self.currentDir = path
+        self.defaultUnitCatalogue = None
 
         # Create the QLineEdit and set its placeholder text
         self.lineEdit = QLineEdit()
@@ -208,11 +216,11 @@ class SingleIndicatorEditDialog(QWidget):
 class GridIndicator(BasicDisplay):
     def __init__(self, path, parent=None):
         super().__init__(path, parent)
-        self.bgColor = None
+        self.bgColor = '#f0f0f0'
         self.labelGridLayout = QGridLayout()
         self.setLayout(self.labelGridLayout)
         self.settingsWidget = GridIndicatorEditDialog(self.currentDir, self)
-        # self.indicators = {(0, 0): LabeledIndicator(self.currentDir, self.settingsWidget.labelEditors[(0, 0)])}
+        self.indicators = {(0, 0): LabeledIndicator('Value 1', self.settingsWidget.labelEditors[(0, 0)], self)}
 
         self.fillGrid()
 
@@ -229,19 +237,26 @@ class GridIndicator(BasicDisplay):
         # Adding New Widgets
         for i in range(rows):
             for j in range(columns):
-                pass
+                if (i, j) not in self.indicators:
+                    self.indicators[(i, j)] = LabeledIndicator('Value ' + str((j * 1 + i)), self.settingsWidget.labelEditors[(i, j)], self)
+                self.labelGridLayout.addWidget(self.indicators[(i, j)], i, j, 1, 1)
+                self.indicators[(i, j)].applyEditorSettings(editWidget.labelEditors[(i, j)])
 
     def applyChanges(self, editWidget=None):
         if editWidget is None:
             editWidget = self.settingsWidget
         backgroundColor = editWidget.backgroundColor.colorLabel.text()
-        self.bgColor = QColor(backgroundColor)
-
-        # Fill Grid
+        self.bgColor = backgroundColor
+        # Fill and update Grid
         self.fillGrid(editWidget)
+        self.updateContent()
 
-    def updateContent(self, content):
-        pass
+    def updateContent(self, content=None):
+        rows = self.settingsWidget.rowSpinBox.value()
+        columns = self.settingsWidget.columnSpinBox.value()
+        for i in range(rows):
+            for j in range(columns):
+                self.indicators[(i, j)].updateLabelContent(content)
 
 
 class GridIndicatorEditDialog(QWidget):
@@ -275,7 +290,7 @@ class GridIndicatorEditDialog(QWidget):
         self.mainWidget = QStackedWidget(self)
 
         # Label Editors
-        initialEditor = LabelEditor(self.currentDir, self)
+        initialEditor = LabelEditor('bruh', self)
         initialEditor.goBackToGrid.connect(self.openGridEditor)
         self.labelEditors = {(0, 0): initialEditor}  # type: Dict[tuple[int, int], LabelEditor]
         self.nbRows = 1
@@ -365,7 +380,6 @@ class GridEditor(QWidget):
                 if self.editWidget.labelEditors[(row, column)].status:
                     palette = button.palette()
                     palette.setColor(QPalette.Button, Qt.red)
-                    # button.setAutoFillBackground(True)
                     button.setPalette(palette)
                 self.grid.addWidget(button, row, column)
         self.setFixedSize(columns * 50 + 20, rows * 50 + 20)
@@ -377,13 +391,13 @@ class GridEditor(QWidget):
 class LabelEditor(QWidget):
     goBackToGrid = pyqtSignal()
 
-    def __init__(self, path, parent, status=False):
+    def __init__(self, name, parent, status=False):
         super().__init__(parent)
         self.nameLineEdit = None
-        self.currentDir = path
         self.curveArgumentSelector = None
         self.selectedUnit = None
         self.status = status
+        self.name = name
 
         # Create the QLineEdit and set its placeholder text
         self.lineEdit = QLineEdit()
@@ -477,7 +491,7 @@ class LabelEditor(QWidget):
         self.returnButton.setStyleSheet("background-color: transparent;")
         self.returnButton.clicked.connect(self.returnButtonPressed)
         # Create the name valueLabel and set its text
-        self.nameLabel = QLabel("Indicator")
+        self.nameLabel = QLabel(self.name)
         self.nameLabel.setAlignment(Qt.AlignCenter)
         self.nameLabel.mouseDoubleClickEvent = self.onNameLabelDoubleClick
         # Create the checkbox
@@ -518,6 +532,7 @@ class LabelEditor(QWidget):
         self.topLayout.replaceWidget(self.nameLineEdit, self.nameLabel)
         self.nameLineEdit.hide()
         self.nameLabel.show()
+        self.name = self.nameLabel.text()
 
     def returnButtonPressed(self):
         self.goBackToGrid.emit()
@@ -541,6 +556,11 @@ class LabelEditor(QWidget):
 class LabeledIndicator(QGroupBox):
     def __init__(self, name: str, editor: LabelEditor = None, parent: GridIndicator = None):
         super().__init__(parent)
+        self.lastValue = None
+        self.generalSettings = load_settings('settings')
+        self.argument = None
+        self.argumentUnit = None
+        self.showUnit = None
         self.setTitle(name)
         self.parentWidget = parent
         self.editor = editor
@@ -550,11 +570,11 @@ class LabeledIndicator(QGroupBox):
         self.setLayout(layout)
         self.applyEditorSettings(self.editor)
 
-    def applyEditorSettings(self, editor: LabelEditor):
-        backgroundColor = self.parentWidget.backgroundColor.colorLabel.text()
-        fontColor = editor.fontColor.colorLabel.text()
-        font = QFont(editor.fontModelComboBox.currentText())
-        fontSize = editor.fontSizeSpinBox.value()
+    def applyEditorSettings(self, labelEditor: LabelEditor):
+        backgroundColor = self.parentWidget.bgColor
+        fontColor = labelEditor.fontColor.colorLabel.text()
+        font = QFont(labelEditor.fontModelComboBox.currentText())
+        fontSize = labelEditor.fontSizeSpinBox.value()
         font.setPixelSize(fontSize * QFontMetricsF(font).height() / font.pointSizeF())
 
         self.label.setAutoFillBackground(True)
@@ -570,9 +590,41 @@ class LabeledIndicator(QGroupBox):
         self.setPalette(palette)
 
         # Text Alignment
-        if editor.positionLeftButton.isChecked():
+        if labelEditor.positionLeftButton.isChecked():
             self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        elif editor.positionCenterButton.isChecked():
+        elif labelEditor.positionCenterButton.isChecked():
             self.label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        elif editor.positionRightButton.isChecked():
+        elif labelEditor.positionRightButton.isChecked():
             self.label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        self.showUnit = labelEditor.unitCheckbox.isChecked()
+        self.argumentUnit = labelEditor.selectedUnit
+        self.argument = labelEditor.lineEdit.text()
+        self.setTitle(labelEditor.name)
+        self.updateLabelContent()
+
+    def updateLabelContent(self, content=None):
+        self.generalSettings = load_settings('settings')
+        argumentMapping = self.argument.split('$')
+        if argumentMapping != ['']:  # There is an argument in the parameters
+            if content is None:
+                value = ''
+            else:
+                value = reduce(operator.getitem, argumentMapping, content.storage)
+            if len(value) > 0:
+                displayedText = str(value[-1])
+                self.lastValue = value[-1]
+            elif issubclass(self.argumentUnit.type, float):
+                displayedText = '____.__'
+            else:
+                displayedText = '____'
+            print(displayedText)
+            print(value)
+            self.lastValue = displayedText
+            if self.showUnit:
+                symbol = self.catalogue.getSymbol(self.argumentUnit.name)
+                if symbol is not None:
+                    displayedText += ' ' + symbol
+                else:
+                    displayedText += ' ' + self.argumentUnit.name
+            self.label.setText(displayedText)
