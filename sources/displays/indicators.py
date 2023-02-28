@@ -9,7 +9,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings
+from sources.common.FileHandling import load_settings, nameGiving
 from sources.common.Widgets import BasicDisplay, ArgumentSelector
 from sources.displays.graphs import ColorEditor
 
@@ -27,8 +27,8 @@ class SingleIndicator(BasicDisplay):
 
         self.lastValue = None
         self.argumentUnit = None
-        self.showUnit = None
-        self.argument = None
+        self.showUnit = False
+        self.argument = ''
 
     def applyChanges(self, editWidget):
         backgroundColor = editWidget.backgroundColor.colorLabel.text()
@@ -290,7 +290,7 @@ class GridIndicatorEditDialog(QWidget):
         self.mainWidget = QStackedWidget(self)
 
         # Label Editors
-        initialEditor = LabelEditor('bruh', self)
+        initialEditor = LabelEditor('Value 0', self.currentDir, self)
         initialEditor.goBackToGrid.connect(self.openGridEditor)
         self.labelEditors = {(0, 0): initialEditor}  # type: Dict[tuple[int, int], LabelEditor]
         self.nbRows = 1
@@ -321,7 +321,8 @@ class GridIndicatorEditDialog(QWidget):
             newRowCount = self.rowSpinBox.value()
             for row in range(self.nbRows, newRowCount):
                 for column in range(self.nbColumns):
-                    editor = LabelEditor(self.currentDir, self)
+                    labelNames = [labelEditor.name for labelEditor in self.labelEditors.values()]
+                    editor = LabelEditor(nameGiving(labelNames, baseName='Value'), self.currentDir, self)
                     editor.goBackToGrid.connect(self.openGridEditor)
                     self.labelEditors[(row, column)] = editor
             self.nbRows = newRowCount
@@ -329,7 +330,8 @@ class GridIndicatorEditDialog(QWidget):
             newColumnCount = self.columnSpinBox.value()
             for row in range(self.nbRows):
                 for column in range(self.nbColumns, newColumnCount):
-                    editor = LabelEditor(self.currentDir, self)
+                    labelNames = [labelEditor.name for labelEditor in self.labelEditors.values()]
+                    editor = LabelEditor(nameGiving(labelNames, baseName='Value'), self.currentDir, self)
                     editor.goBackToGrid.connect(self.openGridEditor)
                     self.labelEditors[(row, column)] = editor
             self.nbColumns = newColumnCount
@@ -391,7 +393,7 @@ class GridEditor(QWidget):
 class LabelEditor(QWidget):
     goBackToGrid = pyqtSignal()
 
-    def __init__(self, name, parent, status=False):
+    def __init__(self, name, path, parent, status=False):
         super().__init__(parent)
         self.nameLineEdit = None
         self.curveArgumentSelector = None

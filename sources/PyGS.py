@@ -11,7 +11,7 @@ from PyQt5.QtCore import QDateTime, QThread
 
 # --------------------- Sources ----------------------- #
 from sources.SerialGS import SerialMonitor
-from sources.common.FileHandling import load_settings, save_settings, check_format, newTabNameGiving
+from sources.common.FileHandling import check_format, nameGiving
 from sources.common.Widgets import *
 
 from sources.databases.general import PacketTabWidget

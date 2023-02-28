@@ -13,16 +13,18 @@ from ecom.datatypes import TypeInfo, DefaultValueInfo, EnumType
 from sources.databases.balloondata import BalloonPackageDatabase
 
 
-def newTabNameGiving(nameList: list, addition: str = None):
-    if addition is not None:
-        baseName = 'New ' + addition
-    else:
-        baseName = 'New'
-    name = baseName
+def nameGiving(nameList: list, baseName: str = '', parentheses=False):
     i = 0
-    while name in nameList:
-        i += 1
+    if parentheses:
         name = baseName + ' (' + str(i) + ')'
+    else:
+        name = baseName + ' ' + str(i)
+    while name in nameList:
+        if parentheses:
+            name = baseName + ' (' + str(i) + ')'
+        else:
+            name = baseName + ' ' + str(i)
+        i += 1
     return name
 
 

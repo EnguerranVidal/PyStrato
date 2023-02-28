@@ -8,7 +8,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, newTabNameGiving
+from sources.common.FileHandling import load_settings, nameGiving
 from sources.common.Widgets import BasicDisplay, ContentStorage
 from sources.displays.graphs import MultiCurveGraph
 from sources.displays.indicators import SingleIndicator, GridIndicator
@@ -19,6 +19,7 @@ class DisplayTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
         self.currentDir = path
+        self.dockSpaces = [Qt.LeftDockWidgetArea, Qt.RightDockWidgetArea, Qt.TopDockWidgetArea, Qt.BottomDockWidgetArea]
         self.formatPath = os.path.join(self.currentDir, 'formats')
         self.content = ContentStorage(self.currentDir)
         self.content.fill()
@@ -26,6 +27,7 @@ class DisplayTabWidget(QMainWindow):
         self.formats = {}
 
         ######## CENTRAL WIDGET ########
+        self.areaCycler = AreaCycler()
         self.tabWidget = QTabWidget(self)
         self.tabWidget.setMovable(True)
         self.setCentralWidget(self.tabWidget)
@@ -40,7 +42,7 @@ class DisplayTabWidget(QMainWindow):
 
     def addNewTab(self):
         tabNames = [self.tabWidget.tabText(i) for i in range(self.tabWidget.count())]
-        newTabName = newTabNameGiving(tabNames, addition='Tab')
+        newTabName = nameGiving(tabNames, baseName='Tab')
         self.tabWidget.addTab(QMainWindow(), newTabName)
 
     def onTabBarDoubleClicked(self, index):
@@ -75,24 +77,25 @@ class DisplayTabWidget(QMainWindow):
 
     def addSimpleIndicator(self):
         currentTabWidget = self.tabWidget.currentWidget()
-        widgetNames = [dock.objectName() for dock in currentTabWidget.findChildren(QDockWidget)]
-        newIndicatorName = newTabNameGiving(widgetNames, addition='Indicator')
+        widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
+        print(widgetNames)
+        newIndicatorName = nameGiving(widgetNames, baseName='Indicator')
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=SingleIndicator(path=self.currentDir))
-        currentTabWidget.addDockWidget(Qt.LeftDockWidgetArea, newDockWidget)
+        currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
     def addGridIndicator(self):
         currentTabWidget = self.tabWidget.currentWidget()
-        widgetNames = [dock.objectName() for dock in currentTabWidget.findChildren(QDockWidget)]
-        newIndicatorName = newTabNameGiving(widgetNames, addition='Grid')
+        widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
+        newIndicatorName = nameGiving(widgetNames, baseName='Grid')
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=GridIndicator(path=self.currentDir))
-        currentTabWidget.addDockWidget(Qt.LeftDockWidgetArea, newDockWidget)
+        currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
     def addMultiCurveGraph(self):
         currentTabWidget = self.tabWidget.currentWidget()
-        widgetNames = [dock.objectName() for dock in currentTabWidget.findChildren(QDockWidget)]
-        newIndicatorName = newTabNameGiving(widgetNames, addition='Graph')
+        widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
+        newIndicatorName = nameGiving(widgetNames, baseName='Graph')
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=MultiCurveGraph(path=self.currentDir))
-        currentTabWidget.addDockWidget(Qt.LeftDockWidgetArea, newDockWidget)
+        currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
 
 class DisplayDockWidget(QDockWidget):
@@ -102,6 +105,8 @@ class DisplayDockWidget(QDockWidget):
             widget = BasicDisplay()
         self.display = widget
         self.setWidget(self.display)
+        self.setAllowedAreas(Qt.TopDockWidgetArea | Qt.LeftDockWidgetArea |
+                             Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
         self.parametersEditWindow = None
         self.setWindowTitle(name)
         self.button = HoverButton(self.display)
@@ -266,3 +271,46 @@ class HoverButton(QPushButton):
 
     def sizeHint(self):
         return self.iconSize()
+
+
+class AreaCycler:
+    def __init__(self):
+        self.cycle = [Qt.LeftDockWidgetArea, Qt.RightDockWidgetArea, Qt.TopDockWidgetArea, Qt.BottomDockWidgetArea]
+        self.step = 0
+
+    def next(self, step=None):
+        if step is not None:
+            self.step = step
+        value = self.cycle[self.step]
+        self.step += 1
+        if self.step == 4:
+            self.step = 0
+        return value
+
+    def get(self, step):
+        assert step < 4
+        return self.cycle[step]
+
+
+class ColorCycler:
+    def __init__(self):
+        self.cycle = [(31, 119, 180), (255, 127, 14), (44, 160, 44), (214, 39, 40), (148, 103, 189),
+                      (140, 86, 75), (227, 119, 194), (127, 127, 127), (188, 189, 34), (23, 190, 207)]
+        self.nbColors = len(self.cycle)
+        self.step = 0
+
+    def next(self, step=None):
+        if step is not None:
+            self.step = step
+        value = self.cycle[self.step]
+        self.step += 1
+        if self.step == self.nbColors:
+            self.step = 0
+        return value
+
+    def get(self, step):
+        assert step < self.nbColors
+        return self.cycle[step]
+
+
+
