@@ -12,12 +12,14 @@ from PyQt5.QtGui import *
 from sources.common.FileHandling import load_settings, nameGiving
 from sources.common.Widgets import BasicDisplay, ArgumentSelector
 from sources.displays.graphs import ColorEditor
+from sources.databases.units import DefaultUnitsCatalogue
 
 
 ######################## CLASSES ########################
 class SingleIndicator(BasicDisplay):
     def __init__(self, path, parent=None):
         super().__init__(path, parent)
+        self.catalogue = DefaultUnitsCatalogue()
         self.indicatorLabel = QLabel('')
         self.settingsWidget = SingleIndicatorEditDialog(self.currentDir, self)
 
@@ -98,7 +100,6 @@ class SingleIndicatorEditDialog(QWidget):
         self.valueArgumentSelector = None
         self.selectedUnit = None
         self.currentDir = path
-        self.defaultUnitCatalogue = None
 
         # Create the QLineEdit and set its placeholder text
         self.lineEdit = QLineEdit()
@@ -220,7 +221,7 @@ class GridIndicator(BasicDisplay):
         self.labelGridLayout = QGridLayout()
         self.setLayout(self.labelGridLayout)
         self.settingsWidget = GridIndicatorEditDialog(self.currentDir, self)
-        self.indicators = {(0, 0): LabeledIndicator('Value 1', self.settingsWidget.labelEditors[(0, 0)], self)}
+        self.indicators = {(0, 0): LabeledIndicator('Value 0', self.settingsWidget.labelEditors[(0, 0)], self)}
 
         self.fillGrid()
 
@@ -237,10 +238,11 @@ class GridIndicator(BasicDisplay):
         # Adding New Widgets
         for i in range(rows):
             for j in range(columns):
+                labelEditor = editWidget.labelEditors[(i, j)]
                 if (i, j) not in self.indicators:
-                    self.indicators[(i, j)] = LabeledIndicator('Value ' + str((j * 1 + i)), self.settingsWidget.labelEditors[(i, j)], self)
+                    self.indicators[(i, j)] = LabeledIndicator(labelEditor.name, self.settingsWidget.labelEditors[(i, j)], self)
                 self.labelGridLayout.addWidget(self.indicators[(i, j)], i, j, 1, 1)
-                self.indicators[(i, j)].applyEditorSettings(editWidget.labelEditors[(i, j)])
+                self.indicators[(i, j)].applyEditorSettings(labelEditor)
 
     def applyChanges(self, editWidget=None):
         if editWidget is None:
@@ -395,6 +397,7 @@ class LabelEditor(QWidget):
 
     def __init__(self, name, path, parent, status=False):
         super().__init__(parent)
+        self.currentDir = path
         self.nameLineEdit = None
         self.curveArgumentSelector = None
         self.selectedUnit = None
@@ -493,18 +496,17 @@ class LabelEditor(QWidget):
         self.returnButton.setStyleSheet("background-color: transparent;")
         self.returnButton.clicked.connect(self.returnButtonPressed)
         # Create the name valueLabel and set its text
-        self.nameLabel = QLabel(self.name)
-        self.nameLabel.setAlignment(Qt.AlignCenter)
-        self.nameLabel.mouseDoubleClickEvent = self.onNameLabelDoubleClick
+        self.nameLineEdit = QLineEdit(self)
+        self.nameLineEdit.setText(self.name)
+        self.nameLineEdit.textChanged.connect(self.onLineEditChange)
         # Create the checkbox
         self.checkbox = QCheckBox()
         self.checkbox.setChecked(status)
         self.checkbox.stateChanged.connect(self.statusChange)
         # Add the widgets to the top layout
         self.topLayout.addWidget(self.returnButton)
-        self.topLayout.addWidget(self.nameLabel)
+        self.topLayout.addWidget(self.nameLineEdit)
         self.topLayout.addWidget(self.checkbox)
-        self.topLayout.addStretch()
 
         # Add the top layout to the main layout
         mainLayout = QVBoxLayout()
@@ -521,20 +523,8 @@ class LabelEditor(QWidget):
         else:
             self.status = False
 
-    def onNameLabelDoubleClick(self, event):
-        self.nameLineEdit = QLineEdit()
-        self.nameLineEdit.setText(self.nameLabel.text())
-        self.nameLineEdit.returnPressed.connect(self.onLineEditReturnPressed)
-        self.topLayout.replaceWidget(self.nameLabel, self.nameLineEdit)
-        self.nameLineEdit.show()
-        self.nameLabel.hide()
-
-    def onLineEditReturnPressed(self):
-        self.nameLabel.setText(self.nameLineEdit.text())
-        self.topLayout.replaceWidget(self.nameLineEdit, self.nameLabel)
-        self.nameLineEdit.hide()
-        self.nameLabel.show()
-        self.name = self.nameLabel.text()
+    def onLineEditChange(self):
+        self.name = self.nameLineEdit.text()
 
     def returnButtonPressed(self):
         self.goBackToGrid.emit()
@@ -559,6 +549,7 @@ class LabeledIndicator(QGroupBox):
     def __init__(self, name: str, editor: LabelEditor = None, parent: GridIndicator = None):
         super().__init__(parent)
         self.lastValue = None
+        self.catalogue = DefaultUnitsCatalogue()
         self.generalSettings = load_settings('settings')
         self.argument = None
         self.argumentUnit = None
@@ -602,6 +593,7 @@ class LabeledIndicator(QGroupBox):
         self.showUnit = labelEditor.unitCheckbox.isChecked()
         self.argumentUnit = labelEditor.selectedUnit
         self.argument = labelEditor.lineEdit.text()
+        print(labelEditor.name)
         self.setTitle(labelEditor.name)
         self.updateLabelContent()
 
@@ -620,8 +612,6 @@ class LabeledIndicator(QGroupBox):
                 displayedText = '____.__'
             else:
                 displayedText = '____'
-            print(displayedText)
-            print(value)
             self.lastValue = displayedText
             if self.showUnit:
                 symbol = self.catalogue.getSymbol(self.argumentUnit.name)

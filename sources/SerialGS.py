@@ -106,12 +106,13 @@ class SerialMonitor(QThread):
     def run(self):
         parsers = {}
         databases = {}
+        self.settings = load_settings('settings')
         for path in self.settings['FORMAT_FILES']:
             path = os.path.join(self.formatDir, path)
             name, database = os.path.basename(path), BalloonPackageDatabase(path)
             parsers[name] = TelemetryParser(database)
             databases[name] = database
-        if True:
+        if self.settings['EMULATOR_MODE']:
             connection = SerialEmulator(databases)
         else:
             connection = Serial(self.settings['SELECTED_PORT'], self.settings['SELECTED_BAUD'], timeout=1)

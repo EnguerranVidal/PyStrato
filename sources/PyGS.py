@@ -92,14 +92,16 @@ class PyGS(QMainWindow):
         self.generalTabWidget.addTab(self.displayTabWidget, 'Display')
         self.generalTabWidget.addTab(self.packetTabWidget, 'Packets')
 
-
-        # TODO
         self.generalTabWidget.currentChanged.connect(self.manageToolBars)
         self.setCentralWidget(self.generalTabWidget)
 
     def _createToolBars(self):
         ########### DATABASES ###########
         self.databasesToolBar = QToolBar("Package", self)
+        self.databasesToolBar.addAction(self.newFormatAction)
+        self.databasesToolBar.addAction(self.openFormatAction)
+        self.databasesToolBar.addAction(self.saveFormatAction)
+        self.databasesToolBar.addSeparator()
 
         ########### DISPLAYS ###########
         self.displaysToolBar = QToolBar('Display', self)
@@ -244,6 +246,10 @@ class PyGS(QMainWindow):
         self.rssiAct.triggered.connect(self.setRssi)
 
         ########### HELP ###########
+        # Toggle Emulator Mode
+        self.emulatorAct = QAction('&Emulator Mode', self, checkable=True, checked=self.settings["EMULATOR_MODE"])
+        self.emulatorAct.setStatusTip("Toggle Emulator mode")
+        self.emulatorAct.triggered.connect(self.setEmulatorMode)
         # Visit GitHub Page
         self.githubAct = QAction('&Visit GitHub', self)
         self.githubAct.setIcon(QIcon('sources/icons/light-theme/icons8-github-96.png'))
@@ -310,6 +316,7 @@ class PyGS(QMainWindow):
 
         ###  HELP MENU  ###
         self.helpMenu = self.menubar.addMenu('&Help')
+        self.helpMenu.addAction(self.emulatorAct)
         self.helpMenu.addAction(self.githubAct)
 
     def _checkEnvironment(self):
@@ -477,6 +484,29 @@ class PyGS(QMainWindow):
     def setAutoscale(self, action):
         self.settings["AUTOSCALE"] = action
         save_settings(self.settings, "settings")
+
+    def setEmulatorMode(self, action):
+        if action:
+            message = "Entering Emulator Mode.\nDo you wish to proceed ?"
+            msg = MessageBox()
+            msg.setWindowIcon(self.mainIcon)
+            msg.setWindowTitle("Emulator Mode Warning")
+            msg.setText(message)
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
+            msg.setStyleSheet("QLabel{min-width: 200px;}")
+            msg.exec_()
+            button = msg.clickedButton()
+            sb = msg.standardButton(button)
+            if sb == QMessageBox.Yes:
+                self.settings["EMULATOR_MODE"] = action
+                save_settings(self.settings, "settings")
+                if self.serial is not None:
+                    self.stopSerial()
+        else:
+            self.settings["EMULATOR_MODE"] = action
+            save_settings(self.settings, "settings")
+            if self.serial is not None:
+                self.stopSerial()
 
     def populateFileMenu(self):
         # OPENED RECENTLY MENU

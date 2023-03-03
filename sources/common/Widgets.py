@@ -398,7 +398,6 @@ class NewPackageWindow(QDialog):
         self.dlgLayout = QVBoxLayout()
         self.formLayout = QFormLayout()
         self.nameEdit = QLineEdit()
-        self.nameEdit.textChanged.connect(self.editLineEdits)
         self.dataEdit = QLineEdit()
         self.formatEdit = QLineEdit()
         self.formLayout.addRow('Name:', self.nameEdit)
