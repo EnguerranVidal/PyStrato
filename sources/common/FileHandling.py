@@ -13,8 +13,8 @@ from ecom.datatypes import TypeInfo, DefaultValueInfo, EnumType
 from sources.databases.balloondata import BalloonPackageDatabase
 
 
-def nameGiving(nameList: list, baseName: str = '', parentheses=False):
-    i = 0
+def nameGiving(nameList: list, baseName: str = '', parentheses=False, startingIndex=0):
+    i = startingIndex
     if parentheses:
         name = baseName + ' (' + str(i) + ')'
     else:
@@ -121,72 +121,6 @@ def save_settings(parameters, path):
                 file.write(setting + '=' + str(int(parameters[setting])) + '\n')
             else:
                 file.write(setting + '=' + str(parameters[setting]) + '\n')
-
-
-def save_format(packetFormat, path):
-    lines = ['NAME' + ':' + packetFormat['NAME'] + '\n']
-    if packetFormat['ID'] is not None:
-        lines.append('ID:' + packetFormat['ID'] + '\n')
-    elif packetFormat['PIN'] is not None:
-        lines.append('PIN:' + packetFormat['PIN'] + '\n')
-    elif packetFormat['CLOCK'] is not None:
-        lines.append('CLOCK:' + packetFormat['CLOCK'] + ':' + '\n')
-    names = list(packetFormat['DATA'].keys())
-    for i in range(len(names)):
-        data = packetFormat[names[i]]
-        addendum = data['SIGN'] + ':' + data['TOTAL'] + ':' + data['FLOAT'] + ':' + data['UNIT']
-        lines.append('VALUE:' + names[i] + ':' + addendum + '\n')
-    lines[-1].rstrip('\n')
-    with open(path, 'r') as file:
-        for i in lines:
-            file.write(i)
-
-
-def load_format(path):
-    # Accessing Lines
-    with open(path, 'r') as file:
-        lines = file.readlines()
-    ID, PIN, CLOCK, FILE, DATA = None, None, None, '', {}
-    # Getting Format Name
-    lines[0] = lines[0].rstrip('\n')
-    firstLine = lines[0].split(':')
-    name = firstLine[1]
-    for i in range(1, len(lines)):
-        line = lines[i].split(':')
-        if line[0] == 'VALUE':
-            DATA[line[1]] = {'SIGN': line[2], 'TOTAL': line[3], 'FLOAT': line[4], 'UNIT': line[5].rstrip('\n')}
-        elif line[0] == 'ID':
-            ID = line[1].rstrip('\n')
-        elif line[0] == 'PIN':
-            PIN = line[1].rstrip('\n')
-        elif line[0] == 'FILE':
-            FILE = line[1].rstrip('\n')
-        elif line[0] == 'CLOCK':
-            CLOCK = line[1]
-    return name, {'ID': ID, 'PIN': PIN, 'CLOCK': CLOCK, 'PATH': path, 'FILE': FILE, 'DATA': DATA}
-
-
-def check_format(path):
-    keywords = ['NAME', 'ID', 'PIN', 'CLOCK', 'FILE', 'VALUE']
-    filename, file_extension = os.path.splitext(path)
-    namePresent, filePresent = False, False
-    if file_extension == '.config':
-        with open(path, 'r') as file:
-            lines = file.readlines()
-        for i in range(len(lines)):
-            line = lines[i].split(':')
-            if len(lines[i]) != 0 and line[0] not in keywords:
-                return False
-            if line[0] == 'NAME':
-                namePresent = True
-            if line[0] == 'FILE':
-                filePresent = True
-        if filePresent and namePresent:
-            return True
-        else:
-            return False
-    else:
-        return False
 
 
 def csvRowCount(path, newLine=''):

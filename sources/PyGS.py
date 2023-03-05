@@ -11,7 +11,7 @@ from PyQt5.QtCore import QDateTime, QThread
 
 # --------------------- Sources ----------------------- #
 from sources.SerialGS import SerialMonitor
-from sources.common.FileHandling import check_format, nameGiving
+from sources.common.FileHandling import nameGiving
 from sources.common.Widgets import *
 
 from sources.databases.general import PacketTabWidget
@@ -205,17 +205,17 @@ class PyGS(QMainWindow):
         self.closeDisplayTabAct.setShortcut('Ctrl+Shift+X')
         self.closeDisplayTabAct.triggered.connect(self.displayTabWidget.closeCurrentTab)
         # Add Simple Indicator
-        self.newSimpleIndicatorAct = QAction('&New Simple Indicator', self)
+        self.newSimpleIndicatorAct = QAction('&Simple Indicator', self)
         self.newSimpleIndicatorAct.setIcon(QIcon('sources/icons/light-theme/icons8-full-screen-96.png'))
         self.newSimpleIndicatorAct.setStatusTip('Add New Simple Indicator')
         self.newSimpleIndicatorAct.triggered.connect(self.displayTabWidget.addSimpleIndicator)
         # Add Grid Indicator
-        self.newGridIndicatorAct = QAction('&New Grid Indicator', self)
+        self.newGridIndicatorAct = QAction('&Grid Indicator', self)
         self.newGridIndicatorAct.setIcon(QIcon('sources/icons/light-theme/icons8-four-squares-96.png'))
         self.newGridIndicatorAct.setStatusTip('Add New Grid Simple Indicator')
         self.newGridIndicatorAct.triggered.connect(self.displayTabWidget.addGridIndicator)
         # Add MultiCurve Graph
-        self.newMultiCurveAct = QAction('&New MultiCurve Graph', self)
+        self.newMultiCurveAct = QAction('&MultiCurve Graph', self)
         self.newMultiCurveAct.setIcon(QIcon('sources/icons/light-theme/icons8-combo-chart-96.png'))
         self.newMultiCurveAct.setStatusTip('Add New MultiCurve Graph')
         self.newMultiCurveAct.triggered.connect(self.displayTabWidget.addMultiCurveGraph)

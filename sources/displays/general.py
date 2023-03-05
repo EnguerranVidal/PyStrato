@@ -290,27 +290,3 @@ class AreaCycler:
     def get(self, step):
         assert step < 4
         return self.cycle[step]
-
-
-class ColorCycler:
-    def __init__(self):
-        self.cycle = [(31, 119, 180), (255, 127, 14), (44, 160, 44), (214, 39, 40), (148, 103, 189),
-                      (140, 86, 75), (227, 119, 194), (127, 127, 127), (188, 189, 34), (23, 190, 207)]
-        self.nbColors = len(self.cycle)
-        self.step = 0
-
-    def next(self, step=None):
-        if step is not None:
-            self.step = step
-        value = self.cycle[self.step]
-        self.step += 1
-        if self.step == self.nbColors:
-            self.step = 0
-        return value
-
-    def get(self, step):
-        assert step < self.nbColors
-        return self.cycle[step]
-
-
-

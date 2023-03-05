@@ -77,13 +77,14 @@ class SingleIndicator(BasicDisplay):
             if len(value) > 0:
                 displayedText = str(value[-1])
                 self.lastValue = value[-1]
-            if self.argumentUnit is not None:
-                if issubclass(self.argumentUnit.type, float):
-                    displayedText = '____.__'
+            else:
+                if self.argumentUnit is not None:
+                    if issubclass(self.argumentUnit.type, float):
+                        displayedText = '____.__'
+                    else:
+                        displayedText = '____'
                 else:
                     displayedText = '____'
-            else:
-                displayedText = '____'
             self.lastValue = displayedText
             if self.showUnit:
                 symbol = self.catalogue.getSymbol(self.argumentUnit.name)
@@ -593,7 +594,6 @@ class LabeledIndicator(QGroupBox):
         self.showUnit = labelEditor.unitCheckbox.isChecked()
         self.argumentUnit = labelEditor.selectedUnit
         self.argument = labelEditor.lineEdit.text()
-        print(labelEditor.name)
         self.setTitle(labelEditor.name)
         self.updateLabelContent()
 
@@ -608,10 +608,14 @@ class LabeledIndicator(QGroupBox):
             if len(value) > 0:
                 displayedText = str(value[-1])
                 self.lastValue = value[-1]
-            elif issubclass(self.argumentUnit.type, float):
-                displayedText = '____.__'
             else:
-                displayedText = '____'
+                if self.argumentUnit is not None:
+                    if issubclass(self.argumentUnit.type, float):
+                        displayedText = '____.__'
+                    else:
+                        displayedText = '____'
+                else:
+                    displayedText = '____'
             self.lastValue = displayedText
             if self.showUnit:
                 symbol = self.catalogue.getSymbol(self.argumentUnit.name)

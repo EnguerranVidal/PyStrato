@@ -11,7 +11,7 @@ from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.widgets.RemoteGraphicsView
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, load_format
+from sources.common.FileHandling import load_settings
 from sources.common.Widgets import QCustomTabWidget
 from sources.databases.balloondata import BalloonPackageDatabase
 
