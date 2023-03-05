@@ -221,10 +221,6 @@ class PyGS(QMainWindow):
         self.newMultiCurveAct.triggered.connect(self.displayTabWidget.addMultiCurveGraph)
 
         ########### TOOLS ###########
-        # Toggle Autoscale
-        self.autoscaleAct = QAction('&Autoscale', self, checkable=True, checked=self.settings["AUTOSCALE"])
-        self.autoscaleAct.setStatusTip("Toggle Graphs' Autoscale")
-        self.autoscaleAct.triggered.connect(self.setAutoscale)
         # Run Serial
         self.runSerialAct = QAction('&Run', self)
         self.runSerialAct.setShortcut('Ctrl+R')
@@ -240,10 +236,6 @@ class PyGS(QMainWindow):
         self.openMonitorAct.setIcon(QIcon('sources/icons/light-theme/icons8-monitor-96.png'))
         self.openMonitorAct.setStatusTip('Open Serial Monitor')
         self.openMonitorAct.triggered.connect(self.openSerialMonitor)
-        # Toggle RSSI Acquirement
-        self.rssiAct = QAction('&RSSI', self, checkable=True, checked=self.settings["RSSI"])
-        self.rssiAct.setStatusTip('Toggle RSSI Retrieval')
-        self.rssiAct.triggered.connect(self.setRssi)
 
         ########### HELP ###########
         # Toggle Emulator Mode
@@ -288,7 +280,6 @@ class PyGS(QMainWindow):
         ###  WINDOW MENU  ###
         self.windowMenu = self.menubar.addMenu('&Window')
         self.windowMenu.addSeparator()
-        self.windowMenu.addAction(self.autoscaleAct)
 
         ###  TOOLS MENU  ###
         self.toolsMenu = self.menubar.addMenu('&Tools')
@@ -310,13 +301,12 @@ class PyGS(QMainWindow):
         baud_group.setExclusive(True)
         baud_group.triggered.connect(self.selectBaud)
         self.toolsMenu.addMenu(self.baudMenu)
-        self.toolsMenu.addSeparator()
-        self.toolsMenu.addAction(self.rssiAct)
         self.toolsMenu.aboutToShow.connect(self.populateToolsMenu)
 
         ###  HELP MENU  ###
         self.helpMenu = self.menubar.addMenu('&Help')
         self.helpMenu.addAction(self.emulatorAct)
+        self.helpMenu.addSeparator()
         self.helpMenu.addAction(self.githubAct)
 
     def _checkEnvironment(self):
@@ -403,16 +393,7 @@ class PyGS(QMainWindow):
     def importFormat(self):
         path = QFileDialog.getOpenFileName(self, 'Import Packet Format')
         # Verifying if chosen file is a format
-        if check_format(path[0]):
-            # Finally copy the file into our format repository
-            shutil.copy2(path[0], self.formatPath)
-        else:
-            cancelling = MessageBox()
-            cancelling.setWindowIcon(self.mainIcon)
-            cancelling.setWindowTitle("Error")
-            cancelling.setText("This file does not satisfy the required format.")
-            cancelling.setStandardButtons(QMessageBox.Ok)
-            cancelling.exec_()
+        pass
 
     def startSerial(self):
         message = "Port : " + self.settings["SELECTED_PORT"] + "  Baud : "
