@@ -24,7 +24,7 @@ class PyGS(QMainWindow):
     def __init__(self, path):
         super().__init__()
         self.currentDir = path
-        self.mainIcon = QIcon('sources/icons/light-theme/icons8-hot-air-balloon-96.png')
+        self.mainIcon = QIcon('sources/icons/iconPyGSCopy')
         self.formatPath = os.path.join(self.currentDir, "formats")
         self.dataPath = os.path.join(self.currentDir, "data")
         self.backupPath = os.path.join(self.dataPath, "backups")
@@ -74,6 +74,7 @@ class PyGS(QMainWindow):
         self._createActions()
         self._createMenuBar()
         self._createToolBars()
+        self.populateFileMenu()
 
         self.show()
 
@@ -342,6 +343,7 @@ class PyGS(QMainWindow):
         if os.path.abspath(path) not in [os.path.abspath(self.formatPath), os.path.abspath(self.currentDir)]:
             self.packetTabWidget.openFormat(path)
             self.addToRecent(path)
+        self.populateFileMenu()
 
     def addToRecent(self, path):
         self.settings['OPENED_RECENTLY'].insert(0, path)
@@ -360,22 +362,27 @@ class PyGS(QMainWindow):
         if os.path.exists(path):
             self.packetTabWidget.openFormat(path)
             self.addToRecent(path)
+        self.populateFileMenu()
 
     def saveFormatTab(self):
         self.packetTabWidget.saveFormat()
         self.graphsTabWidget.fillComboBox()
+        self.populateFileMenu()
 
     def saveAsFormatTab(self):
         # Create Lines
         path = QFileDialog.getSaveFileName(self, 'Save File')
         self.packetTabWidget.saveFormat(path[0])
         self.graphsTabWidget.fillComboBox()
+        self.populateFileMenu()
 
     def saveAllFormatTab(self):
         self.packetTabWidget.saveAllFormats()
+        self.populateFileMenu()
 
     def closeFormatTab(self):
         self.packetTabWidget.closeFormat()
+        self.populateFileMenu()
 
     def openTrackedFormats(self):
         self.trackedFormatsWindow = TrackedBalloonsWindow(self.currentDir)
@@ -495,7 +502,7 @@ class PyGS(QMainWindow):
             self.recentMenu.setDisabled(True)
         else:
             self.recentMenu.setDisabled(False)
-        index = self.packetTabWidget.databaseMenu.openComboBox.currentIndex()
+        index = self.packetTabWidget.databasesTabWidget.currentIndex()
         anyDatabaseChanges = False
         currentDatabaseChanges = False
         for i, database in enumerate(self.packetTabWidget.databases.values()):

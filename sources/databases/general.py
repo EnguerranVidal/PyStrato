@@ -5,6 +5,7 @@ from typing import Optional
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
 from sources.databases.balloondata import BalloonPackageDatabase
@@ -15,149 +16,182 @@ from sources.databases.configurations import ConfigurationsWidget
 
 
 ######################## CLASSES ########################
+class DatabaseEditor(QTabWidget):
+    def __init__(self, database: BalloonPackageDatabase):
+        super(QTabWidget, self).__init__()
+        self.database = database
+        self.setTabPosition(QTabWidget.East)
+        self.setTabShape(QTabWidget.Triangular)
+
+        self.unitsTab = QStackedWidget()
+        self.constantsTab = QStackedWidget()
+        self.configsTab = QStackedWidget()
+        self.dataTypesTab = QStackedWidget()
+        self.telemetriesTab = QStackedWidget()
+        self.telecommandsTab = QStackedWidget()
+
+        self.plusIcon = QIcon('sources/icons/light-theme/icons8-add-96.png')
+
+        if len(database.units) != 0:
+            self.unitsEditor = UnitsWidget(database=self.database)
+            self.unitsTab.addWidget(self.unitsEditor)
+        else:
+            noUnitWidget = QWidget()
+            noUnitLabel = QLabel('There is no unit in this database.')
+            self.firstUnitButton = QPushButton()
+            self.firstUnitButton.setIcon(self.plusIcon)
+            self.firstUnitButton.setText('Add Unit')
+            self.firstUnitButton.clicked.connect(self.firstUnit)
+            noUnitLayout = QVBoxLayout()
+            noUnitLayout.addWidget(noUnitLabel)
+            noUnitLayout.addWidget(self.firstUnitButton)
+            noUnitLayout.setAlignment(Qt.AlignCenter)
+            noUnitWidget.setLayout(noUnitLayout)
+            self.unitsTab.addWidget(noUnitWidget)
+
+        if len(database.constants) != 0:
+            self.constantsEditor = QWidget()
+            self.constantsTab.addWidget(self.constantsEditor)
+        else:
+            noConstantWidget = QWidget()
+            noConstantLabel = QLabel('There is no constant in this database.')
+            self.firstConstantButton = QPushButton()
+            self.firstConstantButton.setIcon(self.plusIcon)
+            self.firstConstantButton.setText('Add Constant')
+            self.firstConstantButton.clicked.connect(self.firstConstant)
+            noConstantLayout = QVBoxLayout()
+            noConstantLayout.addWidget(noConstantLabel)
+            noConstantLayout.addWidget(self.firstConstantButton)
+            noConstantLayout.setAlignment(Qt.AlignCenter)
+            noConstantWidget.setLayout(noConstantLayout)
+            self.constantsTab.addWidget(noConstantWidget)
+
+        if len(database.configurations) != 0:
+            self.configsEditor = ConfigurationsWidget(database=self.database)
+            self.configsTab.addWidget(self.configsEditor)
+        else:
+            noConfigWidget = QWidget()
+            noConfigLabel = QLabel('There is no configuration in this database.')
+            self.firstConfigButton = QPushButton()
+            self.firstConfigButton.setIcon(self.plusIcon)
+            self.firstConfigButton.setText('Add Configuration')
+            self.firstConfigButton.clicked.connect(self.firstConfiguration)
+            noConfigLayout = QVBoxLayout()
+            noConfigLayout.addWidget(noConfigLabel)
+            noConfigLayout.addWidget(self.firstConfigButton)
+            noConfigLayout.setAlignment(Qt.AlignCenter)
+            noConfigWidget.setLayout(noConfigLayout)
+            self.configsTab.addWidget(noConfigWidget)
+
+        if len(database.dataTypes) != 0:
+            self.dataTypesEditor = QWidget()
+            self.dataTypesTab.addWidget(self.dataTypesEditor)
+        else:
+            noDataTypeWidget = QWidget()
+            noDataTypeLabel = QLabel('There is no data type in this database.')
+            self.firstDataTypeButton = QPushButton('+ Add Data Type')
+            self.firstDataTypeButton.clicked.connect(self.firstDataType)
+            noDataTypeLayout = QVBoxLayout()
+            noDataTypeLayout.addWidget(noDataTypeLabel)
+            noDataTypeLayout.addWidget(self.firstDataTypeButton)
+            noDataTypeLayout.setAlignment(Qt.AlignCenter)
+            noDataTypeWidget.setLayout(noDataTypeLayout)
+            self.dataTypesTab.addWidget(noDataTypeWidget)
+
+        if len(database.telemetryTypes) != 0:
+            self.telemetriesEditor = TelemetriesWidget(database=self.database)
+            self.telemetriesTab.addWidget(self.telemetriesEditor)
+        else:
+            noTelemetryWidget = QWidget()
+            noTelemetryLabel = QLabel('There is no telemetry in this database.')
+            self.firstTelemetryButton = QPushButton('+ Add Telemetry')
+            self.firstTelemetryButton.clicked.connect(self.firstTelemetry)
+            noTelemetryLayout = QVBoxLayout()
+            noTelemetryLayout.addWidget(noTelemetryLabel)
+            noTelemetryLayout.addWidget(self.firstTelemetryButton)
+            noTelemetryLayout.setAlignment(Qt.AlignCenter)
+            noTelemetryWidget.setLayout(noTelemetryLayout)
+            self.telemetriesTab.addWidget(noTelemetryWidget)
+
+        if len(database.telecommandTypes) != 0:
+            self.telecommandsEditor = TelecommandsWidget(database=self.database)
+            self.telecommandsTab.addWidget(self.telecommandsEditor)
+        else:
+            noTelecommandWidget = QWidget()
+            noTelecommandLabel = QLabel('There is no telecommand in this database.')
+            self.firstTelecommandButton = QPushButton('+ Add Telecommand')
+            self.firstTelecommandButton.clicked.connect(self.firstTelecommand)
+            noTelecommandLayout = QVBoxLayout()
+            noTelecommandLayout.addWidget(noTelecommandLabel)
+            noTelecommandLayout.addWidget(self.firstTelecommandButton)
+            noTelecommandLayout.setAlignment(Qt.AlignCenter)
+            noTelecommandWidget.setLayout(noTelecommandLayout)
+            self.telecommandsTab.addWidget(noTelecommandWidget)
+
+        self.addTab(self.unitsTab, 'UNITS')
+        self.addTab(self.constantsTab, 'CONSTANTS')
+        self.addTab(self.configsTab, 'CONFIG')
+        self.addTab(self.dataTypesTab, 'DATATYPES')
+        self.addTab(self.telemetriesTab, 'TELEMETRIES')
+        self.addTab(self.telecommandsTab, 'TELECOMMANDS')
+
+    def firstUnit(self):
+        pass
+
+    def firstConstant(self):
+        pass
+
+    def firstConfiguration(self):
+        pass
+
+    def firstDataType(self):
+        pass
+
+    def firstTelemetry(self):
+        pass
+
+    def firstTelecommand(self):
+        pass
+
+
 class PacketTabWidget(QMainWindow):
     def __init__(self, path):
-        super(QMainWindow, self).__init__()
+        super(QWidget, self).__init__()
         self.currentDirectory = path
         self.formatPath = os.path.join(self.currentDirectory, "formats")
         self.databases = {}
 
-        self.centralWidget = QWidget(self)
-        self.setCentralWidget(self.centralWidget)
-
-        # Left Menu Widget ---------------------------------------------
-        self.databaseLeftWidget = QDockWidget('Selection')
-        self.databaseMenu = DatabaseMenu()
-        self.databaseLeftWidget.setWidget(self.databaseMenu)
-        self.databaseLeftWidget.setAllowedAreas(Qt.LeftDockWidgetArea)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.databaseLeftWidget)
-
-        # Setting Connects --------------------------------------------- -
-        self.databaseMenu.openComboBox.currentIndexChanged.connect(self.comboBoxChanged)
-        self.databaseMenu.valuesListWidget.clicked.connect(self.itemListSelected)
-
-    def comboBoxChanged(self):
-        self.databaseMenu.valuesListWidget.clear()
-        # Loading New Values
-        name = self.databaseMenu.openComboBox.currentText()
-        if not name:
-            return
-        database: BalloonPackageDatabase = self.databases[name]
-        if len(database.units) != 0:
-            item = QListWidgetItem('Units')
-            self.databaseMenu.valuesListWidget.addItem(item)
-        if len(database.constants) != 0:
-            item = QListWidgetItem('Constants')
-            self.databaseMenu.valuesListWidget.addItem(item)
-        if len(database.configurations) != 0:
-            item = QListWidgetItem('Configurations')
-            self.databaseMenu.valuesListWidget.addItem(item)
-        if len(database.dataTypes) != 0:
-            item = QListWidgetItem('Shared Data Types')
-            self.databaseMenu.valuesListWidget.addItem(item)
-        if len(database.telemetryTypes) != 0:
-            item = QListWidgetItem('Telemetries')
-            self.databaseMenu.valuesListWidget.addItem(item)
-        if len(database.telecommandTypes) != 0:
-            item = QListWidgetItem('Telecommands')
-            self.databaseMenu.valuesListWidget.addItem(item)
-
-    def itemListSelected(self):
-        item = self.databaseMenu.valuesListWidget.currentItem()
-        databaseName = self.databaseMenu.openComboBox.currentText()
-        itemName = item.text()
-        if item is not None:
-            if itemName == 'Units':
-                self.centralWidget = UnitsWidget(database=self.databases[databaseName])
-                self.setCentralWidget(self.centralWidget)
-            if itemName == 'Constants':
-                self.setCentralWidget(QWidget(self))
-            if itemName == 'Configurations':
-                self.centralWidget = ConfigurationsWidget(database=self.databases[databaseName])
-                self.setCentralWidget(self.centralWidget)
-            if itemName == 'Shared Data Types':
-                self.setCentralWidget(QWidget(self))
-            if itemName == 'Telemetries':
-                self.setCentralWidget(TelemetriesWidget(database=self.databases[databaseName]))
-            if itemName == 'Telecommands':
-                self.setCentralWidget(TelecommandsWidget(database=self.databases[databaseName]))
+        self.databasesTabWidget = QTabWidget()
+        self.setCentralWidget(self.databasesTabWidget)
 
     def newFormat(self, name):
-        databasePath = os.path.join(self.formatPath, name)
-        # self.databaseMenu.openComboBox.addItem(name)
         pass
 
     def openFormat(self, path):
-        # Loading Packet Database Folder
         database = BalloonPackageDatabase(path)
         name = os.path.basename(path)
-        # Getting Database into ComboBox
+        # Creating Tab in Editing Tabs
         self.databases[name] = database
-        self.databaseMenu.openComboBox.addItem(name)
+        editor = DatabaseEditor(self.databases[name])
+        self.databasesTabWidget.addTab(editor, name)
 
     def saveFormat(self, path=None):
-        name = self.databaseMenu.openComboBox.currentText()
-        if name:
-            self._saveDatabase(self.databases[name], path=path)
+        pass
 
     def saveAllFormats(self):
-        n = self.databaseMenu.openComboBox.count()
-        for name in [self.databaseMenu.openComboBox.itemText(i) for i in range(n)]:
-            self._saveDatabase(self.databases[name])
+        pass
 
     @staticmethod
     def _saveDatabase(database: BalloonPackageDatabase, path: Optional[str] = None):
-        if path is None:
-            path = database.path
-        database.save(path)
+        pass
 
     def _closeDatabase(self, index: int):
-        name = self.databaseMenu.openComboBox.itemText(index)
-        if not name:
-            return
-        database = self.databases[name]
-        referenceDatabase = BalloonPackageDatabase(database.path)
-        if database != referenceDatabase:  # If changes
-            messageBox = QMessageBox()
-            title = "Close Format"
-            message = f'WARNING !\n\nIf you close without saving, any changes made to {name}' \
-                      'will be lost.\n\nSave format before closing?'
-            reply = messageBox.question(self, title, message, messageBox.Yes | messageBox.No |
-                                        messageBox.Cancel, messageBox.Cancel)
-            if reply != messageBox.Yes and reply != messageBox.No:  # Cancel
-                return
-            if reply == messageBox.Yes:  # Yes Pressed
-                self._saveDatabase(database)
-        self.databaseMenu.openComboBox.removeItem(index)
-        if self.databaseMenu.openComboBox.count() != 0:
-            self.databaseMenu.openComboBox.setCurrentIndex(0)
-        self.comboBoxChanged()
+        pass
 
     def closeFormat(self):
-        index = self.databaseMenu.openComboBox.currentIndex()
-        if index != -1:
-            self._closeDatabase(index)
+        pass
 
     def closeAllFormat(self):
-        for i in range(self.databaseMenu.openComboBox.count()):
-            self._closeDatabase(0)
+        pass
 
 
-class DatabaseMenu(QWidget):
-    def __init__(self):
-        super(QWidget, self).__init__()
-        # Open Files ComboBox
-        self.openComboBox = QComboBox()
-        # Data Values ListBox
-        self.valuesListWidget = QListWidget()
-        self.listedValues = []
-        self.valuesListWidget.setDragDropMode(QAbstractItemView.InternalMove)
-        # Number Label
-        self.nbLabel = QLabel("Number of Data Values : 0")
-
-        layout = QFormLayout()
-        layout.addRow(self.openComboBox)
-        layout.addRow(self.valuesListWidget)
-        layout.addRow(self.nbLabel)
-        layout.setVerticalSpacing(0)
-        self.setLayout(layout)
