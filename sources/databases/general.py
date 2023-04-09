@@ -21,7 +21,7 @@ class DatabaseEditor(QTabWidget):
         super(QTabWidget, self).__init__()
         self.database = database
         self.setTabPosition(QTabWidget.East)
-        self.setTabShape(QTabWidget.Triangular)
+        # self.setTabShape(QTabWidget.Triangular)
 
         self.unitsTab = QStackedWidget()
         self.constantsTab = QStackedWidget()

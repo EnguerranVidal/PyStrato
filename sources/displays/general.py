@@ -76,14 +76,17 @@ class DisplayTabWidget(QMainWindow):
                 widget.display.updateContent(self.content)
 
     def addSimpleIndicator(self):
+        if self.tabWidget.count() == 0:
+            self.addNewTab()
         currentTabWidget = self.tabWidget.currentWidget()
         widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
-        print(widgetNames)
         newIndicatorName = nameGiving(widgetNames, baseName='Indicator')
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=SingleIndicator(path=self.currentDir))
         currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
     def addGridIndicator(self):
+        if self.tabWidget.count() == 0:
+            self.addNewTab()
         currentTabWidget = self.tabWidget.currentWidget()
         widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
         newIndicatorName = nameGiving(widgetNames, baseName='Grid')
@@ -91,6 +94,8 @@ class DisplayTabWidget(QMainWindow):
         currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
     def addMultiCurveGraph(self):
+        if self.tabWidget.count() == 0:
+            self.addNewTab()
         currentTabWidget = self.tabWidget.currentWidget()
         widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
         newIndicatorName = nameGiving(widgetNames, baseName='Graph')

@@ -29,10 +29,11 @@ class UnitsWidget(QMainWindow):
 
         self.scrollArea = QScrollArea(self.centralWidget)
         self.scrollArea.setWidgetResizable(True)
+
         self.tableWidget = QWidget()
-        self.tableWidget.setGeometry(QRect(0, 0, 780, 539))
         self.tableWidgetLayout = QGridLayout(self.tableWidget)
-        self.tableWidgetLayout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        self.tableWidgetLayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.tableWidgetLayout.setColumnStretch(0, 0)
         self.scrollArea.setWidget(self.tableWidget)
 
         self.buttonWidget = QWidget()
@@ -76,7 +77,7 @@ class UnitsWidget(QMainWindow):
     def generateLabel(self, textContent):
         label = QLabel(self.tableWidget)
         label.setText(textContent)
-        # label.setFixedHeight(30)
+        label.setFixedHeight(30)
         return label
 
     def generateLineEdit(self, textContent):
@@ -99,7 +100,6 @@ class UnitsWidget(QMainWindow):
         for unitName, unitVariants in self.database.units.items():
             unit = unitVariants[0]
             self.addUnitRow(name=unit.name, unitType=unit.baseTypeName, description=unit.description)
-            # self.tableWidgetLayout.setRowStretch(0, 0)
 
     def cleanTable(self):
         for i in reversed(range(1, self.tableWidgetLayout.count())):
