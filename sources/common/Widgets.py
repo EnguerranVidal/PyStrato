@@ -1,5 +1,6 @@
 ######################## IMPORTS ########################
 import os
+import numpy as np
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
@@ -501,3 +502,99 @@ class BalloonsListWidget(QListWidget):
         for i in items:
             source.takeItem(source.indexFromItem(i).row())
             self.addItem(i)
+
+
+class ValueWidget(QWidget):
+    def __init__(self, cType, value=''):
+        super().__init__()
+        self.cType = cType
+        self.value = value
+        self.valueWidget = None
+        self.setLayout(QVBoxLayout())
+        self.createValueWidget()
+
+    def createValueWidget(self):
+        if self.cType == 'bool':
+            self.valueWidget = QComboBox()
+            self.valueWidget.addItems(['false', 'true'])
+            if self.value not in ['true', 'false']:
+                self.value = 'false'
+            self.valueWidget.setCurrentIndex(['true', 'false'].index(self.value))
+
+        elif self.cType.startswith('int') or self.cType.startswith('uint'):
+            minValue, maxValue = self.getIntRange(self.cType)
+            self.valueWidget = QLineEdit()
+            if np.iinfo(np.int64).min <= minValue <= np.iinfo(np.int64).max and np.iinfo(
+                    np.int64).min <= maxValue <= np.iinfo(np.int64).max:
+                if not self.value.isdigit() or not minValue <= int(self.value) <= maxValue:
+                    self.value = '0'
+                self.valueWidget.setValidator(QIntValidator(minValue, maxValue))
+            self.valueWidget.setText(self.value)
+
+        elif self.cType == 'double':
+            self.valueWidget = QLineEdit()
+            self.valueWidget.setValidator(QDoubleValidator())
+            if not self.value or not self.value.replace('.', '').isdigit():
+                self.value = '0.0'
+            self.valueWidget.setText(self.value)
+
+        elif self.cType == 'float':
+            self.valueWidget = QLineEdit()
+            self.valueWidget.setValidator(
+                QDoubleValidator(-3.4e+38, 3.4e+38, 4, notation=QDoubleValidator.StandardNotation))
+            if not self.value or not self.value.replace('.', '').isdigit():
+                self.value = '0.0'
+            self.valueWidget.setText(self.value)
+
+        elif self.cType == 'char':
+            self.valueWidget = QLineEdit()
+            self.valueWidget.setMaxLength(1)
+            if not self.value or not len(self.value) == 1:
+                self.value = ''
+            self.valueWidget.setText(self.value)
+
+        elif self.cType == 'bytes':
+            self.valueWidget = QLineEdit()
+            self.valueWidget.setInputMask('HHHHHHHH')
+            if not self.value or not len(self.value) == 8:
+                self.value = ''
+            self.valueWidget.setText(self.value)
+
+        elif '[' in self.cType:
+            self.valueWidget = QPushButton('Add Value')
+            self.valueWidget.clicked.connect(self.addValue)
+            self.layout().addWidget(self.valueWidget)
+        self.layout().addWidget(self.valueWidget)
+
+    def addValue(self):
+        # create a new ValueWidget for array elements
+        elementType = self.cType[:-2]
+        elementWidget = ValueWidget(elementType)
+        self.layout().insertWidget(self.layout().count() - 1, elementWidget)
+
+    def changeCType(self, newCType):
+        if newCType == self.cType:
+            return
+        if self.valueWidget:
+            self.valueWidget.setParent(None)
+            self.valueWidget = None
+        self.cType = newCType
+        self.createValueWidget()
+
+    def destroy_value(self):
+        if self.valueWidget:
+            self.valueWidget.setParent(None)
+            self.valueWidget = None
+
+    @staticmethod
+    def getIntRange(cType):
+        signed = cType.startswith('int')
+        if signed:
+            size = int(cType[3:])
+            minVal = np.iinfo(np.int64).min if size > 64 else -np.int64(np.power(2, size - 1) - 1)
+            maxVal = np.iinfo(np.int64).max if size > 64 else np.int64(np.power(2, size - 1) - 1)
+        else:
+            size = int(cType[4:])
+            minVal = 0
+            maxVal = np.iinfo(np.uint64).max if size > 64 else np.int64(np.power(2, size - 1) - 1)
+        return minVal, maxVal

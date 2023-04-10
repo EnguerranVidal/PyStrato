@@ -89,7 +89,8 @@ class DatabaseEditor(QTabWidget):
         else:
             noDataTypeWidget = QWidget()
             noDataTypeLabel = QLabel('There is no data type in this database.')
-            self.firstDataTypeButton = QPushButton('+ Add Data Type')
+            self.firstDataTypeButton = QPushButton('Add Data Type')
+            self.firstDataTypeButton.setIcon(self.plusIcon)
             self.firstDataTypeButton.clicked.connect(self.firstDataType)
             noDataTypeLayout = QVBoxLayout()
             noDataTypeLayout.addWidget(noDataTypeLabel)
@@ -136,13 +137,17 @@ class DatabaseEditor(QTabWidget):
         self.addTab(self.telecommandsTab, 'TELECOMMANDS')
 
     def firstUnit(self):
-        pass
+        self.unitsEditor = UnitsWidget(database=self.database)
+        self.unitsTab.addWidget(self.unitsEditor)
 
     def firstConstant(self):
         pass
 
     def firstConfiguration(self):
-        pass
+        self.configsEditor = ConfigurationsWidget(database=self.database)
+        self.configsTab.addWidget(self.configsEditor)
+        self.configsEditor.addNewConfig()
+        self.configsTab.setCurrentIndex(1)
 
     def firstDataType(self):
         pass
