@@ -588,13 +588,12 @@ class ValueWidget(QWidget):
 
     @staticmethod
     def getIntRange(cType):
-        signed = cType.startswith('int')
-        if signed:
+        if cType.startswith('int'):
             size = int(cType[3:])
-            minVal = np.iinfo(np.int64).min if size > 64 else -np.int64(np.power(2, size - 1) - 1)
             maxVal = np.iinfo(np.int64).max if size > 64 else np.int64(np.power(2, size - 1) - 1)
-        else:
+            minVal = -maxVal - 1
+        elif cType.startswith('uint'):
             size = int(cType[4:])
+            maxVal = np.iinfo(np.uint64).max if size > 64 else np.uint64(np.power(2, size) - 1)
             minVal = 0
-            maxVal = np.iinfo(np.uint64).max if size > 64 else np.int64(np.power(2, size - 1) - 1)
         return minVal, maxVal
