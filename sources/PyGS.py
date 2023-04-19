@@ -15,7 +15,6 @@ from sources.common.FileHandling import nameGiving
 from sources.common.Widgets import *
 
 from sources.databases.general import PacketTabWidget
-from sources.common.GraphWidgets import GraphTabWidget
 from sources.displays.general import DisplayTabWidget
 
 
@@ -85,7 +84,6 @@ class PyGS(QMainWindow):
 
         # Packet Tab Widget -----------------------------------------
         self.packetTabWidget = PacketTabWidget(self.currentDir)
-        self.graphsTabWidget = GraphTabWidget(self.currentDir)
         self.displayTabWidget = DisplayTabWidget(self.currentDir)
         self.graphWidgetsList = []
 

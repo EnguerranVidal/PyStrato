@@ -20,7 +20,7 @@
       "__doc__": "A number identifying this command."
     },
     "type": {
-      "__type__": "Telecommand",
+      "__type__": "TelecommandType",
       "__doc__": "The type of telecommand."
     }
   },

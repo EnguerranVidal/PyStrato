@@ -37,7 +37,9 @@ class UnitsWidget(QMainWindow):
         self.scrollArea.setWidget(self.tableWidget)
 
         self.buttonWidget = QWidget()
-        self.buttonAddUnit = QPushButton('+ ADD UNIT', self.buttonWidget)
+        self.buttonAddUnit = QPushButton(self.buttonWidget)
+        self.buttonAddUnit.setIcon(QIcon('sources/icons/light-theme/icons8-add-96.png'))
+        self.buttonAddUnit.setText('ADD UNIT')
         self.buttonDeleteUnit = QPushButton('', self.buttonWidget)
         self.buttonDeleteUnit.setIcon(QIcon(QPixmap('sources/icons/light-theme/icons8-remove-96.png')))
         self.buttonLayout = QHBoxLayout(self.buttonWidget)

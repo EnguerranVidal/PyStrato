@@ -34,7 +34,9 @@ class ConfigurationsWidget(QMainWindow):
         self.scrollArea.setWidget(self.tableWidget)
 
         self.buttonWidget = QWidget()
-        self.buttonAddConfig = QPushButton('+ ADD CONFIG', self.buttonWidget)
+        self.buttonAddConfig = QPushButton(self.buttonWidget)
+        self.buttonAddConfig.setIcon(QIcon('sources/icons/light-theme/icons8-add-96.png'))
+        self.buttonAddConfig.setText('ADD CONFIG')
         self.buttonDeleteConfig = QPushButton('', self.buttonWidget)
         self.buttonDeleteConfig.setIcon(QIcon(QPixmap('sources/icons/light-theme/icons8-remove-96.png')))
         self.buttonLayout = QHBoxLayout(self.buttonWidget)
@@ -132,6 +134,12 @@ class ConfigurationsWidget(QMainWindow):
         typeInfo = self.database.getTypeInfo(self.rowWidgets['CONFIG TYPE'][i].text())
         self.database.configurations[i] = dataclasses.replace(self.database.configurations[i], type=typeInfo)
         # CHANGING DEFAULT VALUE WIDGET
+        if typeName not in self.basicTypes:  # Must be in Units... Hopefully...
+            unitList = [unitName for unitName, unitVariants in self.database.units.items()]
+            if typeName not in unitList:  # Unknown Unit
+                return QWidget(self.tableWidget)
+            else:
+                typeName = self.database.units[typeName][0].baseTypeName
         oldDefaultValue = self.rowWidgets['DEFAULT VALUE'][i].value
         self.rowWidgets['DEFAULT VALUE'][i].changeCType(typeName)
         self.configTypeSelector.close()
