@@ -8,4 +8,4 @@ qtpy~=2.3.1
 qtwidgets~=0.18
 pygame~=2.3.0
 requests~=2.28.2
-git+https://gitlab.com/team-aster/software/ecom
+git+https://gitlab.com/team-aster/software/ecom@1.1.1

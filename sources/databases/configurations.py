@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-from sources.common.Widgets import ValueWidget
+from sources.common.Widgets import ValueWidget, TypeSelector
 # --------------------- Sources ----------------------- #
 from sources.databases.balloondata import BalloonPackageDatabase, serializeTypedValue
 
@@ -121,7 +121,7 @@ class ConfigurationsWidget(QMainWindow):
 
     def openAvailableTypes(self, i):
         configType = self.rowWidgets['CONFIG TYPE'][i].text()
-        self.configTypeSelector = ConfigTypeSelector(configType, database=self.database)
+        self.configTypeSelector = TypeSelector(configType, database=self.database)
         self.configTypeSelector.buttons.accepted.connect(lambda: self.acceptTypeChange(i))
         self.configTypeSelector.buttons.rejected.connect(self.configTypeSelector.close)
         self.configTypeSelector.show()
@@ -206,61 +206,6 @@ class ConfigurationsWidget(QMainWindow):
                                      defaultValue=defaultValue, description=configuration.description)
 
 
-class ConfigTypeSelector(QWidget):
-    def __init__(self, configType, database: BalloonPackageDatabase):
-        super(QWidget, self).__init__()
-        self.database = database
-        self.setWindowTitle('Selecting Configuration Type or Unit')
-        self.basicTypes = [baseType.value for baseType in TypeInfo.BaseType]
-        self.basicTypesList = QListWidget()
-        self.basicTypesLabel = QLabel('Basic Types')
-        self.unitsList = QListWidget()
-        self.unitsLabel = QLabel('Database Units')
-        self.basicTypesList.itemClicked.connect(self.itemClickedBasic)
-        self.unitsList.itemClicked.connect(self.itemClickedUnit)
-
-        # General Layout
-        centralLayout = QGridLayout()
-        centralLayout.addWidget(self.basicTypesLabel, 0, 0)
-        centralLayout.addWidget(self.basicTypesList, 1, 0)
-        centralLayout.addWidget(self.unitsLabel, 0, 1)
-        centralLayout.addWidget(self.unitsList, 1, 1)
-
-        # Selected Type
-        self.selectedLabel = QLabel()
-        self.selectedLabel.setText(configType)
-        centralLayout.addWidget(self.selectedLabel, 2, 0)
-
-        # Adding Buttons
-        self.buttons = QDialogButtonBox()
-        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        self.buttons.button(QDialogButtonBox.Ok).setText("Apply")
-        centralLayout.addWidget(self.buttons, 2, 1)
-
-        self.setLayout(centralLayout)
-        self.populateLists()
-
-    def populateLists(self, database: BalloonPackageDatabase = None):
-        # Clearing Past Items
-        if database is not None:
-            self.database = database
-            self.unitsList.clear()
-            self.basicTypesList.clear()
-        # Filling Lists
-        for basicType in self.basicTypes:
-            self.basicTypesList.addItem(basicType)
-        for unitName, unitVariants in self.database.units.items():
-            self.unitsList.addItem(unitName)
-
-    def itemClickedBasic(self):
-        selection = self.basicTypesList.selectedItems()
-        self.selectedLabel.setText(selection[0].text())
-
-    def itemClickedUnit(self):
-        selection = self.unitsList.selectedItems()
-        self.selectedLabel.setText(selection[0].text())
-
-
 class NewConfigWindow(QDialog):
     def __init__(self, database):
         super().__init__()
@@ -287,7 +232,7 @@ class NewConfigWindow(QDialog):
         self.setLayout(self.dlgLayout)
 
     def openAvailableTypes(self):
-        self.configTypeSelector = ConfigTypeSelector(self.typePushButton.text(), database=self.database)
+        self.configTypeSelector = TypeSelector(self.typePushButton.text(), database=self.database)
         self.configTypeSelector.buttons.accepted.connect(self.acceptTypeChange)
         self.configTypeSelector.buttons.rejected.connect(self.configTypeSelector.close)
         self.configTypeSelector.show()

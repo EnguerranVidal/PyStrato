@@ -1,5 +1,6 @@
 ######################## IMPORTS ########################
 import dataclasses
+from ecom.datatypes import TypeInfo
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
@@ -7,6 +8,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
+from sources.common.Widgets import TypeSelector
 from sources.databases.balloondata import BalloonPackageDatabase
 
 
@@ -44,6 +46,10 @@ class TelemetriesWidget(QStackedWidget):
 
         self.telemetriesLayout.addWidget(self.buttonWidget)
         self.telemetriesLayout.addWidget(self.scrollArea)
+
+        self.mainLayout = QVBoxLayout()
+        self.mainLayout.setAlignment(Qt.AlignCenter)
+        self.setLayout(self.mainLayout)
         self.addWidget(self.telemetriesWidget)
 
         self.rowWidgets = {'SELECTION': [], 'NAME': [], 'ARGUMENTS': [], 'DESCRIPTION': []}
@@ -62,7 +68,7 @@ class TelemetriesWidget(QStackedWidget):
         for telemetryResponseType in self.database.telemetryTypes:
             telemetryName = telemetryResponseType.id.name
             self.addTelemetryRow(name=telemetryName, description=telemetryResponseType.id.__doc__)
-            self.argumentEditors.append(0)
+            self.argumentEditors.append(None)
 
     def cleanTable(self):
         for i in reversed(range(1, self.tableWidgetLayout.count())):
@@ -73,7 +79,7 @@ class TelemetriesWidget(QStackedWidget):
         newRowCount = len(self.rowWidgets['SELECTION']) + 1
         self.rowWidgets['SELECTION'].append(self.generateCheckBox())
         self.rowWidgets['NAME'].append(self.generateLabel(name))
-        self.rowWidgets['ARGUMENTS'].append(self.generateArgumentButton(newRowCount))
+        self.rowWidgets['ARGUMENTS'].append(self.generateArgumentButton(newRowCount - 1))
         self.rowWidgets['DESCRIPTION'].append(self.generateLineEdit(description))
         self.tableWidgetLayout.addWidget(self.rowWidgets['SELECTION'][-1], newRowCount, 0, 1, 1)
         self.tableWidgetLayout.addWidget(self.rowWidgets['NAME'][-1], newRowCount, 1, 1, 1)
@@ -144,23 +150,29 @@ class TelemetriesWidget(QStackedWidget):
             self.fillTable()
 
     def openTelemetryArguments(self, i):
-        if self.selectedTelemetryIndex is None or self.selectedTelemetryIndex != i:
-            # This part shows the Arguments widget
-            # TODO Create a Telemetry Argument Widget to the self.argumentsDockWidget
-            pass
-        else:
-            if self.argumentsDockWidget.isHidden():
-                self.argumentsDockWidget.show()
-            else:
-                self.argumentsDockWidget.hide()
+        if self.argumentEditors[i] is None:
+            telemetryType = self.database.telemetryTypes[i]
+            argumentEditor = TelemetryArgumentEditor(self.database, telemetryType)
+            argumentEditor.goBackToTelemetry.connect(self.goBackToMainEditor)
+            self.argumentEditors[i] = argumentEditor
+        self.addWidget(self.argumentEditors[i])
+        self.setCurrentWidget(self.argumentEditors[i])
+
+    def goBackToMainEditor(self):
+        self.setCurrentWidget(self.telemetriesWidget)
 
 
 class TelemetryArgumentEditor(QWidget):
-    def __init__(self, database: BalloonPackageDatabase, telemetryName):
+    goBackToTelemetry = pyqtSignal()
+
+    def __init__(self, database: BalloonPackageDatabase, telemetryType):
         super(QWidget, self).__init__()
+        self.configTypeSelector = None
         self.newArgumentWindow = None
         self.database = database
-        self.telemetryName = telemetryName
+        self.basicTypes = [baseType.value for baseType in TypeInfo.BaseType]
+        self.telemetryType = telemetryType
+        self.telemetryName = self.telemetryType.id.name
 
         self.argumentsWidget = QWidget(self)
         self.argumentsLayout = QVBoxLayout(self.argumentsWidget)
@@ -184,14 +196,33 @@ class TelemetryArgumentEditor(QWidget):
         self.buttonLayout.addWidget(self.buttonAddArgument)
         self.buttonLayout.addWidget(self.buttonDeleteArgument)
 
-        self.buttonAddArgument.clicked.connect(self.addNewTelemetry)
+        self.buttonAddArgument.clicked.connect(self.addNewArgument)
         self.buttonDeleteArgument.clicked.connect(self.removeSelected)
 
         self.argumentsLayout.addWidget(self.buttonWidget)
         self.argumentsLayout.addWidget(self.scrollArea)
-        self.addWidget(self.argumentsWidget)
 
         self.rowWidgets = {'SELECTION': [], 'NAME': [], 'TYPE': [], 'DESCRIPTION': []}
+
+        # --------- Top Layout --------
+        self.topLayout = QHBoxLayout()
+        # Create the return button and set its icon
+        self.returnButton = QPushButton()
+        self.returnButton.setIcon(QIcon('sources/icons/light-theme/icons8-back-96'))
+        self.returnButton.setIconSize(QSize(20, 20))
+        self.returnButton.setStyleSheet("background-color: transparent;")
+        self.returnButton.clicked.connect(self.returnButtonPressed)
+        # Create the name valueLabel and set its text
+        self.telemetryNameLabel = QLabel(self)
+        self.telemetryNameLabel.setText(self.telemetryName)
+        # Add the widgets to the top layout
+        self.topLayout.addWidget(self.returnButton)
+        self.topLayout.addWidget(self.telemetryNameLabel)
+
+        self.mainLayout = QVBoxLayout()
+        self.mainLayout.addLayout(self.topLayout)
+        self.mainLayout.addWidget(self.argumentsWidget)
+        self.setLayout(self.mainLayout)
 
         self.fillTable()
         self.show()
@@ -203,25 +234,26 @@ class TelemetryArgumentEditor(QWidget):
         self.tableWidgetLayout.addWidget(self.generateLabel(''), 0, 2, 1, 1)
         self.tableWidgetLayout.addWidget(self.generateLabel('DESCRIPTION'), 0, 3, 1, 1)
         ### ADD ROWS ###
-        for telemetryResponseType in self.database.telemetryTypes:
-            telemetryName = telemetryResponseType.id.name
-            self.addTelemetryRow(name=telemetryName, description=telemetryResponseType.id.__doc__)
-            self.argumentEditors.append(0)
+        for dataPoint in self.telemetryType.data:
+            dataPointName = dataPoint.name
+            dataPointType = self.database.getTypeName(dataPoint.type)
+            dataPointDescription = dataPoint.description
+            self.addArgumentRow(name=dataPointName, configType=dataPointType, description=dataPointDescription)
 
     def cleanTable(self):
         for i in reversed(range(1, self.tableWidgetLayout.count())):
             self.tableWidgetLayout.itemAt(i).widget().setParent(None)
-        self.rowWidgets = {'SELECTION': [], 'NAME': [], 'ARGUMENTS': [], 'DESCRIPTION': []}
+        self.rowWidgets = {'SELECTION': [], 'NAME': [], 'TYPE': [], 'DESCRIPTION': []}
 
-    def addTelemetryRow(self, name='', description=''):
+    def addArgumentRow(self, name='', configType=TypeInfo.BaseType.INT8.value, description=''):
         newRowCount = len(self.rowWidgets['SELECTION']) + 1
         self.rowWidgets['SELECTION'].append(self.generateCheckBox())
         self.rowWidgets['NAME'].append(self.generateLabel(name))
-        self.rowWidgets['ARGUMENTS'].append(self.generateArgumentButton(newRowCount))
+        self.rowWidgets['TYPE'].append(self.generateArgumentTypeButton(configType, newRowCount - 1))
         self.rowWidgets['DESCRIPTION'].append(self.generateDescriptionEdit(description))
         self.tableWidgetLayout.addWidget(self.rowWidgets['SELECTION'][-1], newRowCount, 0, 1, 1)
         self.tableWidgetLayout.addWidget(self.rowWidgets['NAME'][-1], newRowCount, 1, 1, 1)
-        self.tableWidgetLayout.addWidget(self.rowWidgets['ARGUMENTS'][-1], newRowCount, 2, 1, 1)
+        self.tableWidgetLayout.addWidget(self.rowWidgets['TYPE'][-1], newRowCount, 2, 1, 1)
         self.tableWidgetLayout.addWidget(self.rowWidgets['DESCRIPTION'][-1], newRowCount, 3, 1, 1)
 
     def generateLabel(self, textContent):
@@ -229,11 +261,14 @@ class TelemetryArgumentEditor(QWidget):
         label.setText(textContent)
         return label
 
-    def generateArgumentButton(self, i):
-        button = QPushButton('', self.tableWidget)
-        button.setIcon(QIcon(QPixmap('sources/icons/stack-icon.svg')))
-        button.clicked.connect(lambda: self.openTelemetryArguments(i))
-        return button
+    def generateArgumentTypeButton(self, textContent, i):
+        typeButton = QPushButton(self.tableWidget)
+        unitList = [unitName for unitName, unitVariants in self.database.units.items()]
+        if textContent not in self.basicTypes and textContent not in unitList:  # Degenerate Type
+            typeButton.setStyleSheet('QPushButton {color: red;}')
+        typeButton.setText(textContent)
+        typeButton.clicked.connect(lambda: self.openAvailableTypes(i))
+        return typeButton
 
     def generateDescriptionEdit(self, textContent):
         lineEdit = QLineEdit(self.tableWidget)
@@ -251,8 +286,8 @@ class TelemetryArgumentEditor(QWidget):
             description = descriptionWidget.text()
             self.database.telemetryTypes[i] = dataclasses.replace(telemetryItem, description=description)
 
-    def addNewTelemetry(self):
-        self.newArgumentWindow = NewTelemetryWindow(self.database)
+    def addNewArgument(self):
+        self.newArgumentWindow = NewTelemetryArgumentWindow(self.database, self.telemetryName)
         self.newArgumentWindow.buttons.accepted.connect(self.acceptNewArgument)
         self.newArgumentWindow.buttons.rejected.connect(self.newArgumentWindow.close)
         self.newArgumentWindow.show()
@@ -272,7 +307,7 @@ class TelemetryArgumentEditor(QWidget):
         else:
             self.database.addTelemetry(name=name)
             # TODO ERROR when adding telemetry : not recognizing 'name'
-            self.addTelemetryRow(name, description='')
+            self.addArgumentRow(name, description='')
 
     def removeSelected(self):
         states = [checkbox.isChecked() for checkbox in self.rowWidgets['SELECTION']]
@@ -286,16 +321,36 @@ class TelemetryArgumentEditor(QWidget):
             self.cleanTable()
             self.fillTable()
 
-    def openTelemetryArguments(self, i):
-        if self.selectedTelemetryIndex is None or self.selectedTelemetryIndex != i:
-            # This part shows the Arguments widget
-            # TODO Create a Telemetry Argument Widget to the self.argumentsDockWidget
-            pass
-        else:
-            if self.argumentsDockWidget.isHidden():
-                self.argumentsDockWidget.show()
-            else:
-                self.argumentsDockWidget.hide()
+    def returnButtonPressed(self):
+        self.goBackToTelemetry.emit()
+    
+    def openAvailableTypes(self, i):
+        configType = self.rowWidgets['TYPE'][i].text()
+        self.configTypeSelector = TypeSelector(configType, database=self.database)
+        self.configTypeSelector.buttons.accepted.connect(lambda: self.acceptTypeChange(i))
+        self.configTypeSelector.buttons.rejected.connect(self.configTypeSelector.close)
+        self.configTypeSelector.show()
+
+
+class NewTelemetryArgumentWindow(QDialog):
+    def __init__(self, database, telemetryName: str):
+        super().__init__()
+        self.database = database
+        self.setWindowTitle('Add New Argument to ' + telemetryName)
+        # self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.resize(400, 100)
+        self.dlgLayout = QVBoxLayout()
+        self.formWidget = QWidget(self)
+        self.formLayout = QFormLayout()
+        self.nameEdit = QLineEdit()
+        self.defaultValueEdit = QLineEdit()
+        self.formLayout.addRow('Name:', self.nameEdit)
+        self.formWidget.setLayout(self.formLayout)
+        self.dlgLayout.addWidget(self.formWidget)
+        self.buttons = QDialogButtonBox()
+        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self.dlgLayout.addWidget(self.buttons)
+        self.setLayout(self.dlgLayout)
 
 
 class NewTelemetryWindow(QDialog):
