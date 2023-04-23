@@ -9,10 +9,12 @@ from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
 from sources.databases.balloondata import BalloonPackageDatabase
-from sources.databases.telecommands import TelecommandsWidget
-from sources.databases.telemetries import TelemetriesWidget
+
 from sources.databases.units import UnitsWidget
+from sources.databases.constants import ConstantsWidget
 from sources.databases.configurations import ConfigurationsWidget
+from sources.databases.telemetries import TelemetriesWidget
+from sources.databases.telecommands import TelecommandsWidget
 
 
 ######################## CLASSES ########################
@@ -50,7 +52,7 @@ class DatabaseEditor(QTabWidget):
             self.unitsTab.addWidget(noUnitWidget)
 
         if len(database.constants) != 0:
-            self.constantsEditor = QWidget()
+            self.constantsEditor = ConstantsWidget(database=self.database)
             self.constantsTab.addWidget(self.constantsEditor)
         else:
             noConstantWidget = QWidget()
