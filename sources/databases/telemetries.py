@@ -264,7 +264,8 @@ class TelemetryArgumentEditor(QWidget):
     def generateArgumentTypeButton(self, textContent, i):
         typeButton = QPushButton(self.tableWidget)
         unitList = [unitName for unitName, unitVariants in self.database.units.items()]
-        if textContent not in self.basicTypes and textContent not in unitList:  # Degenerate Type
+        acceptedTypes = self.basicTypes + unitList + self.database.getSharedDataTypes()
+        if textContent not in acceptedTypes:  # Degenerate Type
             typeButton.setStyleSheet('QPushButton {color: red;}')
         typeButton.setText(textContent)
         typeButton.clicked.connect(lambda: self.openAvailableTypes(i))
@@ -326,7 +327,7 @@ class TelemetryArgumentEditor(QWidget):
     
     def openAvailableTypes(self, i):
         configType = self.rowWidgets['TYPE'][i].text()
-        self.configTypeSelector = TypeSelector(configType, database=self.database)
+        self.configTypeSelector = TypeSelector(configType, database=self.database, sharedDataTypes=True)
         self.configTypeSelector.buttons.accepted.connect(lambda: self.acceptTypeChange(i))
         self.configTypeSelector.buttons.rejected.connect(self.configTypeSelector.close)
         self.configTypeSelector.show()

@@ -97,7 +97,8 @@ class ConfigurationsWidget(QMainWindow):
     def generateTypePushButton(self, textContent, i):
         typeButton = QPushButton(self.tableWidget)
         unitList = [unitName for unitName, unitVariants in self.database.units.items()]
-        if textContent not in self.basicTypes and textContent not in unitList:  # Degenerate Type
+        acceptedTypes = self.basicTypes + unitList + self.database.getSharedDataTypes()
+        if textContent not in acceptedTypes:  # Degenerate Type
             typeButton.setStyleSheet('QPushButton {color: red;}')
         typeButton.setText(textContent)
         typeButton.clicked.connect(lambda: self.openAvailableTypes(i))
