@@ -15,7 +15,6 @@ from sources.common.FileHandling import nameGiving
 from sources.common.Widgets import *
 
 from sources.databases.general import PacketTabWidget
-from sources.common.GraphWidgets import GraphTabWidget
 from sources.displays.general import DisplayTabWidget
 
 
@@ -24,7 +23,7 @@ class PyGS(QMainWindow):
     def __init__(self, path):
         super().__init__()
         self.currentDir = path
-        self.mainIcon = QIcon('sources/icons/light-theme/icons8-hot-air-balloon-96.png')
+        self.mainIcon = QIcon('sources/icons/iconPyGSCopy')
         self.formatPath = os.path.join(self.currentDir, "formats")
         self.dataPath = os.path.join(self.currentDir, "data")
         self.backupPath = os.path.join(self.dataPath, "backups")
@@ -74,6 +73,7 @@ class PyGS(QMainWindow):
         self._createActions()
         self._createMenuBar()
         self._createToolBars()
+        self.populateFileMenu()
 
         self.show()
 
@@ -84,7 +84,6 @@ class PyGS(QMainWindow):
 
         # Packet Tab Widget -----------------------------------------
         self.packetTabWidget = PacketTabWidget(self.currentDir)
-        self.graphsTabWidget = GraphTabWidget(self.currentDir)
         self.displayTabWidget = DisplayTabWidget(self.currentDir)
         self.graphWidgetsList = []
 
@@ -221,10 +220,6 @@ class PyGS(QMainWindow):
         self.newMultiCurveAct.triggered.connect(self.displayTabWidget.addMultiCurveGraph)
 
         ########### TOOLS ###########
-        # Toggle Autoscale
-        self.autoscaleAct = QAction('&Autoscale', self, checkable=True, checked=self.settings["AUTOSCALE"])
-        self.autoscaleAct.setStatusTip("Toggle Graphs' Autoscale")
-        self.autoscaleAct.triggered.connect(self.setAutoscale)
         # Run Serial
         self.runSerialAct = QAction('&Run', self)
         self.runSerialAct.setShortcut('Ctrl+R')
@@ -240,10 +235,6 @@ class PyGS(QMainWindow):
         self.openMonitorAct.setIcon(QIcon('sources/icons/light-theme/icons8-monitor-96.png'))
         self.openMonitorAct.setStatusTip('Open Serial Monitor')
         self.openMonitorAct.triggered.connect(self.openSerialMonitor)
-        # Toggle RSSI Acquirement
-        self.rssiAct = QAction('&RSSI', self, checkable=True, checked=self.settings["RSSI"])
-        self.rssiAct.setStatusTip('Toggle RSSI Retrieval')
-        self.rssiAct.triggered.connect(self.setRssi)
 
         ########### HELP ###########
         # Toggle Emulator Mode
@@ -288,7 +279,6 @@ class PyGS(QMainWindow):
         ###  WINDOW MENU  ###
         self.windowMenu = self.menubar.addMenu('&Window')
         self.windowMenu.addSeparator()
-        self.windowMenu.addAction(self.autoscaleAct)
 
         ###  TOOLS MENU  ###
         self.toolsMenu = self.menubar.addMenu('&Tools')
@@ -310,13 +300,12 @@ class PyGS(QMainWindow):
         baud_group.setExclusive(True)
         baud_group.triggered.connect(self.selectBaud)
         self.toolsMenu.addMenu(self.baudMenu)
-        self.toolsMenu.addSeparator()
-        self.toolsMenu.addAction(self.rssiAct)
         self.toolsMenu.aboutToShow.connect(self.populateToolsMenu)
 
         ###  HELP MENU  ###
         self.helpMenu = self.menubar.addMenu('&Help')
         self.helpMenu.addAction(self.emulatorAct)
+        self.helpMenu.addSeparator()
         self.helpMenu.addAction(self.githubAct)
 
     def _checkEnvironment(self):
@@ -352,6 +341,7 @@ class PyGS(QMainWindow):
         if os.path.abspath(path) not in [os.path.abspath(self.formatPath), os.path.abspath(self.currentDir)]:
             self.packetTabWidget.openFormat(path)
             self.addToRecent(path)
+        self.populateFileMenu()
 
     def addToRecent(self, path):
         self.settings['OPENED_RECENTLY'].insert(0, path)
@@ -370,22 +360,27 @@ class PyGS(QMainWindow):
         if os.path.exists(path):
             self.packetTabWidget.openFormat(path)
             self.addToRecent(path)
+        self.populateFileMenu()
 
     def saveFormatTab(self):
         self.packetTabWidget.saveFormat()
         self.graphsTabWidget.fillComboBox()
+        self.populateFileMenu()
 
     def saveAsFormatTab(self):
         # Create Lines
         path = QFileDialog.getSaveFileName(self, 'Save File')
         self.packetTabWidget.saveFormat(path[0])
         self.graphsTabWidget.fillComboBox()
+        self.populateFileMenu()
 
     def saveAllFormatTab(self):
         self.packetTabWidget.saveAllFormats()
+        self.populateFileMenu()
 
     def closeFormatTab(self):
         self.packetTabWidget.closeFormat()
+        self.populateFileMenu()
 
     def openTrackedFormats(self):
         self.trackedFormatsWindow = TrackedBalloonsWindow(self.currentDir)
@@ -403,16 +398,7 @@ class PyGS(QMainWindow):
     def importFormat(self):
         path = QFileDialog.getOpenFileName(self, 'Import Packet Format')
         # Verifying if chosen file is a format
-        if check_format(path[0]):
-            # Finally copy the file into our format repository
-            shutil.copy2(path[0], self.formatPath)
-        else:
-            cancelling = MessageBox()
-            cancelling.setWindowIcon(self.mainIcon)
-            cancelling.setWindowTitle("Error")
-            cancelling.setText("This file does not satisfy the required format.")
-            cancelling.setStandardButtons(QMessageBox.Ok)
-            cancelling.exec_()
+        pass
 
     def startSerial(self):
         message = "Port : " + self.settings["SELECTED_PORT"] + "  Baud : "
@@ -514,7 +500,7 @@ class PyGS(QMainWindow):
             self.recentMenu.setDisabled(True)
         else:
             self.recentMenu.setDisabled(False)
-        index = self.packetTabWidget.databaseMenu.openComboBox.currentIndex()
+        index = self.packetTabWidget.databasesTabWidget.currentIndex()
         anyDatabaseChanges = False
         currentDatabaseChanges = False
         for i, database in enumerate(self.packetTabWidget.databases.values()):

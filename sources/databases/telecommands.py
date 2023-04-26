@@ -33,7 +33,7 @@ class TelecommandsWidget(QMainWindow):
         self.tableWidget = QWidget()
         self.tableWidget.setGeometry(QRect(0, 0, 780, 539))
         self.tableWidgetLayout = QGridLayout(self.tableWidget)
-        self.tableWidgetLayout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        self.tableWidgetLayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.scrollArea.setWidget(self.tableWidget)
 
         self.buttonWidget = QWidget()

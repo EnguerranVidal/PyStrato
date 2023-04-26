@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
+from sources.common.Widgets import ValueWidget, TypeSelector
 # --------------------- Sources ----------------------- #
 from sources.databases.balloondata import BalloonPackageDatabase, serializeTypedValue
 
@@ -29,11 +30,13 @@ class ConfigurationsWidget(QMainWindow):
         self.tableWidget = QWidget()
         self.tableWidget.setGeometry(QRect(0, 0, 780, 539))
         self.tableWidgetLayout = QGridLayout(self.tableWidget)
-        self.tableWidgetLayout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        self.tableWidgetLayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.scrollArea.setWidget(self.tableWidget)
 
         self.buttonWidget = QWidget()
-        self.buttonAddConfig = QPushButton('+ ADD CONFIG', self.buttonWidget)
+        self.buttonAddConfig = QPushButton(self.buttonWidget)
+        self.buttonAddConfig.setIcon(QIcon('sources/icons/light-theme/icons8-add-96.png'))
+        self.buttonAddConfig.setText('ADD CONFIG')
         self.buttonDeleteConfig = QPushButton('', self.buttonWidget)
         self.buttonDeleteConfig.setIcon(QIcon(QPixmap('sources/icons/light-theme/icons8-remove-96.png')))
         self.buttonLayout = QHBoxLayout(self.buttonWidget)
@@ -94,7 +97,8 @@ class ConfigurationsWidget(QMainWindow):
     def generateTypePushButton(self, textContent, i):
         typeButton = QPushButton(self.tableWidget)
         unitList = [unitName for unitName, unitVariants in self.database.units.items()]
-        if textContent not in self.basicTypes and textContent not in unitList:  # Degenerate Type
+        acceptedTypes = self.basicTypes + unitList + self.database.getSharedDataTypes()
+        if textContent not in acceptedTypes:  # Degenerate Type
             typeButton.setStyleSheet('QPushButton {color: red;}')
         typeButton.setText(textContent)
         typeButton.clicked.connect(lambda: self.openAvailableTypes(i))
@@ -107,32 +111,8 @@ class ConfigurationsWidget(QMainWindow):
                 return QWidget(self.tableWidget)
             else:
                 configType = self.database.units[configType][0].baseTypeName
-        configTypeInfo = self.database.getTypeInfo(configType)
-        if issubclass(configTypeInfo.type, bool):
-            comboBox = QComboBox(self.tableWidget)
-            comboBox.addItems(['true', 'false'])
-            if defaultValue in ['true', 'false']:
-                comboBox.setCurrentIndex(['true', 'false'].index(defaultValue))
-            else:
-                comboBox.setCurrentIndex(0)
-            return comboBox
-        else:
-            # TODO add minimum maximum ranges and types to comply with C types
-            lineEdit = QLineEdit(self.tableWidget)
-            lineEdit.setText(str(defaultValue))
-            if issubclass(configTypeInfo.type, int):
-                # maxRange = configTypeInfo.getMaxNumericalValue(self.database)
-                # minRange = configTypeInfo.getMinNumericalValue(self.database)
-                # onlyInt = QIntValidator(minRange, maxRange)
-                onlyInt = QIntValidator()
-                lineEdit.setValidator(onlyInt)
-            elif issubclass(configTypeInfo.type, float):
-                onlyFloat = QDoubleValidator()
-                locale = QLocale(QLocale.English, QLocale.UnitedStates)
-                onlyFloat.setLocale(locale)
-                onlyFloat.setNotation(QDoubleValidator.StandardNotation)
-                lineEdit.setValidator(onlyFloat)
-            return lineEdit
+        valueWidget = ValueWidget(configType, defaultValue)
+        return valueWidget
 
     def generateLineEdit(self, textContent):
         lineEdit = QLineEdit(self.tableWidget)
@@ -142,30 +122,32 @@ class ConfigurationsWidget(QMainWindow):
 
     def openAvailableTypes(self, i):
         configType = self.rowWidgets['CONFIG TYPE'][i].text()
-        self.configTypeSelector = ConfigTypeSelector(configType, database=self.database)
+        self.configTypeSelector = TypeSelector(configType, database=self.database)
         self.configTypeSelector.buttons.accepted.connect(lambda: self.acceptTypeChange(i))
         self.configTypeSelector.buttons.rejected.connect(self.configTypeSelector.close)
         self.configTypeSelector.show()
 
     def acceptTypeChange(self, i):
+        # CHANGING TYPE IN DATABASE
         typeName = self.configTypeSelector.selectedLabel.text()
         self.rowWidgets['CONFIG TYPE'][i].setStyleSheet('')
         self.rowWidgets['CONFIG TYPE'][i].setText(typeName)
         typeInfo = self.database.getTypeInfo(self.rowWidgets['CONFIG TYPE'][i].text())
         self.database.configurations[i] = dataclasses.replace(self.database.configurations[i], type=typeInfo)
-        config = self.database.configurations[i]
-        compatible = self.compatibleDefaultValue()
-        # TODO for ranges in default value, look at SerialGS.py SerialEmulator min/max values
-        if not compatible:
-            defaultValue = typeInfo.type()
-            self.database.configurations[i] = dataclasses.replace(
-                self.database.configurations[i], defaultValue=defaultValue)
-        else:
-            defaultValue = self.database.configurations[i].defaultValue
-        self.tableWidgetLayout.removeWidget(self.rowWidgets['DEFAULT VALUE'][i])
-        self.rowWidgets['DEFAULT VALUE'][i] = self.generateDefaultEdit(typeName, str(defaultValue))
-        self.tableWidgetLayout.addWidget(self.rowWidgets['DEFAULT VALUE'][i], i + 1, 3, 1, 1)
+        # CHANGING DEFAULT VALUE WIDGET
+        if typeName not in self.basicTypes:  # Must be in Units... Hopefully...
+            unitList = [unitName for unitName, unitVariants in self.database.units.items()]
+            if typeName not in unitList:  # Unknown Unit
+                return QWidget(self.tableWidget)
+            else:
+                typeName = self.database.units[typeName][0].baseTypeName
+        oldDefaultValue = self.rowWidgets['DEFAULT VALUE'][i].value
+        self.rowWidgets['DEFAULT VALUE'][i].changeCType(typeName)
         self.configTypeSelector.close()
+        # CHANGING DEFAULT VALUE IN DATABASE
+        defaultValue = self.rowWidgets['DEFAULT VALUE'][i].value
+        if defaultValue != oldDefaultValue:
+            self.database.configurations[i] = dataclasses.replace(self.database.configurations[i], defaultValue=defaultValue)
 
     def defaultValueChanged(self):
         for i, (defaultValueWidget, configItem) in enumerate(
@@ -179,11 +161,6 @@ class ConfigurationsWidget(QMainWindow):
                     print(f'{error}')
                     return
             self.database.configurations[i] = dataclasses.replace(configItem, defaultValue=defaultValue)
-
-    @staticmethod
-    def compatibleDefaultValue():
-        # TODO Create Compatible verification function
-        return False
 
     def addNewConfig(self):
         self.newConfigWindow = NewConfigWindow(self.database)
@@ -230,63 +207,6 @@ class ConfigurationsWidget(QMainWindow):
                                      defaultValue=defaultValue, description=configuration.description)
 
 
-
-
-class ConfigTypeSelector(QWidget):
-    def __init__(self, configType, database: BalloonPackageDatabase):
-        super(QWidget, self).__init__()
-        self.database = database
-        self.setWindowTitle('Selecting Configuration Type or Unit')
-        self.basicTypes = [baseType.value for baseType in TypeInfo.BaseType]
-        self.basicTypesList = QListWidget()
-        self.basicTypesLabel = QLabel('Basic Types')
-        self.unitsList = QListWidget()
-        self.unitsLabel = QLabel('Database Units')
-        self.basicTypesList.itemClicked.connect(self.itemClickedBasic)
-        self.unitsList.itemClicked.connect(self.itemClickedUnit)
-
-        # General Layout
-        centralLayout = QGridLayout()
-        centralLayout.addWidget(self.basicTypesLabel, 0, 0)
-        centralLayout.addWidget(self.basicTypesList, 1, 0)
-        centralLayout.addWidget(self.unitsLabel, 0, 1)
-        centralLayout.addWidget(self.unitsList, 1, 1)
-
-        # Selected Type
-        self.selectedLabel = QLabel()
-        self.selectedLabel.setText(configType)
-        centralLayout.addWidget(self.selectedLabel, 2, 0)
-
-        # Adding Buttons
-        self.buttons = QDialogButtonBox()
-        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        self.buttons.button(QDialogButtonBox.Ok).setText("Apply")
-        centralLayout.addWidget(self.buttons, 2, 1)
-
-        self.setLayout(centralLayout)
-        self.populateLists()
-
-    def populateLists(self, database: BalloonPackageDatabase = None):
-        # Clearing Past Items
-        if database is not None:
-            self.database = database
-            self.unitsList.clear()
-            self.basicTypesList.clear()
-        # Filling Lists
-        for basicType in self.basicTypes:
-            self.basicTypesList.addItem(basicType)
-        for unitName, unitVariants in self.database.units.items():
-            self.unitsList.addItem(unitName)
-
-    def itemClickedBasic(self):
-        selection = self.basicTypesList.selectedItems()
-        self.selectedLabel.setText(selection[0].text())
-
-    def itemClickedUnit(self):
-        selection = self.unitsList.selectedItems()
-        self.selectedLabel.setText(selection[0].text())
-
-
 class NewConfigWindow(QDialog):
     def __init__(self, database):
         super().__init__()
@@ -302,11 +222,9 @@ class NewConfigWindow(QDialog):
         self.nameEdit = QLineEdit()
         self.typePushButton = QPushButton(self.basicTypes[0])
         self.typePushButton.clicked.connect(self.openAvailableTypes)
-        self.defaultValueEdit = QLineEdit()
         self.formLayout.addRow('Name:', self.nameEdit)
         self.formLayout.addRow('Type:', self.typePushButton)
         self.formLayout.addRow('', QWidget())
-        self.formLayout.addRow('Value:', self.defaultValueEdit)
         self.formWidget.setLayout(self.formLayout)
         self.dlgLayout.addWidget(self.formWidget)
         self.buttons = QDialogButtonBox()
@@ -315,7 +233,7 @@ class NewConfigWindow(QDialog):
         self.setLayout(self.dlgLayout)
 
     def openAvailableTypes(self):
-        self.configTypeSelector = ConfigTypeSelector(self.typePushButton.text(), database=self.database)
+        self.configTypeSelector = TypeSelector(self.typePushButton.text(), database=self.database)
         self.configTypeSelector.buttons.accepted.connect(self.acceptTypeChange)
         self.configTypeSelector.buttons.rejected.connect(self.configTypeSelector.close)
         self.configTypeSelector.show()
