@@ -190,6 +190,24 @@ class PyGS(QMainWindow):
         self.exitAct.setStatusTip('Exit application')
         self.exitAct.triggered.connect(self.close)
 
+        ########### WINDOW ###########
+        # Load Layout
+        self.loadLayoutPresetAct = QAction('&Load Layout', self)
+        self.loadLayoutPresetAct.setStatusTip('Load Display Layout')
+        self.loadLayoutPresetAct.triggered.connect(self.openLayoutPreset)
+        # Save Layout
+        self.saveLayoutPresetAct = QAction('&Save Layout', self)
+        self.saveLayoutPresetAct.setStatusTip('Save Display Layout')
+        self.saveLayoutPresetAct.triggered.connect(self.saveLayoutPreset)
+        # Save As Layout
+        self.saveAsLayoutPresetAct = QAction('&Save Layout As', self)
+        self.saveAsLayoutPresetAct.setStatusTip('Save Display Layout As')
+        self.saveAsLayoutPresetAct.triggered.connect(self.saveLayoutPresetAs)
+        # Set Layout Autosave
+        self.layoutAutoSaveAct = QAction('&Layout AutoSave', self, checkable=True, checked=self.settings["LAYOUT_AUTOSAVE"])
+        self.layoutAutoSaveAct.setStatusTip('Toggle Layout Autosave')
+        self.layoutAutoSaveAct.triggered.connect(self.setLayoutAutoSave)
+
         ########### DISPLAYS ###########
         # Add New Display Tab
         self.newDisplayTabAct = QAction('&New Display Tab', self)
@@ -278,6 +296,12 @@ class PyGS(QMainWindow):
 
         ###  WINDOW MENU  ###
         self.windowMenu = self.menubar.addMenu('&Window')
+        self.layoutMenu = QMenu('&Layout')
+        self.layoutMenu.addAction(self.saveLayoutPresetAct)
+        self.layoutMenu.addAction(self.saveAsLayoutPresetAct)
+        self.layoutMenu.addAction(self.loadLayoutPresetAct)
+        self.layoutMenu.addAction(self.layoutAutoSaveAct)
+        self.windowMenu.addMenu(self.layoutMenu)
         self.windowMenu.addSeparator()
 
         ###  TOOLS MENU  ###
@@ -395,6 +419,19 @@ class PyGS(QMainWindow):
         self.trackedFormatsWindow.close()
         self.graphsTabWidget.fillComboBox()
 
+    def openLayoutPreset(self):
+        pass
+
+    def saveLayoutPreset(self):
+        pass
+
+    def saveLayoutPresetAs(self):
+        pass
+
+    def setLayoutAutoSave(self, action):
+        self.settings["LAYOUT_AUTOSAVE"] = action
+        save_settings(self.settings, "settings")
+
     def importFormat(self):
         path = QFileDialog.getOpenFileName(self, 'Import Packet Format')
         # Verifying if chosen file is a format
@@ -435,12 +472,6 @@ class PyGS(QMainWindow):
             self.serial = None
             time.sleep(0.5)
             self.serialWindow.textedit.setDisabled(True)
-
-    def startSerialEmulator(self):
-        pass
-
-    def stopSerialEmulator(self):
-        pass
 
     def newSerialData(self, content):
         self.displayTabWidget.updateTabDisplays(content)

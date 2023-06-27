@@ -101,7 +101,7 @@ def load_settings(path):
                 parameters[line[0]] = []
             else:
                 parameters[line[0]] = splitSetting
-        elif line[0] in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE', 'RSSI']:
+        elif line[0] in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE', 'LAYOUT_AUTOSAVE']:
             parameters[line[0]] = bool(int(line[1].rstrip("\n")))
         else:
             parameters[line[0]] = line[1].rstrip("\n")
@@ -117,7 +117,7 @@ def save_settings(parameters, path):
             setting = line[0]
             if setting in ['AVAILABLE_BAUDS', 'FORMAT_FILES', 'OPENED_RECENTLY']:
                 file.write(setting + '=' + ','.join(parameters[setting]) + '\n')
-            elif setting in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE', 'RSSI']:
+            elif setting in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE', 'LAYOUT_AUTOSAVE']:
                 file.write(setting + '=' + str(int(parameters[setting])) + '\n')
             else:
                 file.write(setting + '=' + str(parameters[setting]) + '\n')
