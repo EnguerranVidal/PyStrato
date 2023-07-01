@@ -48,7 +48,7 @@ class PyGS(QMainWindow):
         self.statusBar().showMessage('Ready')
         self.statusDateTimer = QTimer()
         self.statusDateTimer.timeout.connect(self.updateStatus)
-        self.statusDateTimer.start(0)
+        self.statusDateTimer.start(1)
 
         ##################  VARIABLES  ##################
         self.serial = None
@@ -66,6 +66,7 @@ class PyGS(QMainWindow):
         self.newPlotWindow = None
         self.changeHeaderWindow = None
         self.trackedFormatsWindow = None
+        self.layoutAutosaveTimer = None
 
         # Initialize Interface
         self._checkEnvironment()
@@ -204,7 +205,8 @@ class PyGS(QMainWindow):
         self.saveAsLayoutPresetAct.setStatusTip('Save Display Layout As')
         self.saveAsLayoutPresetAct.triggered.connect(self.saveLayoutPresetAs)
         # Set Layout Autosave
-        self.layoutAutoSaveAct = QAction('&Layout AutoSave', self, checkable=True, checked=self.settings["LAYOUT_AUTOSAVE"])
+        self.layoutAutoSaveAct = QAction('&Layout AutoSave', self, checkable=True,
+                                         checked=self.settings["LAYOUT_AUTOSAVE"])
         self.layoutAutoSaveAct.setStatusTip('Toggle Layout Autosave')
         self.layoutAutoSaveAct.triggered.connect(self.setLayoutAutoSave)
 
@@ -214,7 +216,7 @@ class PyGS(QMainWindow):
         self.newDisplayTabAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-folder-96.png'))
         self.newDisplayTabAct.setStatusTip('Create New Display Tab')
         self.newDisplayTabAct.setShortcut('Ctrl+Shift+N')
-        self.newDisplayTabAct.triggered.connect(self.displayTabWidget.addNewTab)
+        self.newDisplayTabAct.triggered.connect(lambda: self.displayTabWidget.addNewTab())
         # Close Display Tab
         self.closeDisplayTabAct = QAction('&Close Display Tab', self)
         self.closeDisplayTabAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-folder-96.png'))
@@ -422,8 +424,12 @@ class PyGS(QMainWindow):
     def openLayoutPreset(self):
         pass
 
-    def saveLayoutPreset(self):
-        pass
+    def saveLayoutPreset(self, autosave=False):
+        self.displayTabWidget.getLayoutDescription()
+        if autosave:
+            pass
+        else:
+            pass
 
     def saveLayoutPresetAs(self):
         pass
@@ -431,6 +437,10 @@ class PyGS(QMainWindow):
     def setLayoutAutoSave(self, action):
         self.settings["LAYOUT_AUTOSAVE"] = action
         save_settings(self.settings, "settings")
+        if self.settings["LAYOUT_AUTOSAVE"]:
+            self.layoutAutosaveTimer = QTimer()
+            self.layoutAutosaveTimer.timeout.connect(lambda: self.saveLayoutPreset(autosave=True))
+            self.layoutAutosaveTimer.start(120)
 
     def importFormat(self):
         path = QFileDialog.getOpenFileName(self, 'Import Packet Format')

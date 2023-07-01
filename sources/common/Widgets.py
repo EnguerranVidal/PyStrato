@@ -31,6 +31,10 @@ class BasicDisplay(QWidget):
     def updateContent(self, content):
         pass
 
+    @staticmethod
+    def getDescription():
+        return {'TYPE': 'BASIC_DISPLAY'}
+
 
 class ContentStorage:
     def __init__(self, path):

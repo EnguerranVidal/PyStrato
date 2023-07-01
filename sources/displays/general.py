@@ -40,10 +40,11 @@ class DisplayTabWidget(QMainWindow):
         currentTabIndex = self.tabWidget.currentIndex()
         self.tabWidget.removeTab(currentTabIndex)
 
-    def addNewTab(self):
-        tabNames = [self.tabWidget.tabText(i) for i in range(self.tabWidget.count())]
-        newTabName = nameGiving(tabNames, baseName='Tab')
-        self.tabWidget.addTab(QMainWindow(), newTabName)
+    def addNewTab(self, name=None):
+        if name is None:
+            tabNames = [self.tabWidget.tabText(i) for i in range(self.tabWidget.count())]
+            name = nameGiving(tabNames, baseName='Tab')
+        self.tabWidget.addTab(QMainWindow(), name)
 
     def onTabBarDoubleClicked(self, index):
         tabName = self.tabWidget.tabText(index)
@@ -102,10 +103,35 @@ class DisplayTabWidget(QMainWindow):
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=MultiCurveGraph(path=self.currentDir))
         currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
+    def getLayoutDescription(self):
+        tabs = [self.tabWidget.widget(index) for index in range(self.tabWidget.count())]
+        tabNames = [self.tabWidget.tabText(index) for index in range(self.tabWidget.count())]
+        description = {}
+        for tab, tabName in zip(tabs, tabNames):
+            tabDescription = {}
+            dockWidgets = [dockWidget for dockWidget in tab.findChildren(QDockWidget)]
+            displayDockWidgets = [dockWidget.display for dockWidget in dockWidgets]
+            parametersDockWidgets = [dockWidget.parametersEditWindow for dockWidget in dockWidgets]
+            for dockWidget, display, parameters in zip(dockWidgets, displayDockWidgets, parametersDockWidgets):
+                dockDescription = {}
+                name = dockWidget.windowTitle()
+                dockPlacement = int(tab.dockWidgetArea(dockWidget))
+                dockGeometry = dockWidget.geometry().getRect()
+                displayDescription = display.getDescription()
+                dockDescription['AREA_PLACEMENT'] = dockPlacement
+                dockDescription['GEOMETRY'] = dockGeometry
+                dockDescription['DISPLAY'] = displayDescription
+                tabDescription[name] = dockDescription
+            description[tabName] = tabDescription
+        print(description)
+        return description
+
 
 class DisplayDockWidget(QDockWidget):
     def __init__(self, name: str, widget: Optional[BasicDisplay] = None):
         super().__init__()
+        self.dockingProperties = {'MOVING': True, 'FLOATING': True,
+                                  'CLOSABLE': True, 'TITLEBAR': True}
         if widget is None:
             widget = BasicDisplay()
         self.display = widget
@@ -149,6 +175,8 @@ class DisplayDockWidget(QDockWidget):
         moving = self.parametersEditWindow.movingCheckBox.isChecked()
         showTitleBar = self.parametersEditWindow.showTitleCheckBox.isChecked()
         closable = self.parametersEditWindow.closableCheckbox.isChecked()
+        self.dockingProperties = {'MOVING': moving, 'FLOATING': floating,
+                                  'CLOSABLE': closable, 'TITLEBAR': showTitleBar}
 
         # Upper Layout Basic Properties
         features = QDockWidget.NoDockWidgetFeatures

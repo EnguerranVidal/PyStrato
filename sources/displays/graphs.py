@@ -32,7 +32,11 @@ class MultiCurveGraph(BasicDisplay):
         self.backgroundColor = backgroundColor
         self.showLegend = False
         layout.addWidget(self.plotWidget)
-        self.settingsWidget = CustomGraphEditDialog(self.currentDir, self)
+        self.settingsWidget = MultiCurveGraphEditDialog(self.currentDir, self)
+
+    def getDescription(self):
+        graphDescription = {'DISPLAY_TYPE': 'MULTI_CURVE_GRAPH'}
+        return graphDescription
 
     def applyChanges(self, editWidget):
         editWidget = self.settingsWidget
@@ -76,7 +80,7 @@ class MultiCurveGraph(BasicDisplay):
                         self.plotWidget.plot(valueX, valueY, pen=pen)
 
 
-class CustomGraphEditDialog(QWidget):
+class MultiCurveGraphEditDialog(QWidget):
     def __init__(self, path, graph: MultiCurveGraph = None):
         super().__init__(parent=graph)
         self.currentDir = path
