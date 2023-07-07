@@ -35,7 +35,11 @@ class MultiCurveGraph(BasicDisplay):
         self.settingsWidget = MultiCurveGraphEditDialog(self.currentDir, self)
 
     def getDescription(self):
-        graphDescription = {'DISPLAY_TYPE': 'MULTI_CURVE_GRAPH'}
+        graphDescription = {'DISPLAY_TYPE': 'MULTI_CURVE_GRAPH',
+                            'BACKGROUND_COLOR': self.backgroundColor,
+                            'NB_CURVES': len(self.curveProperties)}
+        for i in range(len(self.curveProperties)):
+            graphDescription[i] = self.curveProperties[i]
         return graphDescription
 
     def applyChanges(self, editWidget):

@@ -123,8 +123,10 @@ class DisplayTabWidget(QMainWindow):
                 dockDescription['DISPLAY'] = displayDescription
                 tabDescription[name] = dockDescription
             description[tabName] = tabDescription
-        print(description)
         return description
+
+    def applyLayoutDescription(self, description: dict):
+        pass
 
 
 class DisplayDockWidget(QDockWidget):

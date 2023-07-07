@@ -256,7 +256,7 @@ class GridIndicator(BasicDisplay):
         bgColor = palette.color(QPalette.Base).name()
         gridDescription = {'DISPLAY_TYPE': 'GRID_INDICATOR',
                            'BACKGROUND_COLOR': bgColor,
-                           'DIMENSIONS': (self.nbRows, self.nbColumns)}
+                           'DIMENSIONS': [self.nbRows, self.nbColumns]}
         for i in range(self.nbRows):
             for j in range(self.nbColumns):
                 indicator = self.indicators[(i, j)]

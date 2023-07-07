@@ -2,7 +2,7 @@ from sources.PyGS import *
 import sys
 
 
-def test_pyqt5(*args):
+def main(*args):
     app = QApplication(sys.argv)
     # Force the style to be the same on all OSs:
     app.setStyle('Windows')
@@ -12,5 +12,5 @@ def test_pyqt5(*args):
 
 
 if __name__ == '__main__':
-    test_pyqt5()
+    main()
 

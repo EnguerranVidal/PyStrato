@@ -1,5 +1,7 @@
 ######################## IMPORTS ########################
 import os
+import time
+
 import numpy as np
 from ecom.datatypes import TypeInfo
 
@@ -584,6 +586,149 @@ class BalloonsListWidget(QListWidget):
         for i in items:
             source.takeItem(source.indexFromItem(i).row())
             self.addItem(i)
+
+
+class TwoLineButton(QPushButton):
+    def __init__(self, topText, bottomText, parent=None):
+        super().__init__(parent)
+
+        # Create the labels
+        self.topTextLabel = QLabel(topText)
+        self.bottomTextLabel = QLabel(bottomText)
+
+        # Set up the layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.topTextLabel)
+        layout.addWidget(self.bottomTextLabel)
+        self.setLayout(layout)
+        self.setMinimumSize(150, 60)
+
+
+class LayoutSelector(QDialog):
+    accepted = pyqtSignal()
+    applied = pyqtSignal()
+    canceled = pyqtSignal()
+    typeChanged = pyqtSignal()
+
+    def __init__(self, currentDir, currentLayout=None):
+        super().__init__()
+        self.setModal(True)
+        self.setFixedSize(400, 300)
+        self.setWindowTitle('Layout Preset Selection')
+        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.currentDir = currentDir
+        self.dataPath = os.path.join(self.currentDir, "data")
+        self.presetPath = os.path.join(self.dataPath, 'presets')
+        self.autosavePath = os.path.join(self.presetPath, 'autosaves')
+        self.examplesPath = os.path.join(self.presetPath, 'examples')
+        self.currentLayout = currentLayout
+        if self.currentLayout is None or self.currentLayout == '':
+            self.currentLayout = 'None'
+        self.layoutLabel = QLabel("Current Layout : ")
+        self.selectedLabel = QLabel("Selected Layout : ")
+        self.currentLayoutLabel = QLabel(self.currentLayout)
+        self.selectedLayoutLabel = QLabel(self.currentLayout)
+        self.topLayout = QGridLayout()
+        self.topLayout.addWidget(self.layoutLabel, 0, 0, 1, 1)
+        self.topLayout.addWidget(self.selectedLabel, 0, 1, 1, 1)
+        self.topLayout.addWidget(self.currentLayoutLabel, 1, 0, 1, 1)
+        self.topLayout.addWidget(self.selectedLayoutLabel, 1, 1, 1, 1)
+
+        # Tab Widget
+        self.tabWidget = QTabWidget()
+
+        # AUTOSAVES
+        self.autosaveWidget = QWidget()
+        self.autosaveLayout = QVBoxLayout()
+        self.autosaveScrollArea = QScrollArea()
+        self.autosaveScrollArea.setWidgetResizable(True)
+        self.autosaveWidget.setLayout(self.autosaveLayout)
+        self.autosaveScrollArea.setWidget(self.autosaveWidget)
+        self.tabWidget.addTab(self.autosaveScrollArea, "Autosaves")
+
+        # USER SAVES
+        self.savesWidget = QWidget()
+        self.savesLayout = QVBoxLayout()
+        self.savesScrollArea = QScrollArea()
+        self.savesScrollArea.setWidgetResizable(True)
+        self.savesWidget.setLayout(self.savesLayout)
+        self.savesScrollArea.setWidget(self.savesWidget)
+        self.tabWidget.addTab(self.savesScrollArea, "User Saves")
+
+        self.buttonGroup = QButtonGroup()
+        self.buttonGroup.buttonClicked.connect(self.onSaveButtonClicked)
+        self.userButtons, self.autoButtons = None, None
+
+        # ACCEPT BUTTONS
+        buttonLayout = QHBoxLayout()
+        # Add three buttons to the button layout
+        self.acceptButton = QPushButton("Accept")
+        self.applyButton = QPushButton("Apply")
+        self.cancelButton = QPushButton("Cancel")
+        self.acceptButton.clicked.connect(self.acceptedButtonClicked)
+        self.applyButton.clicked.connect(self.appliedButtonClicked)
+        self.cancelButton.clicked.connect(self.canceledButtonClicked)
+        buttonLayout.addWidget(self.acceptButton)
+        buttonLayout.addWidget(self.applyButton)
+        buttonLayout.addWidget(self.cancelButton)
+
+        # Main Layout
+        mainLayout = QVBoxLayout()
+        mainLayout.addLayout(self.topLayout)
+        mainLayout.addWidget(self.tabWidget)
+        mainLayout.addLayout(buttonLayout)
+        self.setLayout(mainLayout)
+
+        self.fillTabs()
+
+    def fillTabs(self):
+        # SAVES RECON -----------------------------------------------------
+        userItems = os.listdir(self.presetPath)
+        userSaves = [item for item in userItems if os.path.isfile(os.path.join(self.presetPath, item))]
+        autoItems = os.listdir(self.autosavePath)
+        autoSaves = [item for item in autoItems if os.path.isfile(os.path.join(self.autosavePath, item))]
+        autoSaves.reverse()
+        self.userButtons, self.autoButtons = [], []
+
+        for save in userSaves:
+            modificationTime = os.path.getmtime(os.path.join(self.presetPath, save))
+            formattedTime = time.ctime(modificationTime)
+            button = TwoLineButton(save, f"Last Modified :{formattedTime}")
+            button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.buttonGroup.addButton(button)
+            self.savesLayout.addWidget(button)
+            button.setCheckable(True)
+            if save == self.currentLayout:
+                button.setChecked(True)
+
+        for autoSave in autoSaves:
+            modificationTime = os.path.getmtime(os.path.join(self.autosavePath, autoSave))
+            formattedTime = time.ctime(modificationTime)
+            button = TwoLineButton(autoSave, f"Last Modified :{formattedTime}")
+            button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.buttonGroup.addButton(button)
+            self.autosaveLayout.addWidget(button)
+            button.setCheckable(True)
+            if autoSave == self.currentLayout:
+                button.setChecked(True)
+
+    def onSaveButtonClicked(self, button: TwoLineButton):
+        # Deselect all buttons except the clicked one
+        for otherButton in self.buttonGroup.buttons():
+            if otherButton is not button:
+                otherButton.setChecked(False)
+        self.selectedLayoutLabel.setText(button.topTextLabel.text())
+
+    def acceptedButtonClicked(self):
+        self.accepted.emit()
+        self.close()
+
+    def appliedButtonClicked(self):
+        self.applied.emit()
+
+    def canceledButtonClicked(self):
+        self.canceled.emit()
+        self.close()
 
 
 class ValueWidget(QWidget):

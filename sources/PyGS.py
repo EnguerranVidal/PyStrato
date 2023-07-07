@@ -1,9 +1,11 @@
 ######################## IMPORTS ########################
+import json
 import time
 import os
 import shutil
 import sys
 import subprocess
+from datetime import datetime
 from functools import partial
 
 # ------------------- PyQt Modules -------------------- #
@@ -24,9 +26,15 @@ class PyGS(QMainWindow):
         super().__init__()
         self.currentDir = path
         self.mainIcon = QIcon('sources/icons/iconPyGSCopy')
+        # FOLDER PATHS
         self.formatPath = os.path.join(self.currentDir, "formats")
         self.dataPath = os.path.join(self.currentDir, "data")
+        self.savesPath = os.path.join(self.dataPath, 'saves')
         self.backupPath = os.path.join(self.dataPath, "backups")
+        self.presetPath = os.path.join(self.dataPath, 'presets')
+        self.autosavePath = os.path.join(self.presetPath, 'autosaves')
+        self.examplesPath = os.path.join(self.presetPath, 'examples')
+
         # Main Window Settings
         self.setGeometry(500, 500, 1000, 600)
         self.setWindowTitle('Weather Balloon Ground Station')
@@ -48,7 +56,7 @@ class PyGS(QMainWindow):
         self.statusBar().showMessage('Ready')
         self.statusDateTimer = QTimer()
         self.statusDateTimer.timeout.connect(self.updateStatus)
-        self.statusDateTimer.start(1)
+        self.statusDateTimer.start(1000)
 
         ##################  VARIABLES  ##################
         self.serial = None
@@ -57,6 +65,7 @@ class PyGS(QMainWindow):
         self.graphsTabList = []
         self.serialWindow = SerialWindow()
         self.serialWindow.textedit.setDisabled(True)
+        self.layoutPresetWindow = None
 
         self.serialMonitorTimer = QTimer()
         self.serialMonitorTimer.timeout.connect(self.checkSerialMonitor)
@@ -75,6 +84,9 @@ class PyGS(QMainWindow):
         self._createMenuBar()
         self._createToolBars()
         self.populateFileMenu()
+
+        if self.settings['LAYOUT_AUTOSAVE']:
+            self.startupAutosave()
 
         self.show()
 
@@ -195,7 +207,7 @@ class PyGS(QMainWindow):
         # Load Layout
         self.loadLayoutPresetAct = QAction('&Load Layout', self)
         self.loadLayoutPresetAct.setStatusTip('Load Display Layout')
-        self.loadLayoutPresetAct.triggered.connect(self.openLayoutPreset)
+        self.loadLayoutPresetAct.triggered.connect(self.openLayoutSelector)
         # Save Layout
         self.saveLayoutPresetAct = QAction('&Save Layout', self)
         self.saveLayoutPresetAct.setStatusTip('Save Display Layout')
@@ -341,6 +353,12 @@ class PyGS(QMainWindow):
             os.mkdir(self.dataPath)
         if not os.path.exists(self.backupPath):
             os.mkdir(self.backupPath)
+        if not os.path.exists(self.presetPath):
+            os.mkdir(self.presetPath)
+        if not os.path.exists(self.autosavePath):
+            os.mkdir(self.autosavePath)
+        if not os.path.exists(self.examplesPath):
+            os.mkdir(self.examplesPath)
 
     def _center(self):
         frameGeometry = self.frameGeometry()
@@ -421,18 +439,39 @@ class PyGS(QMainWindow):
         self.trackedFormatsWindow.close()
         self.graphsTabWidget.fillComboBox()
 
-    def openLayoutPreset(self):
+    def startupLayoutPreset(self):
         pass
 
+    def openLayoutSelector(self):
+        self.layoutPresetWindow = LayoutSelector(self.currentDir, currentLayout=self.settings['CURRENT_LAYOUT'])
+        self.layoutPresetWindow.applied.connect(self.applyDisplayLayout)
+        self.layoutPresetWindow.accepted.connect(self.acceptDisplayLayout)
+        self.layoutPresetWindow.show()
+
+    def loadLayoutPreset(self, filePath):
+        with open(filePath, "r") as file:
+            description = json.load(file)
+        self.displayTabWidget.applyLayoutDescription(description)
+
     def saveLayoutPreset(self, autosave=False):
-        self.displayTabWidget.getLayoutDescription()
-        if autosave:
-            pass
+        # SAVING LAYOUT PRESET
+        layout = self.displayTabWidget.getLayoutDescription()
+        if autosave and self.settings['CURRENT_LAYOUT'] == '':
+            current_datetime = datetime.now()
+            timestamp = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+            filename = os.path.join(self.autosavePath, f"autosave_{timestamp}.json")
         else:
-            pass
+            filename = os.path.join(self.presetPath, f"{self.settings['CURRENT_LAYOUT']}.json")
+        with open(filename, "w") as file:
+            json.dump(layout, file)
 
     def saveLayoutPresetAs(self):
         pass
+
+    def startupAutosave(self):
+        self.layoutAutosaveTimer = QTimer()
+        self.layoutAutosaveTimer.timeout.connect(lambda: self.saveLayoutPreset(autosave=True))
+        self.layoutAutosaveTimer.start(60000)
 
     def setLayoutAutoSave(self, action):
         self.settings["LAYOUT_AUTOSAVE"] = action
@@ -651,7 +690,7 @@ class PyGS(QMainWindow):
         self.datetime = QDateTime.currentDateTime()
         self.dateLabel.setText(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
         now = time.perf_counter()
-        fps = 1.0 / (now - self.lastUpdate)
+        fps = 1000 / (now - self.lastUpdate)
         self.lastUpdate = now
         self.avgFps = self.avgFps * 0.8 + fps * 0.2
         self.fpsLabel.setText('Fps : %0.2f ' % self.avgFps)
