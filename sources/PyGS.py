@@ -446,12 +446,22 @@ class PyGS(QMainWindow):
         self.layoutPresetWindow = LayoutSelector(self.currentDir, currentLayout=self.settings['CURRENT_LAYOUT'])
         self.layoutPresetWindow.applied.connect(self.applyDisplayLayout)
         self.layoutPresetWindow.accepted.connect(self.acceptDisplayLayout)
+        self.layoutPresetWindow.canceled.connect(self.cancelDisplayLayout)
         self.layoutPresetWindow.show()
 
     def loadLayoutPreset(self, filePath):
         with open(filePath, "r") as file:
             description = json.load(file)
         self.displayTabWidget.applyLayoutDescription(description)
+
+    def applyDisplayLayout(self):
+        pass
+
+    def acceptDisplayLayout(self):
+        pass
+
+    def cancelDisplayLayout(self):
+        pass
 
     def saveLayoutPreset(self, autosave=False):
         # SAVING LAYOUT PRESET
@@ -460,6 +470,14 @@ class PyGS(QMainWindow):
             current_datetime = datetime.now()
             timestamp = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
             filename = os.path.join(self.autosavePath, f"autosave_{timestamp}.json")
+            autoItems = os.listdir(self.autosavePath)
+            autoSaves = [item for item in autoItems if os.path.isfile(os.path.join(self.autosavePath, item))]
+            # REMOVING OLD AUTOSAVES
+            overflow = len(autoSaves) - int(self.settings['MAXIMUM_AUTOSAVES'])
+            if overflow > 0:
+                for i in range(overflow):
+                    fileToDelete = os.path.join(self.autosavePath, autoSaves[i])
+                    os.remove(fileToDelete)
         else:
             filename = os.path.join(self.presetPath, f"{self.settings['CURRENT_LAYOUT']}.json")
         with open(filename, "w") as file:

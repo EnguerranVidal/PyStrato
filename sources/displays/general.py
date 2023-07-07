@@ -208,7 +208,6 @@ class ParameterDialog(QDialog):
     accepted = pyqtSignal()
     applied = pyqtSignal()
     canceled = pyqtSignal()
-    typeChanged = pyqtSignal()
 
     def __init__(self, parent: DisplayDockWidget = None, editWidget: Optional[BasicDisplay] = None):
         super().__init__(parent)
