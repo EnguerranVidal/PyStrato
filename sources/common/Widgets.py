@@ -604,11 +604,28 @@ class TwoLineButton(QPushButton):
         self.setMinimumSize(150, 60)
 
 
-class LayoutSelector(QDialog):
+class ThreeLineButton(QPushButton):
+    def __init__(self, topText, middleText, bottomText, parent=None):
+        super().__init__(parent)
+
+        # Create the labels
+        self.topTextLabel = QLabel(topText)
+        self.middleTextLabel = QLabel(middleText)
+        self.bottomTextLabel = QLabel(bottomText)
+
+        # Set up the layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.topTextLabel)
+        layout.addWidget(self.middleTextLabel)
+        layout.addWidget(self.bottomTextLabel)
+        self.setLayout(layout)
+        self.setMinimumSize(150, 90)
+
+
+class LayoutManagerDialog(QDialog):
     accepted = pyqtSignal()
     applied = pyqtSignal()
     canceled = pyqtSignal()
-    typeChanged = pyqtSignal()
 
     def __init__(self, currentDir, currentLayout=None):
         super().__init__()
@@ -638,23 +655,37 @@ class LayoutSelector(QDialog):
         self.tabWidget = QTabWidget()
 
         # AUTOSAVES
-        self.autosaveWidget = QWidget()
-        self.autosaveLayout = QVBoxLayout()
         self.autosaveScrollArea = QScrollArea()
         self.autosaveScrollArea.setWidgetResizable(True)
+        # AutoSaves Buttons
+        self.autosaveWidget = QWidget()
+        self.autosaveLayout = QVBoxLayout()
         self.autosaveWidget.setLayout(self.autosaveLayout)
         self.autosaveScrollArea.setWidget(self.autosaveWidget)
         self.tabWidget.addTab(self.autosaveScrollArea, "Autosaves")
 
         # USER SAVES
+        self.userSavesWidget = QWidget()
+        self.userSavesWidgetLayout = QVBoxLayout()
+        # Top Buttons --------------------
+        self.userButtonsWidget = QWidget()
+        self.userButtonsLayout = QHBoxLayout()
+
+
+        # User Saves ---------------------
         self.savesWidget = QWidget()
         self.savesLayout = QVBoxLayout()
         self.savesScrollArea = QScrollArea()
         self.savesScrollArea.setWidgetResizable(True)
         self.savesWidget.setLayout(self.savesLayout)
         self.savesScrollArea.setWidget(self.savesWidget)
-        self.tabWidget.addTab(self.savesScrollArea, "User Saves")
 
+        self.userSavesWidgetLayout.addWidget(self.userButtonsWidget)
+        self.userSavesWidgetLayout.addWidget(self.savesScrollArea)
+        self.userSavesWidget.setLayout(self.userSavesWidgetLayout)
+        self.tabWidget.addTab(self.userSavesWidget, "User Saves")
+
+        # BUTTON GROUP
         self.buttonGroup = QButtonGroup()
         self.buttonGroup.buttonClicked.connect(self.onSaveButtonClicked)
         self.userButtons, self.autoButtons = None, None
@@ -692,8 +723,12 @@ class LayoutSelector(QDialog):
 
         for save in userSaves:
             modificationTime = os.path.getmtime(os.path.join(self.presetPath, save))
-            formattedTime = time.ctime(modificationTime)
-            button = TwoLineButton(save, f"Last Modified :{formattedTime}")
+            creationTime = os.path.getctime(os.path.join(self.presetPath, save))
+            modificationTimeFormatted = time.ctime(modificationTime)
+            creationTimeFormatted = time.ctime(creationTime)
+            button = ThreeLineButton(os.path.splitext(os.path.basename(save))[0],
+                                     f"Creation Date : {creationTimeFormatted}",
+                                     f"Last Modified : {modificationTimeFormatted}")
             button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             self.buttonGroup.addButton(button)
             self.savesLayout.addWidget(button)
@@ -703,8 +738,8 @@ class LayoutSelector(QDialog):
 
         for autoSave in autoSaves:
             modificationTime = os.path.getmtime(os.path.join(self.autosavePath, autoSave))
-            formattedTime = time.ctime(modificationTime)
-            button = TwoLineButton(autoSave, f"Last Modified :{formattedTime}")
+            modificationTimeFormatted = time.ctime(modificationTime)
+            button = TwoLineButton(autoSave, f"Creation Date : {modificationTimeFormatted}")
             button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             self.buttonGroup.addButton(button)
             self.autosaveLayout.addWidget(button)

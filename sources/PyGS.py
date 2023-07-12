@@ -204,20 +204,33 @@ class PyGS(QMainWindow):
         self.exitAct.triggered.connect(self.close)
 
         ########### WINDOW ###########
-        # Load Layout
-        self.loadLayoutPresetAct = QAction('&Load Layout', self)
-        self.loadLayoutPresetAct.setStatusTip('Load Display Layout')
-        self.loadLayoutPresetAct.triggered.connect(self.openLayoutSelector)
+        # LAYOUT -----------------------------------------------------
         # Save Layout
-        self.saveLayoutPresetAct = QAction('&Save Layout', self)
-        self.saveLayoutPresetAct.setStatusTip('Save Display Layout')
-        self.saveLayoutPresetAct.triggered.connect(self.saveLayoutPreset)
+        self.saveLayoutAct = QAction('&Save', self)
+        self.saveLayoutAct.setStatusTip('Save Display Layout')
+        self.saveLayoutAct.triggered.connect(self.saveLayout)
         # Save As Layout
-        self.saveAsLayoutPresetAct = QAction('&Save Layout As', self)
-        self.saveAsLayoutPresetAct.setStatusTip('Save Display Layout As')
-        self.saveAsLayoutPresetAct.triggered.connect(self.saveLayoutPresetAs)
+        self.saveAsLayoutAct = QAction('&Save As', self)
+        self.saveAsLayoutAct.setStatusTip('Save Display Layout As')
+        self.saveAsLayoutAct.triggered.connect(self.saveLayoutAs)
+        # Restore Layout
+        self.restoreLayoutAct = QAction('&Restore', self)
+        self.restoreLayoutAct.setStatusTip('Restore External Layout')
+        self.restoreLayoutAct.triggered.connect(self.restoreLayout)
+        # Import Layout
+        self.importLayoutAct = QAction('&Import', self)
+        self.importLayoutAct.setStatusTip('Import External Layout')
+        self.importLayoutAct.triggered.connect(self.importLayout)
+        # Export Layout
+        self.exportLayoutAct = QAction('&Export As', self)
+        self.exportLayoutAct.setStatusTip('Export Layout As JSON')
+        self.exportLayoutAct.triggered.connect(self.exportLayoutJSON)
+        # Manage Layouts
+        self.manageLayoutAct = QAction('&Manage Layouts', self)
+        self.manageLayoutAct.setStatusTip('Open Layout Manager')
+        self.manageLayoutAct.triggered.connect(self.openLayoutManager)
         # Set Layout Autosave
-        self.layoutAutoSaveAct = QAction('&Layout AutoSave', self, checkable=True,
+        self.layoutAutoSaveAct = QAction('&AutoSave', self, checkable=True,
                                          checked=self.settings["LAYOUT_AUTOSAVE"])
         self.layoutAutoSaveAct.setStatusTip('Toggle Layout Autosave')
         self.layoutAutoSaveAct.triggered.connect(self.setLayoutAutoSave)
@@ -308,14 +321,33 @@ class PyGS(QMainWindow):
         ###  EDIT MENU  ###
         self.editMenu = self.menubar.addMenu('&Edit')
 
+        ###  INSERT MENU  ###
+        self.insertMenu = self.menubar.addMenu('&Insert')
+        self.indicatorMenu = QMenu('&Indicators')
+        self.indicatorMenu.addAction(self.newSimpleIndicatorAct)
+        self.indicatorMenu.addAction(self.newGridIndicatorAct)
+        self.insertMenu.addMenu(self.indicatorMenu)
+        self.graphsMenu = QMenu('&Graphs')
+        self.graphsMenu.addAction(self.newMultiCurveAct)
+        self.insertMenu.addMenu(self.graphsMenu)
+
         ###  WINDOW MENU  ###
         self.windowMenu = self.menubar.addMenu('&Window')
         self.layoutMenu = QMenu('&Layout')
-        self.layoutMenu.addAction(self.saveLayoutPresetAct)
-        self.layoutMenu.addAction(self.saveAsLayoutPresetAct)
-        self.layoutMenu.addAction(self.loadLayoutPresetAct)
+        self.layoutMenu.addAction(self.saveLayoutAct)
+        self.layoutMenu.addAction(self.saveAsLayoutAct)
+        self.layoutMenu.addSeparator()
+        self.layoutMenu.addAction(self.restoreLayoutAct)
+        self.layoutMenu.addAction(self.importLayoutAct)
+        self.layoutMenu.addAction(self.exportLayoutAct)
+        self.layoutMenu.addSeparator()
+        self.layoutMenu.addAction(self.manageLayoutAct)
         self.layoutMenu.addAction(self.layoutAutoSaveAct)
         self.windowMenu.addMenu(self.layoutMenu)
+        self.windowMenu.addSeparator()
+        self.displayMenu = QMenu('&Display Tabs')
+        self.displayMenu.addAction(self.newDisplayTabAct)
+        self.displayMenu.addAction(self.closeDisplayTabAct)
         self.windowMenu.addSeparator()
 
         ###  TOOLS MENU  ###
@@ -439,31 +471,16 @@ class PyGS(QMainWindow):
         self.trackedFormatsWindow.close()
         self.graphsTabWidget.fillComboBox()
 
-    def startupLayoutPreset(self):
-        pass
-
-    def openLayoutSelector(self):
-        self.layoutPresetWindow = LayoutSelector(self.currentDir, currentLayout=self.settings['CURRENT_LAYOUT'])
-        self.layoutPresetWindow.applied.connect(self.applyDisplayLayout)
-        self.layoutPresetWindow.accepted.connect(self.acceptDisplayLayout)
-        self.layoutPresetWindow.canceled.connect(self.cancelDisplayLayout)
+    def openLayoutManager(self):
+        self.layoutPresetWindow = LayoutManagerDialog(self.currentDir, currentLayout=self.settings['CURRENT_LAYOUT'])
         self.layoutPresetWindow.show()
 
-    def loadLayoutPreset(self, filePath):
+    def loadLayout(self, filePath):
         with open(filePath, "r") as file:
             description = json.load(file)
         self.displayTabWidget.applyLayoutDescription(description)
 
-    def applyDisplayLayout(self):
-        pass
-
-    def acceptDisplayLayout(self):
-        pass
-
-    def cancelDisplayLayout(self):
-        pass
-
-    def saveLayoutPreset(self, autosave=False):
+    def saveLayout(self, autosave=False):
         # SAVING LAYOUT PRESET
         layout = self.displayTabWidget.getLayoutDescription()
         if autosave and self.settings['CURRENT_LAYOUT'] == '':
@@ -483,21 +500,33 @@ class PyGS(QMainWindow):
         with open(filename, "w") as file:
             json.dump(layout, file)
 
-    def saveLayoutPresetAs(self):
+    def saveLayoutAs(self):
+        pass
+
+    def importLayout(self):
+        pass
+
+    def exportLayoutJSON(self):
+        pass
+
+    def restoreLayout(self):
         pass
 
     def startupAutosave(self):
         self.layoutAutosaveTimer = QTimer()
-        self.layoutAutosaveTimer.timeout.connect(lambda: self.saveLayoutPreset(autosave=True))
-        self.layoutAutosaveTimer.start(60000)
+        self.layoutAutosaveTimer.timeout.connect(lambda: self.saveLayout(autosave=True))
+        self.layoutAutosaveTimer.start(int(self.settings['INTERVAL_AUTOSAVE']) * 1000)
 
     def setLayoutAutoSave(self, action):
         self.settings["LAYOUT_AUTOSAVE"] = action
         save_settings(self.settings, "settings")
         if self.settings["LAYOUT_AUTOSAVE"]:
             self.layoutAutosaveTimer = QTimer()
-            self.layoutAutosaveTimer.timeout.connect(lambda: self.saveLayoutPreset(autosave=True))
+            self.layoutAutosaveTimer.timeout.connect(lambda: self.saveLayout(autosave=True))
             self.layoutAutosaveTimer.start(120)
+
+    def populateLayoutMenu(self):
+        pass
 
     def importFormat(self):
         path = QFileDialog.getOpenFileName(self, 'Import Packet Format')
