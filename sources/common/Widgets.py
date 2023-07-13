@@ -622,6 +622,27 @@ class ThreeLineButton(QPushButton):
         self.setMinimumSize(150, 90)
 
 
+class StringInputDialog(QDialog):
+    def __init__(self, title, label_text, parent=None):
+        super(StringInputDialog, self).__init__(parent)
+        self.setWindowTitle(title)
+        mainLayout = QVBoxLayout()
+        textLabel = QLabel(label_text, self)
+        mainLayout.addWidget(textLabel)
+
+        self.inputLineEdit = QLineEdit(self)
+        mainLayout.addWidget(self.inputLineEdit)
+
+        bottomButtonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        bottomButtonBox.accepted.connect(self.accept)
+        bottomButtonBox.rejected.connect(self.reject)
+        mainLayout.addWidget(bottomButtonBox)
+        self.setLayout(mainLayout)
+
+    def getStringInput(self):
+        return self.inputLineEdit.text()
+
+
 class LayoutManagerDialog(QDialog):
     accepted = pyqtSignal()
     applied = pyqtSignal()

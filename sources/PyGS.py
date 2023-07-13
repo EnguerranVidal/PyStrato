@@ -343,6 +343,7 @@ class PyGS(QMainWindow):
         self.layoutMenu.addSeparator()
         self.layoutMenu.addAction(self.manageLayoutAct)
         self.layoutMenu.addAction(self.layoutAutoSaveAct)
+        self.layoutMenu.aboutToShow.connect(self.populateLayoutMenu)
         self.windowMenu.addMenu(self.layoutMenu)
         self.windowMenu.addSeparator()
         self.displayMenu = QMenu('&Display Tabs')
@@ -475,14 +476,16 @@ class PyGS(QMainWindow):
         self.layoutPresetWindow = LayoutManagerDialog(self.currentDir, currentLayout=self.settings['CURRENT_LAYOUT'])
         self.layoutPresetWindow.show()
 
-    def loadLayout(self, filePath):
+    def loadLayout(self, filePath: str):
         with open(filePath, "r") as file:
             description = json.load(file)
         self.displayTabWidget.applyLayoutDescription(description)
+        self.settings['CURRENT_LAYOUT'] = os.path.basename(filePath)
 
     def saveLayout(self, autosave=False):
         # SAVING LAYOUT PRESET
         layout = self.displayTabWidget.getLayoutDescription()
+        # AUTOMATIC AUTOSAVE WITHOUT ANY CURRENT LAYOUT
         if autosave and self.settings['CURRENT_LAYOUT'] == '':
             current_datetime = datetime.now()
             timestamp = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
@@ -495,22 +498,90 @@ class PyGS(QMainWindow):
                 for i in range(overflow):
                     fileToDelete = os.path.join(self.autosavePath, autoSaves[i])
                     os.remove(fileToDelete)
+            with open(filename, "w") as file:
+                json.dump(layout, file)
+        # MANUAL SAVE WITH SAVE AS
+        elif not autosave and self.settings['CURRENT_LAYOUT'] == '':
+            self.saveLayoutAs()
+        # MANUAL OR AUTOMATIC SAVE
         else:
             filename = os.path.join(self.presetPath, f"{self.settings['CURRENT_LAYOUT']}.json")
-        with open(filename, "w") as file:
-            json.dump(layout, file)
+            with open(filename, "w") as file:
+                json.dump(layout, file)
 
     def saveLayoutAs(self):
-        pass
+        layoutDescription = self.displayTabWidget.getLayoutDescription()
+        # NEW NAME DIALOG
+        inputDialog = StringInputDialog('Save Layout As')
+        # EXISTING USER SAVES' NAMES
+        userItems = os.listdir(self.presetPath)
+        userSaves = [os.path.splitext(item)[0] for item in userItems if os.path.isfile(os.path.join(self.presetPath, item))]
+        while True:
+            if inputDialog.exec_() == QDialog.Accepted:
+                name = inputDialog.getStringInput()
+                if name not in userSaves:
+                    self.settings['CURRENT_LAYOUT'] = name
+                    filename = os.path.join(self.presetPath, f"{self.settings['CURRENT_LAYOUT']}.json")
+                    with open(filename, "w") as file:
+                        json.dump(layoutDescription, file)
+                else:
+                    error_dialog = QMessageBox()
+                    error_dialog.setIcon(QMessageBox.Warning)
+                    error_dialog.setWindowTitle("Error")
+                    error_dialog.setText("A save with this name already exists. Please enter a unique name.")
+                    error_dialog.exec_()
+            else:
+                break
 
     def importLayout(self):
-        pass
+        filePath, _ = QFileDialog.getOpenFileName(None, "Select JSON layout file", "", "JSON Files (*.json)")
+        if filePath:
+            try:
+                with open(filePath, 'r') as file:
+                    layoutDescription = json.load(file)
+                testDisplay = DisplayTabWidget(self.currentDir)
+                testDisplay.applyLayoutDescription(layoutDescription)
+                # Move File to User Saves
+                shutil.copy(filePath, self.presetPath)
+                # Ask for Loading
+                choice = QMessageBox.question(None, "Load Layout", "Do you want to load this layout?",
+                                              QMessageBox.Yes | QMessageBox.No)
+                if choice == QMessageBox.Yes:
+                    self.loadLayout(filePath)
+                    self.settings['CURRENT_LAYOUT'] = os.path.basename(filePath)
+
+            except Exception as e:
+                errorDialog = QMessageBox()
+                errorDialog.setIcon(QMessageBox.Warning)
+                errorDialog.setWindowTitle("Error")
+                errorDialog.setText("An error occurred while processing the file.")
+                errorDialog.setStandardButtons(QMessageBox.Retry | QMessageBox.Cancel)
+                errorDialog.setDefaultButton(QMessageBox.Retry)
+                errorDialog.exec_()
+                if errorDialog.Retry:
+                    self.importLayout()
 
     def exportLayoutJSON(self):
-        pass
+        layout = self.displayTabWidget.getLayoutDescription()
+        filePath, _ = QFileDialog.getSaveFileName(None, "Export as JSON file", "", "JSON Files (*.json)")
+        if filePath:
+            with open(filePath, 'w') as file:
+                json.dump(layout, file)
 
     def restoreLayout(self):
-        pass
+        dialog = QDialog()
+        dialog.setWindowTitle("Confirmation")
+        layout = QVBoxLayout()
+        label = QLabel("All previous changes will be erased. Do you want to proceed?")
+        layout.addWidget(label)
+        button_box = QDialogButtonBox(QDialogButtonBox.Yes | QDialogButtonBox.No)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        layout.addWidget(button_box)
+        dialog.setLayout(layout)
+        dialog.exec_()
+        if dialog.Accepted:
+            self.loadLayout(self.settings['CURRENT_LAYOUT'])
 
     def startupAutosave(self):
         self.layoutAutosaveTimer = QTimer()
