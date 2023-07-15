@@ -651,7 +651,7 @@ class LayoutManagerDialog(QDialog):
     def __init__(self, currentDir, currentLayout=None):
         super().__init__()
         self.setModal(True)
-        self.setFixedSize(400, 300)
+        self.setFixedSize(400, 600)
         self.setWindowTitle('Layout Preset Selection')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.currentDir = currentDir
@@ -691,7 +691,16 @@ class LayoutManagerDialog(QDialog):
         # Top Buttons --------------------
         self.userButtonsWidget = QWidget()
         self.userButtonsLayout = QHBoxLayout()
+        self.renameButton = FlatButton('sources/icons/light-theme/icons8-rename-96.png', self.userButtonsWidget)
+        self.loadButton = FlatButton('sources/icons/light-theme/icons8-up-square-96.png', self.userButtonsWidget)
+        self.deleteButton = FlatButton('sources/icons/light-theme/icons8-remove-96.png', self.userButtonsWidget)
+        self.newButton = FlatButton('sources/icons/light-theme/icons8-add-new-96.png', self.userButtonsWidget)
 
+        self.userButtonsLayout.addWidget(self.newButton)
+        self.userButtonsLayout.addWidget(self.renameButton)
+        self.userButtonsLayout.addWidget(self.loadButton)
+        self.userButtonsLayout.addWidget(self.deleteButton)
+        self.userButtonsWidget.setLayout(self.userButtonsLayout)
 
         # User Saves ---------------------
         self.savesWidget = QWidget()
@@ -768,12 +777,20 @@ class LayoutManagerDialog(QDialog):
             if autoSave == self.currentLayout:
                 button.setChecked(True)
 
+    def emptyTabs(self):
+        pass
+
     def onSaveButtonClicked(self, button: TwoLineButton):
         # Deselect all buttons except the clicked one
         for otherButton in self.buttonGroup.buttons():
             if otherButton is not button:
                 otherButton.setChecked(False)
         self.selectedLayoutLabel.setText(button.topTextLabel.text())
+        isUserSave = self.userSavesWidget.isAncestorOf(button)
+        if isUserSave:
+            print('UserSave')
+        else:
+            print('not UserSave')
 
     def acceptedButtonClicked(self):
         self.accepted.emit()
@@ -785,6 +802,26 @@ class LayoutManagerDialog(QDialog):
     def canceledButtonClicked(self):
         self.canceled.emit()
         self.close()
+
+
+class FlatButton(QPushButton):
+    def __init__(self, icon: str, parent=None):
+        super().__init__(parent)
+        # Set the icon and icon size
+        self.setIcon(QIcon(icon))
+        self.setIconSize(QSize(25, 25))
+
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.setStyleSheet('border: none;')
+        self.setAutoFillBackground(False)
+        self.setFlat(True)
+
+    def setIconSize(self, size):
+        super().setIconSize(size)
+        self.setFixedSize(size)
+
+    def sizeHint(self):
+        return self.iconSize()
 
 
 class ValueWidget(QWidget):

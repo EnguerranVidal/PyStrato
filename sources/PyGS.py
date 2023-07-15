@@ -41,17 +41,17 @@ class PyGS(QMainWindow):
         self.setWindowIcon(self.mainIcon)
         self.settings = load_settings("settings")
         self._center()
-        # Date&Time in StatusBar
-        self.datetime = QDateTime.currentDateTime()
-        self.dateLabel = QLabel(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
-        self.dateLabel.setStyleSheet('border: 0;')
-        self.statusBar().addPermanentWidget(self.dateLabel)
         # FPS in StatusBar
         self.lastUpdate = time.perf_counter()
         self.avgFps = 0.0
         self.fpsLabel = QLabel('Fps : ---')
         self.fpsLabel.setStyleSheet('border: 0;')
         self.statusBar().addPermanentWidget(self.fpsLabel)
+        # Date&Time in StatusBar
+        self.datetime = QDateTime.currentDateTime()
+        self.dateLabel = QLabel(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
+        self.dateLabel.setStyleSheet('border: 0;')
+        self.statusBar().addPermanentWidget(self.dateLabel)
         # Status Bar Message and Timer
         self.statusBar().showMessage('Ready')
         self.statusDateTimer = QTimer()
@@ -215,7 +215,7 @@ class PyGS(QMainWindow):
         self.saveAsLayoutAct.triggered.connect(self.saveLayoutAs)
         # Restore Layout
         self.restoreLayoutAct = QAction('&Restore', self)
-        self.restoreLayoutAct.setStatusTip('Restore External Layout')
+        self.restoreLayoutAct.setStatusTip('Restore Current Layout')
         self.restoreLayoutAct.triggered.connect(self.restoreLayout)
         # Import Layout
         self.importLayoutAct = QAction('&Import', self)
@@ -480,7 +480,7 @@ class PyGS(QMainWindow):
         with open(filePath, "r") as file:
             description = json.load(file)
         self.displayTabWidget.applyLayoutDescription(description)
-        self.settings['CURRENT_LAYOUT'] = os.path.basename(filePath)
+        self.settings['CURRENT_LAYOUT'] = os.path.splitext(os.path.basename(filePath))[0]
 
     def saveLayout(self, autosave=False):
         # SAVING LAYOUT PRESET
@@ -512,7 +512,7 @@ class PyGS(QMainWindow):
     def saveLayoutAs(self):
         layoutDescription = self.displayTabWidget.getLayoutDescription()
         # NEW NAME DIALOG
-        inputDialog = StringInputDialog('Save Layout As')
+        inputDialog = StringInputDialog('Save Layout As', 'Enter Layout Name')
         # EXISTING USER SAVES' NAMES
         userItems = os.listdir(self.presetPath)
         userSaves = [os.path.splitext(item)[0] for item in userItems if os.path.isfile(os.path.join(self.presetPath, item))]
@@ -595,9 +595,30 @@ class PyGS(QMainWindow):
             self.layoutAutosaveTimer = QTimer()
             self.layoutAutosaveTimer.timeout.connect(lambda: self.saveLayout(autosave=True))
             self.layoutAutosaveTimer.start(120)
+        else:
+            self.layoutAutosaveTimer.stop()
 
     def populateLayoutMenu(self):
-        pass
+        layoutDescription = self.displayTabWidget.getLayoutDescription()
+        if self.settings['CURRENT_LAYOUT'] == '':
+            self.restoreLayoutAct.setDisabled(True)
+            if layoutDescription:
+                self.saveLayoutAct.setDisabled(False)
+                self.exportLayoutAct.setDisabled(False)
+            else:
+                self.saveLayoutAct.setDisabled(True)
+                self.exportLayoutAct.setDisabled(True)
+        else:
+            filename = os.path.join(self.presetPath, f"{self.settings['CURRENT_LAYOUT']}.json")
+            self.exportLayoutAct.setDisabled(False)
+            with open(filename, "r") as file:
+                previousState = json.load(file)
+            if layoutDescription == previousState:
+                self.saveLayoutAct.setDisabled(True)
+                self.restoreLayoutAct.setDisabled(True)
+            else:
+                self.saveLayoutAct.setDisabled(False)
+                self.restoreLayoutAct.setDisabled(False)
 
     def importFormat(self):
         path = QFileDialog.getOpenFileName(self, 'Import Packet Format')
