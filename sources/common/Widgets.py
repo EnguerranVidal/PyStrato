@@ -416,62 +416,6 @@ class MessageBox(QMessageBox):
         grid_layout.addWidget(qt_msgbox_buttonbox, 1, 0, alignment=Qt.AlignCenter)
 
 
-class QCustomDockWidget(QDockWidget):
-    def __init__(self, string, parent=None):
-        super(QCustomDockWidget, self).__init__(parent)
-        self.setAllowedAreas(Qt.TopDockWidgetArea | Qt.LeftDockWidgetArea |
-                             Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
-        self.setWindowTitle(string)
-        # self.setTitleBarWidget(QWidget())
-
-
-class QCustomTabWidget(QTabWidget):
-    def __init__(self):
-        super(QCustomTabWidget, self).__init__()
-        self.setTabsClosable(True)
-        self.setMovable(True)
-        self.tabCloseRequested.connect(self.closeTab)
-
-    def closeTab(self, currentIndex):
-        currentQWidget = self.widget(currentIndex)
-        currentQWidget.deleteLater()
-        self.removeTab(currentIndex)
-
-
-class NewGraphWindow(QWidget):
-    def __init__(self, parent=None, *args):
-        super().__init__(parent, *args)
-        self.setWindowTitle('Open New Plot Window')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
-        self.resize(400, 100)
-        self.dlgLayout = QVBoxLayout()
-        self.formLayout = QFormLayout()
-        self.nameEdit = QLineEdit()
-        self.formLayout.addRow('Name:', self.nameEdit)
-        self.dlgLayout.addLayout(self.formLayout)
-        self.buttons = QDialogButtonBox()
-        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        self.dlgLayout.addWidget(self.buttons)
-        self.setLayout(self.dlgLayout)
-
-
-class NewPlotWindow(QWidget):
-    def __init__(self, parent=None, *args):
-        super().__init__(parent, *args)
-        self.setWindowTitle('Add New Plot Instance')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
-        self.resize(400, 100)
-        self.dlgLayout = QVBoxLayout()
-        self.formLayout = QFormLayout()
-        self.nameEdit = QLineEdit()
-        self.formLayout.addRow('Name:', self.nameEdit)
-        self.dlgLayout.addLayout(self.formLayout)
-        self.buttons = QDialogButtonBox()
-        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        self.dlgLayout.addWidget(self.buttons)
-        self.setLayout(self.dlgLayout)
-
-
 class NewPackageWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -486,23 +430,6 @@ class NewPackageWindow(QDialog):
         self.dataEdit = QLineEdit()
         self.formatEdit = QLineEdit()
         self.formLayout.addRow('Name:', self.nameEdit)
-        self.dlgLayout.addLayout(self.formLayout)
-        self.buttons = QDialogButtonBox()
-        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        self.dlgLayout.addWidget(self.buttons)
-        self.setLayout(self.dlgLayout)
-
-
-class HeaderChangeWindow(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle('Change Header')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
-        self.resize(400, 100)
-        self.dlgLayout = QVBoxLayout()
-        self.formLayout = QFormLayout()
-        self.headerEdit = QLineEdit()
-        self.formLayout.addRow('Header:', self.headerEdit)
         self.dlgLayout.addLayout(self.formLayout)
         self.buttons = QDialogButtonBox()
         self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)

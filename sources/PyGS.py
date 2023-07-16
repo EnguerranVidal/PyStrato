@@ -135,6 +135,10 @@ class PyGS(QMainWindow):
         graphSubMenu.addAction(self.newMultiCurveAct)
         graphToolButton.setMenu(graphSubMenu)
         self.displaysToolBar.addWidget(graphToolButton)
+        # RUN / STOP
+        self.displaysToolBar.addSeparator()
+        self.displaysToolBar.addAction(self.runSerialAct)
+        self.displaysToolBar.addAction(self.stopSerialAct)
 
         ########### APPEARANCE ###########
         self.addToolBar(self.databasesToolBar)
@@ -268,10 +272,12 @@ class PyGS(QMainWindow):
         # Run Serial
         self.runSerialAct = QAction('&Run', self)
         self.runSerialAct.setShortcut('Ctrl+R')
+        self.runSerialAct.setIcon(QIcon('sources/icons/light-theme/icons8-play-96.png'))
         self.runSerialAct.setStatusTip('Run Serial Monitoring')
         self.runSerialAct.triggered.connect(self.startSerial)
         # Stop Serial
         self.stopSerialAct = QAction('&Stop', self)
+        self.stopSerialAct.setIcon(QIcon('sources/icons/light-theme/icons8-stop-96.png'))
         self.stopSerialAct.setStatusTip('Stop Serial Monitoring')
         self.stopSerialAct.triggered.connect(self.stopSerial)
         # Opening Serial Monitor
@@ -291,6 +297,11 @@ class PyGS(QMainWindow):
         self.githubAct.setIcon(QIcon('sources/icons/light-theme/icons8-github-96.png'))
         self.githubAct.setStatusTip('Visit GitHub Page')
         self.githubAct.triggered.connect(self.openGithub)
+        # Open About Page
+        self.aboutAct = QAction('&About', self)
+        self.aboutAct.setIcon(QIcon('sources/icons/light-theme/icons8-help-96.png'))
+        self.aboutAct.setStatusTip('About This Software')
+        self.aboutAct.triggered.connect(self.openAbout)
 
     def _createMenuBar(self):
         self.menubar = self.menuBar()
@@ -378,6 +389,7 @@ class PyGS(QMainWindow):
         self.helpMenu.addAction(self.emulatorAct)
         self.helpMenu.addSeparator()
         self.helpMenu.addAction(self.githubAct)
+        self.helpMenu.addAction(self.aboutAct)
 
     def _checkEnvironment(self):
         if not os.path.exists(self.formatPath):
@@ -838,6 +850,9 @@ class PyGS(QMainWindow):
     def openGithub():
         import webbrowser
         webbrowser.open("https://github.com/EnguerranVidal/PyGS")
+
+    def openAbout(self):
+        pass
 
     def closeEvent(self, event):
         reply = QMessageBox.question(self, 'Message', "Are you sure to quit?", QMessageBox.Yes |
