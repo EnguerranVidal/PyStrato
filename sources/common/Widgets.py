@@ -570,6 +570,72 @@ class StringInputDialog(QDialog):
         return self.inputLineEdit.text()
 
 
+class AboutDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("About")
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+
+        # Add your content here
+        aboutText = """
+        <html>
+        <body>
+        <p align="justify">About the PyGS Software</p>
+
+        <p align="justify">Our Stratospheric Balloon Ground Station software is an open-source solution designed specifically for student projects involving stratospheric balloon missions. Developed by <a href='https://github.com/EnguerranVidal'>KeplerDream</a> for the TSI Master located in Toulouse (France), with ease of use and functionality in mind, our software provides a comprehensive suite of tools and features to support ground station operations.</p>
+
+        <p align="justify">Key Features:</p>
+        <ul>
+        <li>Real-time telemetry data visualization: Visualize information in real_time through several diagram types and plots.</li>
+        <li>Payload Telemetry Data Editing : Set up the telecommunication payload layout.</li>
+        </ul>
+
+        <p align="justify">This software is written in Python, utilizing the power and flexibility of the language to provide an intuitive user experience. We recommend using Python 3.9 for optimal performance.</p>
+
+        <p align="justify">Icon Provider: <a href='https://www.icons8.com'>Icons8</a></p>
+
+        <p align="justify">Contributors: 
+            <a href='https://github.com/Abestanis'>Abestanis</a>
+        </p>
+
+        <p align="justify">To get started with our Stratospheric Balloon Ground Station software, please visit our GitHub repository <a href='https://github.com/EnguerranVidal/PyGS'>PyGS</a> for the latest version, installation instructions, and detailed documentation. We welcome contributions from the community and encourage you to provide feedback and suggestions to help us improve the software.</p>
+
+        <p align="justify">Thank you for choosing our software for your stratospheric balloon project. We hope it facilitates your mission and contributes to the success of your endeavors.</p>
+        </body>
+        </html>
+        """
+
+        text_edit = ExternalLinkTextEdit()
+        text_edit.setReadOnly(True)
+        text_edit.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        text_edit.setHtml(aboutText)
+        self.layout.addWidget(text_edit)
+
+        done_button = QPushButton("Done")
+        done_button.clicked.connect(self.accept)
+        self.layout.addWidget(done_button)
+
+        # Set fixed width and height
+        text_edit.setFixedWidth(400)
+        text_edit.setFixedHeight(500)
+
+
+class ExternalLinkTextEdit(QTextEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            anchor = self.anchorAt(event.pos())
+            if anchor:
+                QDesktopServices.openUrl(QUrl(anchor))
+            else:
+                super().mousePressEvent(event)
+        else:
+            super().mousePressEvent(event)
+
+
 class LayoutManagerDialog(QDialog):
     accepted = pyqtSignal()
     applied = pyqtSignal()

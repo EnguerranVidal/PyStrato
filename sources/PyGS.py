@@ -852,7 +852,8 @@ class PyGS(QMainWindow):
         webbrowser.open("https://github.com/EnguerranVidal/PyGS")
 
     def openAbout(self):
-        pass
+        dialog = AboutDialog()
+        dialog.exec_()
 
     def closeEvent(self, event):
         reply = QMessageBox.question(self, 'Message', "Are you sure to quit?", QMessageBox.Yes |
