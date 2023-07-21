@@ -550,14 +550,20 @@ class ThreeLineButton(QPushButton):
 
 
 class StringInputDialog(QDialog):
-    def __init__(self, title, label_text, parent=None):
+    def __init__(self, title, label_text, defaultText='', placeholder=False, parent=None):
         super(StringInputDialog, self).__init__(parent)
         self.setWindowTitle(title)
         mainLayout = QVBoxLayout()
+        self.placeholder = placeholder
+        self.defaultText = defaultText
         textLabel = QLabel(label_text, self)
         mainLayout.addWidget(textLabel)
 
         self.inputLineEdit = QLineEdit(self)
+        if self.placeholder:
+            self.inputLineEdit.setText(defaultText)
+        else:
+            self.inputLineEdit.setPlaceholderText(defaultText)
         mainLayout.addWidget(self.inputLineEdit)
 
         bottomButtonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
@@ -567,7 +573,11 @@ class StringInputDialog(QDialog):
         self.setLayout(mainLayout)
 
     def getStringInput(self):
-        return self.inputLineEdit.text()
+        text = self.inputLineEdit.text()
+        if self.placeholder and text == '':
+            return self.defaultText
+        else:
+            return text
 
 
 class AboutDialog(QDialog):
@@ -623,7 +633,7 @@ class AboutDialog(QDialog):
 
 class ExternalLinkTextEdit(QTextEdit):
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super(QTextEdit, self).__init__(parent)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -642,9 +652,9 @@ class LayoutManagerDialog(QDialog):
     canceled = pyqtSignal()
 
     def __init__(self, currentDir, currentLayout=None):
-        super().__init__()
+        super(QDialog, self).__init__()
         self.setModal(True)
-        self.setFixedSize(400, 600)
+        self.setFixedSize(600, 600)
         self.setWindowTitle('Layout Preset Selection')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
         self.currentDir = currentDir
@@ -665,48 +675,44 @@ class LayoutManagerDialog(QDialog):
         self.topLayout.addWidget(self.currentLayoutLabel, 1, 0, 1, 1)
         self.topLayout.addWidget(self.selectedLayoutLabel, 1, 1, 1, 1)
 
-        # Tab Widget
-        self.tabWidget = QTabWidget()
+        # TOP BUTTONS
+        self.topButtonsWidget = QWidget()
+        self.topButtonsLayout = QHBoxLayout()
+        self.renameButton = FlatButton('sources/icons/light-theme/icons8-rename-96.png', self.topButtonsWidget)
+        self.loadButton = FlatButton('sources/icons/light-theme/icons8-download-96.png', self.topButtonsWidget)
+        self.deleteButton = FlatButton('sources/icons/light-theme/icons8-remove-96.png', self.topButtonsWidget)
+        self.newButton = FlatButton('sources/icons/light-theme/icons8-add-new-96.png', self.topButtonsWidget)
+        self.renameButton.setToolTip('Rename Layout')
+        self.loadButton.setToolTip('Load Save')
+        self.deleteButton.setToolTip('Delete Layout')
+        self.newButton.setToolTip('Create Layout')
+        self.renameButton.clicked.connect(self.renameSave)
+        self.loadButton.clicked.connect(self.loadSave)
+        self.deleteButton.clicked.connect(self.deleteSave)
+        self.newButton.clicked.connect(self.newSave)
+
+        self.topButtonsLayout.addWidget(self.newButton)
+        self.topButtonsLayout.addWidget(self.renameButton)
+        self.topButtonsLayout.addWidget(self.loadButton)
+        self.topButtonsLayout.addWidget(self.deleteButton)
+        self.topButtonsWidget.setLayout(self.topButtonsLayout)
+        self.topLayout.addWidget(self.topButtonsWidget, 2, 0, 1, 1)
+
+        # USER SAVES
+        self.savesScrollArea = QScrollArea()
+        self.savesScrollArea.setWidgetResizable(True)
+        self.savesWidget = QWidget()
+        self.savesLayout = QVBoxLayout()
+        self.savesWidget.setLayout(self.savesLayout)
+        self.savesScrollArea.setWidget(self.savesWidget)
 
         # AUTOSAVES
         self.autosaveScrollArea = QScrollArea()
         self.autosaveScrollArea.setWidgetResizable(True)
-        # AutoSaves Buttons
         self.autosaveWidget = QWidget()
         self.autosaveLayout = QVBoxLayout()
         self.autosaveWidget.setLayout(self.autosaveLayout)
         self.autosaveScrollArea.setWidget(self.autosaveWidget)
-        self.tabWidget.addTab(self.autosaveScrollArea, "Autosaves")
-
-        # USER SAVES
-        self.userSavesWidget = QWidget()
-        self.userSavesWidgetLayout = QVBoxLayout()
-        # Top Buttons --------------------
-        self.userButtonsWidget = QWidget()
-        self.userButtonsLayout = QHBoxLayout()
-        self.renameButton = FlatButton('sources/icons/light-theme/icons8-rename-96.png', self.userButtonsWidget)
-        self.loadButton = FlatButton('sources/icons/light-theme/icons8-up-square-96.png', self.userButtonsWidget)
-        self.deleteButton = FlatButton('sources/icons/light-theme/icons8-remove-96.png', self.userButtonsWidget)
-        self.newButton = FlatButton('sources/icons/light-theme/icons8-add-new-96.png', self.userButtonsWidget)
-
-        self.userButtonsLayout.addWidget(self.newButton)
-        self.userButtonsLayout.addWidget(self.renameButton)
-        self.userButtonsLayout.addWidget(self.loadButton)
-        self.userButtonsLayout.addWidget(self.deleteButton)
-        self.userButtonsWidget.setLayout(self.userButtonsLayout)
-
-        # User Saves ---------------------
-        self.savesWidget = QWidget()
-        self.savesLayout = QVBoxLayout()
-        self.savesScrollArea = QScrollArea()
-        self.savesScrollArea.setWidgetResizable(True)
-        self.savesWidget.setLayout(self.savesLayout)
-        self.savesScrollArea.setWidget(self.savesWidget)
-
-        self.userSavesWidgetLayout.addWidget(self.userButtonsWidget)
-        self.userSavesWidgetLayout.addWidget(self.savesScrollArea)
-        self.userSavesWidget.setLayout(self.userSavesWidgetLayout)
-        self.tabWidget.addTab(self.userSavesWidget, "User Saves")
 
         # BUTTON GROUP
         self.buttonGroup = QButtonGroup()
@@ -726,10 +732,14 @@ class LayoutManagerDialog(QDialog):
         buttonLayout.addWidget(self.applyButton)
         buttonLayout.addWidget(self.cancelButton)
 
-        # Main Layout
+        self.containerLayout = QHBoxLayout()
+        self.containerLayout.addWidget(self.savesScrollArea)
+        self.containerLayout.addWidget(self.autosaveScrollArea)
+
+        # MAIN LAYOUT
         mainLayout = QVBoxLayout()
         mainLayout.addLayout(self.topLayout)
-        mainLayout.addWidget(self.tabWidget)
+        mainLayout.addLayout(self.containerLayout)
         mainLayout.addLayout(buttonLayout)
         self.setLayout(mainLayout)
 
@@ -771,7 +781,26 @@ class LayoutManagerDialog(QDialog):
                 button.setChecked(True)
 
     def emptyTabs(self):
-        pass
+        # Clear the autosaves tab
+        self.autosaveLayout.removeWidget(self.autosaveWidget)
+        self.autosaveWidget.deleteLater()
+        self.autosaveWidget = QWidget()
+        self.autosaveLayout = QVBoxLayout()
+        self.autosaveWidget.setLayout(self.autosaveLayout)
+        self.autosaveScrollArea.setWidget(self.autosaveWidget)
+
+        # Clear the user saves tab
+        self.savesLayout.removeWidget(self.savesWidget)
+        self.savesWidget.deleteLater()
+        self.savesWidget = QWidget()
+        self.savesLayout = QVBoxLayout()
+        self.savesWidget.setLayout(self.savesLayout)
+        self.savesScrollArea.setWidget(self.savesWidget)
+
+        # Clear the button group
+        for button in self.buttonGroup.buttons():
+            self.buttonGroup.removeButton(button)
+            button.setParent(None)
 
     def onSaveButtonClicked(self, button: TwoLineButton):
         # Deselect all buttons except the clicked one
@@ -779,11 +808,23 @@ class LayoutManagerDialog(QDialog):
             if otherButton is not button:
                 otherButton.setChecked(False)
         self.selectedLayoutLabel.setText(button.topTextLabel.text())
-        isUserSave = self.userSavesWidget.isAncestorOf(button)
+        isUserSave = self.savesWidget.isAncestorOf(button)
         if isUserSave:
             print('UserSave')
         else:
             print('not UserSave')
+
+    def renameSave(self):
+        pass
+
+    def loadSave(self):
+        pass
+
+    def newSave(self):
+        pass
+
+    def deleteSave(self):
+        pass
 
     def acceptedButtonClicked(self):
         self.accepted.emit()
@@ -799,7 +840,7 @@ class LayoutManagerDialog(QDialog):
 
 class FlatButton(QPushButton):
     def __init__(self, icon: str, parent=None):
-        super().__init__(parent)
+        super(QPushButton, self).__init__(parent)
         # Set the icon and icon size
         self.setIcon(QIcon(icon))
         self.setIconSize(QSize(25, 25))
@@ -819,7 +860,7 @@ class FlatButton(QPushButton):
 
 class ValueWidget(QWidget):
     def __init__(self, cType, value=''):
-        super().__init__()
+        super(QWidget, self).__init__()
         self.cType = cType
         self.value = value
         self.valueWidget = None

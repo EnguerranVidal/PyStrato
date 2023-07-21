@@ -334,13 +334,18 @@ class PyGS(QMainWindow):
 
         ###  INSERT MENU  ###
         self.insertMenu = self.menubar.addMenu('&Insert')
+        # Display Menu ----------------------
+        self.displayMenu = self.insertMenu.addMenu('&Displays')
+        # Indicators
         self.indicatorMenu = QMenu('&Indicators')
         self.indicatorMenu.addAction(self.newSimpleIndicatorAct)
         self.indicatorMenu.addAction(self.newGridIndicatorAct)
-        self.insertMenu.addMenu(self.indicatorMenu)
+        # Graphs
         self.graphsMenu = QMenu('&Graphs')
         self.graphsMenu.addAction(self.newMultiCurveAct)
-        self.insertMenu.addMenu(self.graphsMenu)
+        self.displayMenu.addMenu(self.indicatorMenu)
+        self.displayMenu.addMenu(self.graphsMenu)
+        self.insertMenu.addMenu(self.displayMenu)
 
         ###  WINDOW MENU  ###
         self.windowMenu = self.menubar.addMenu('&Window')
