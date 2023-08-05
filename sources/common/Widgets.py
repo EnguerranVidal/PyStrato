@@ -1,6 +1,8 @@
 ######################## IMPORTS ########################
+import json
 import os
 import time
+import shutil
 
 import numpy as np
 from ecom.datatypes import TypeInfo
@@ -12,7 +14,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, save_settings
+from sources.common.FileHandling import load_settings, save_settings, nameGiving, getWithoutExtension, \
+    getModificationDate
 from sources.databases.balloondata import BalloonPackageDatabase
 from sources.databases.units import DefaultUnitsCatalogue
 
@@ -404,16 +407,16 @@ class SerialWindow(QWidget):
 class MessageBox(QMessageBox):
     def __init__(self, parent=None):
         super().__init__(parent)
-        grid_layout = self.layout()
-        qt_msgboxex_icon_label = self.findChild(QLabel, "qt_msgboxex_icon_label")
-        qt_msgboxex_icon_label.deleteLater()
-        qt_msgbox_label = self.findChild(QLabel, "qt_msgbox_label")
-        qt_msgbox_label.setAlignment(Qt.AlignCenter)
-        grid_layout.removeWidget(qt_msgbox_label)
-        qt_msgbox_buttonbox = self.findChild(QDialogButtonBox, "qt_msgbox_buttonbox")
-        grid_layout.removeWidget(qt_msgbox_buttonbox)
-        grid_layout.addWidget(qt_msgbox_label, 0, 0)
-        grid_layout.addWidget(qt_msgbox_buttonbox, 1, 0, alignment=Qt.AlignCenter)
+        gridLayout = self.layout()
+        iconLabel = self.findChild(QLabel, "qt_msgboxex_icon_label")
+        iconLabel.deleteLater()
+        label = self.findChild(QLabel, "qt_msgbox_label")
+        label.setAlignment(Qt.AlignCenter)
+        gridLayout.removeWidget(label)
+        buttonBox = self.findChild(QDialogButtonBox, "qt_msgbox_buttonbox")
+        gridLayout.removeWidget(buttonBox)
+        gridLayout.addWidget(label, 0, 0)
+        gridLayout.addWidget(buttonBox, 1, 0, alignment=Qt.AlignCenter)
 
 
 class NewPackageWindow(QDialog):
@@ -550,27 +553,37 @@ class ThreeLineButton(QPushButton):
 
 
 class StringInputDialog(QDialog):
-    def __init__(self, title, label_text, defaultText='', placeholder=False, parent=None):
+    def __init__(self, title, label_text, defaultText='', placeholder=False, exclusives=None, parent=None):
         super(StringInputDialog, self).__init__(parent)
         self.setWindowTitle(title)
         mainLayout = QVBoxLayout()
         self.placeholder = placeholder
         self.defaultText = defaultText
+        self.exclusives = exclusives
+
         textLabel = QLabel(label_text, self)
         mainLayout.addWidget(textLabel)
 
         self.inputLineEdit = QLineEdit(self)
-        if self.placeholder:
+        if not self.placeholder:
             self.inputLineEdit.setText(defaultText)
         else:
             self.inputLineEdit.setPlaceholderText(defaultText)
         mainLayout.addWidget(self.inputLineEdit)
 
         bottomButtonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
-        bottomButtonBox.accepted.connect(self.accept)
+        bottomButtonBox.accepted.connect(self.validateInput)
         bottomButtonBox.rejected.connect(self.reject)
         mainLayout.addWidget(bottomButtonBox)
         self.setLayout(mainLayout)
+
+    def validateInput(self):
+        text = self.inputLineEdit.text()
+        if self.exclusives and text in self.exclusives:
+            QMessageBox.critical(self, "Error", "This name already exists")
+            return
+
+        self.accept()
 
     def getStringInput(self):
         text = self.inputLineEdit.text()
@@ -647,11 +660,9 @@ class ExternalLinkTextEdit(QTextEdit):
 
 
 class LayoutManagerDialog(QDialog):
-    accepted = pyqtSignal()
-    applied = pyqtSignal()
-    canceled = pyqtSignal()
+    loadSignal = pyqtSignal(str)
 
-    def __init__(self, currentDir, currentLayout=None):
+    def __init__(self, currentDir, layoutDescription, currentLayout=None):
         super(QDialog, self).__init__()
         self.setModal(True)
         self.setFixedSize(600, 600)
@@ -663,6 +674,7 @@ class LayoutManagerDialog(QDialog):
         self.autosavePath = os.path.join(self.presetPath, 'autosaves')
         self.examplesPath = os.path.join(self.presetPath, 'examples')
         self.currentLayout = currentLayout
+        self.layoutDescription = layoutDescription
         if self.currentLayout is None or self.currentLayout == '':
             self.currentLayout = 'None'
         self.layoutLabel = QLabel("Current Layout : ")
@@ -690,106 +702,102 @@ class LayoutManagerDialog(QDialog):
         self.loadButton.clicked.connect(self.loadSave)
         self.deleteButton.clicked.connect(self.deleteSave)
         self.newButton.clicked.connect(self.newSave)
-
-        self.topButtonsLayout.addWidget(self.newButton)
-        self.topButtonsLayout.addWidget(self.renameButton)
-        self.topButtonsLayout.addWidget(self.loadButton)
-        self.topButtonsLayout.addWidget(self.deleteButton)
-        self.topButtonsWidget.setLayout(self.topButtonsLayout)
-        self.topLayout.addWidget(self.topButtonsWidget, 2, 0, 1, 1)
-
-        # USER SAVES
-        self.savesScrollArea = QScrollArea()
-        self.savesScrollArea.setWidgetResizable(True)
-        self.savesWidget = QWidget()
-        self.savesLayout = QVBoxLayout()
-        self.savesWidget.setLayout(self.savesLayout)
-        self.savesScrollArea.setWidget(self.savesWidget)
-
-        # AUTOSAVES
-        self.autosaveScrollArea = QScrollArea()
-        self.autosaveScrollArea.setWidgetResizable(True)
-        self.autosaveWidget = QWidget()
-        self.autosaveLayout = QVBoxLayout()
-        self.autosaveWidget.setLayout(self.autosaveLayout)
-        self.autosaveScrollArea.setWidget(self.autosaveWidget)
+        self.loadButton.setDisabled(True)
+        self.renameButton.setDisabled(True)
+        self.deleteButton.setDisabled(True)
 
         # BUTTON GROUP
         self.buttonGroup = QButtonGroup()
         self.buttonGroup.buttonClicked.connect(self.onSaveButtonClicked)
         self.userButtons, self.autoButtons = None, None
 
-        # ACCEPT BUTTONS
-        buttonLayout = QHBoxLayout()
-        # Add three buttons to the button layout
-        self.acceptButton = QPushButton("Accept")
-        self.applyButton = QPushButton("Apply")
-        self.cancelButton = QPushButton("Cancel")
-        self.acceptButton.clicked.connect(self.acceptedButtonClicked)
-        self.applyButton.clicked.connect(self.appliedButtonClicked)
-        self.cancelButton.clicked.connect(self.canceledButtonClicked)
-        buttonLayout.addWidget(self.acceptButton)
-        buttonLayout.addWidget(self.applyButton)
-        buttonLayout.addWidget(self.cancelButton)
+        # Test Button
+        # TODO : REMOVE THIS BUTTON
+        self.emptyButton = QPushButton('Empty')
+        self.emptyButton.clicked.connect(self.emptyTabs)
+        self.topButtonsLayout.addWidget(self.emptyButton)
 
-        self.containerLayout = QHBoxLayout()
-        self.containerLayout.addWidget(self.savesScrollArea)
-        self.containerLayout.addWidget(self.autosaveScrollArea)
+        self.refillButton = QPushButton('Refill')
+        self.refillButton.clicked.connect(self.refreshSaveTab)
+        self.topButtonsLayout.addWidget(self.refillButton)
+
+        self.topButtonsLayout.addWidget(self.newButton)
+        self.topButtonsLayout.addWidget(self.loadButton)
+        self.topButtonsLayout.addWidget(self.renameButton)
+        self.topButtonsLayout.addWidget(self.deleteButton)
+        self.topButtonsWidget.setLayout(self.topButtonsLayout)
+        self.topLayout.addWidget(self.topButtonsWidget, 2, 0, 1, 1)
+
+        self.savesScrollArea = QScrollArea()
+        self.savesScrollArea.setWidgetResizable(True)
+        self.savesWidget = None
+        self.savesLayout = None
+        self.initializeTab()
+        self.fillTabs()
+
+        # DONE BUTTON
+        self.doneButton = QPushButton("Done")
+        self.doneButton.clicked.connect(self.accept)
 
         # MAIN LAYOUT
         mainLayout = QVBoxLayout()
         mainLayout.addLayout(self.topLayout)
-        mainLayout.addLayout(self.containerLayout)
-        mainLayout.addLayout(buttonLayout)
+        mainLayout.addWidget(self.savesScrollArea)
+        mainLayout.addWidget(self.doneButton)
         self.setLayout(mainLayout)
 
-        self.fillTabs()
+    def initializeTab(self):
+        # USER SAVES
+        self.savesWidget = QWidget()
+        self.savesLayout = QVBoxLayout()
+        self.savesWidget.setLayout(self.savesLayout)
+        self.savesScrollArea.setWidget(self.savesWidget)
+
+        # BUTTON GROUP
+        self.buttonGroup = QButtonGroup()
+        self.buttonGroup.buttonClicked.connect(self.onSaveButtonClicked)
+        self.userButtons, self.autoButtons = None, None
 
     def fillTabs(self):
         # SAVES RECON -----------------------------------------------------
         userItems = os.listdir(self.presetPath)
-        userSaves = [item for item in userItems if os.path.isfile(os.path.join(self.presetPath, item))]
+        userSaves = [os.path.join(self.presetPath, item) for item in userItems if os.path.isfile(os.path.join(self.presetPath, item))]
         autoItems = os.listdir(self.autosavePath)
-        autoSaves = [item for item in autoItems if os.path.isfile(os.path.join(self.autosavePath, item))]
-        autoSaves.reverse()
+        autoSaves = [os.path.join(self.autosavePath, item) for item in autoItems if os.path.isfile(os.path.join(self.autosavePath, item))]
+        filePaths = userSaves + autoSaves
+        sortedFilePaths = sorted(filePaths, key=getModificationDate)
+        sortedFilePaths.reverse()
         self.userButtons, self.autoButtons = [], []
-
-        for save in userSaves:
-            modificationTime = os.path.getmtime(os.path.join(self.presetPath, save))
-            creationTime = os.path.getctime(os.path.join(self.presetPath, save))
-            modificationTimeFormatted = time.ctime(modificationTime)
-            creationTimeFormatted = time.ctime(creationTime)
-            button = ThreeLineButton(os.path.splitext(os.path.basename(save))[0],
-                                     f"Creation Date : {creationTimeFormatted}",
-                                     f"Last Modified : {modificationTimeFormatted}")
-            button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            self.buttonGroup.addButton(button)
-            self.savesLayout.addWidget(button)
-            button.setCheckable(True)
-            if save == self.currentLayout:
-                button.setChecked(True)
-
-        for autoSave in autoSaves:
-            modificationTime = os.path.getmtime(os.path.join(self.autosavePath, autoSave))
-            modificationTimeFormatted = time.ctime(modificationTime)
-            button = TwoLineButton(autoSave, f"Creation Date : {modificationTimeFormatted}")
-            button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            self.buttonGroup.addButton(button)
-            self.autosaveLayout.addWidget(button)
-            button.setCheckable(True)
-            if autoSave == self.currentLayout:
-                button.setChecked(True)
+        for save in sortedFilePaths:
+            if save in userSaves:
+                modificationTime = os.path.getmtime(os.path.join(self.presetPath, save))
+                creationTime = os.path.getctime(os.path.join(self.presetPath, save))
+                modificationTimeFormatted = time.ctime(modificationTime)
+                creationTimeFormatted = time.ctime(creationTime)
+                button = ThreeLineButton(os.path.splitext(os.path.basename(save))[0],
+                                         f"Creation Date : {creationTimeFormatted}",
+                                         f"Last Modified : {modificationTimeFormatted}")
+                button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                self.buttonGroup.addButton(button)
+                self.savesLayout.addWidget(button)
+                button.setCheckable(True)
+                if os.path.splitext(os.path.basename(save))[0] == self.currentLayout:
+                    button.setChecked(True)
+            if save in autoSaves:
+                modificationTime = os.path.getmtime(os.path.join(self.autosavePath, save))
+                modificationTimeFormatted = time.ctime(modificationTime)
+                button = TwoLineButton(os.path.splitext(os.path.basename(save))[0],
+                                       f"Creation Date : {modificationTimeFormatted}")
+                button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                self.buttonGroup.addButton(button)
+                self.savesLayout.addWidget(button)
+                button.setCheckable(True)
+                if os.path.splitext(os.path.basename(save))[0] == self.currentLayout:
+                    button.setChecked(True)
+        self.buttonGroup.buttonClicked.connect(self.onSaveButtonClicked)
 
     def emptyTabs(self):
-        # Clear the autosaves tab
-        self.autosaveLayout.removeWidget(self.autosaveWidget)
-        self.autosaveWidget.deleteLater()
-        self.autosaveWidget = QWidget()
-        self.autosaveLayout = QVBoxLayout()
-        self.autosaveWidget.setLayout(self.autosaveLayout)
-        self.autosaveScrollArea.setWidget(self.autosaveWidget)
-
-        # Clear the user saves tab
+        # Clear the saves Tab
         self.savesLayout.removeWidget(self.savesWidget)
         self.savesWidget.deleteLater()
         self.savesWidget = QWidget()
@@ -802,40 +810,116 @@ class LayoutManagerDialog(QDialog):
             self.buttonGroup.removeButton(button)
             button.setParent(None)
 
-    def onSaveButtonClicked(self, button: TwoLineButton):
+    def refreshSaveTab(self):
+        self.emptyTabs()
+        self.initializeTab()
+        self.fillTabs()
+
+    def generateNewName(self):
+        userItems = os.listdir(self.presetPath)
+        userSaves = [item for item in userItems if os.path.isfile(os.path.join(self.presetPath, item))]
+        name = nameGiving(userSaves, baseName='New_Layout', parentheses=True, startingIndex=1)
+        return name
+
+    def onSaveButtonClicked(self, button):
         # Deselect all buttons except the clicked one
+        userItems = os.listdir(self.presetPath)
+        userSaves = [os.path.splitext(os.path.basename(item))[0] for item in userItems
+                     if os.path.isfile(os.path.join(self.presetPath, item))]
         for otherButton in self.buttonGroup.buttons():
             if otherButton is not button:
                 otherButton.setChecked(False)
-        self.selectedLayoutLabel.setText(button.topTextLabel.text())
-        isUserSave = self.savesWidget.isAncestorOf(button)
-        if isUserSave:
-            print('UserSave')
+        selectedLayout = button.topTextLabel.text()
+        self.selectedLayoutLabel.setText(selectedLayout)
+        if selectedLayout in userSaves:
+            self.loadButton.setDisabled(False)
+            self.renameButton.setDisabled(False)
+            self.deleteButton.setDisabled(False)
         else:
-            print('not UserSave')
-
-    def renameSave(self):
-        pass
+            self.loadButton.setDisabled(False)
+            self.renameButton.setDisabled(True)
+            self.deleteButton.setDisabled(False)
 
     def loadSave(self):
-        pass
+        userItems = os.listdir(self.presetPath)
+        userSaves = [os.path.splitext(os.path.basename(item))[0] for item in userItems if
+                     os.path.isfile(os.path.join(self.presetPath, item))]
+        selectedLayout = self.selectedLayoutLabel.text()
+
+        if selectedLayout in userSaves:
+            path = os.path.join(self.presetPath, f"{selectedLayout}.json")
+        else:
+            path = os.path.join(self.autosavePath, f"{selectedLayout}.json")
+        reply = QMessageBox.question(self, 'Message', "Do you really want to load this layout?\n "
+                                     "Some changes to the current layout may not have been saved.",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.loadSignal.emit(path)
+            self.currentLayoutLabel.setText(selectedLayout)
 
     def newSave(self):
-        pass
+        userItems = os.listdir(self.presetPath)
+        userSaves = [os.path.splitext(os.path.basename(item))[0] for item in userItems if
+                     os.path.isfile(os.path.join(self.presetPath, item))]
+        defaultName = self.generateNewName()
+        newNameDialog = StringInputDialog('Creating a New Layout', 'New Layout Name :',
+                                          defaultText=defaultName, placeholder=True, exclusives=userSaves)
+        result = newNameDialog.exec_()
+        if result == QDialog.Accepted:
+            givenNewName = newNameDialog.getStringInput()
+            newLayoutPath = os.path.join(self.presetPath, f"{givenNewName}.json")
+            with open(newLayoutPath, 'w') as file:
+                json.dump({}, file)
+
+            messageBox = QMessageBox()
+            messageBox.setIcon(QMessageBox.Question)
+            messageBox.setWindowTitle("Load Layout")
+            messageBox.setText("Do you want to load the newly created layout?")
+            messageBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            messageBox.setDefaultButton(QMessageBox.No)
+            reply = messageBox.exec_()
+            if reply == QMessageBox.Yes:
+                self.selectedLayoutLabel.setText(givenNewName)
+                self.loadSave()
+        self.refreshSaveTab()
+
+    def renameSave(self):
+        userItems = os.listdir(self.presetPath)
+        userSaves = [os.path.splitext(os.path.basename(item))[0] for item in userItems if
+                     os.path.isfile(os.path.join(self.presetPath, item))]
+        selectedLayout = self.selectedLayoutLabel.text()
+        userSaves.remove(selectedLayout)
+        newNameDialog = StringInputDialog('Renaming Display Layout', 'New Layout Name :',
+                                          defaultText=selectedLayout, placeholder=False, exclusives=userSaves)
+        result = newNameDialog.exec_()
+        if result == QDialog.Accepted:
+            givenNewName = newNameDialog.getStringInput()
+            oldPath = os.path.join(self.presetPath, f"{selectedLayout}.json")
+            newPath = os.path.join(self.presetPath, f"{givenNewName}.json")
+            try:
+                os.rename(oldPath, newPath)
+            except OSError as e:
+                print(f"An error occurred: {e}")
+            finally:
+                self.refreshSaveTab()
 
     def deleteSave(self):
-        pass
-
-    def acceptedButtonClicked(self):
-        self.accepted.emit()
-        self.close()
-
-    def appliedButtonClicked(self):
-        self.applied.emit()
-
-    def canceledButtonClicked(self):
-        self.canceled.emit()
-        self.close()
+        selectedLayout = self.selectedLayoutLabel.text()
+        # TODO : MAYBE ADD SPECIFIC MESSAGE IF CURRENT LAYOUT IS ABOUT TO BE DELETED ?
+        reply = QMessageBox.question(self, 'Message', "Are you sure to delete this layout?", QMessageBox.Yes |
+                                     QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            userItems = os.listdir(self.presetPath)
+            userSaves = [os.path.splitext(os.path.basename(item))[0] for item in userItems if os.path.isfile(os.path.join(self.presetPath, item))]
+            try:
+                if selectedLayout in userSaves:
+                    os.remove(os.path.join(self.presetPath, f"{selectedLayout}.json"))
+                else:
+                    os.remove(os.path.join(self.autosavePath, f"{selectedLayout}.json"))
+            except OSError as e:
+                print(f"An error occurred: {e}")
+            finally:
+                self.refreshSaveTab()
 
 
 class FlatButton(QPushButton):

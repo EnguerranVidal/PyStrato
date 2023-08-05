@@ -83,7 +83,10 @@ class PyGS(QMainWindow):
         self._createActions()
         self._createMenuBar()
         self._createToolBars()
+        # Populate Menus
         self.populateFileMenu()
+        self.populateToolsMenu()
+        self.populateLayoutMenu()
 
         if self.settings['LAYOUT_AUTOSAVE']:
             self.startupAutosave()
@@ -490,20 +493,26 @@ class PyGS(QMainWindow):
         self.graphsTabWidget.fillComboBox()
 
     def openLayoutManager(self):
-        self.layoutPresetWindow = LayoutManagerDialog(self.currentDir, currentLayout=self.settings['CURRENT_LAYOUT'])
-        self.layoutPresetWindow.show()
+        description = self.displayTabWidget.getLayoutDescription()
+        self.layoutPresetWindow = LayoutManagerDialog(self.currentDir, description, currentLayout=self.settings['CURRENT_LAYOUT'])
+        self.layoutPresetWindow.loadSignal.connect(self.loadLayout)
+        self.layoutPresetWindow.exec_()
+        self.layoutPresetWindow = None
 
-    def loadLayout(self, filePath: str):
+    def loadLayout(self, filePath: str, warning=True):
         with open(filePath, "r") as file:
             description = json.load(file)
         self.displayTabWidget.applyLayoutDescription(description)
+        print('done')
         self.settings['CURRENT_LAYOUT'] = os.path.splitext(os.path.basename(filePath))[0]
+        save_settings(self.settings, 'settings')
 
     def saveLayout(self, autosave=False):
         # SAVING LAYOUT PRESET
-        layout = self.displayTabWidget.getLayoutDescription()
+        displayedLayout = self.displayTabWidget.getLayoutDescription()
+        currentLayout = self.settings['CURRENT_LAYOUT']
         # AUTOMATIC AUTOSAVE WITHOUT ANY CURRENT LAYOUT
-        if autosave and self.settings['CURRENT_LAYOUT'] == '':
+        if autosave and currentLayout == '':
             current_datetime = datetime.now()
             timestamp = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
             filename = os.path.join(self.autosavePath, f"autosave_{timestamp}.json")
@@ -516,15 +525,15 @@ class PyGS(QMainWindow):
                     fileToDelete = os.path.join(self.autosavePath, autoSaves[i])
                     os.remove(fileToDelete)
             with open(filename, "w") as file:
-                json.dump(layout, file)
+                json.dump(displayedLayout, file)
         # MANUAL SAVE WITH SAVE AS
-        elif not autosave and self.settings['CURRENT_LAYOUT'] == '':
+        elif not autosave and currentLayout == '':
             self.saveLayoutAs()
         # MANUAL OR AUTOMATIC SAVE
         else:
-            filename = os.path.join(self.presetPath, f"{self.settings['CURRENT_LAYOUT']}.json")
+            filename = os.path.join(self.presetPath, f"{currentLayout}.json")
             with open(filename, "w") as file:
-                json.dump(layout, file)
+                json.dump(displayedLayout, file)
 
     def saveLayoutAs(self):
         layoutDescription = self.displayTabWidget.getLayoutDescription()
@@ -549,6 +558,7 @@ class PyGS(QMainWindow):
                     error_dialog.exec_()
             else:
                 break
+        self.populateLayoutMenu()
 
     def importLayout(self):
         filePath, _ = QFileDialog.getOpenFileName(None, "Select JSON layout file", "", "JSON Files (*.json)")
@@ -567,7 +577,7 @@ class PyGS(QMainWindow):
                     self.loadLayout(filePath)
                     self.settings['CURRENT_LAYOUT'] = os.path.basename(filePath)
 
-            except Exception as e:
+            except Exception:
                 errorDialog = QMessageBox()
                 errorDialog.setIcon(QMessageBox.Warning)
                 errorDialog.setWindowTitle("Error")
@@ -639,21 +649,34 @@ class PyGS(QMainWindow):
 
     def importFormat(self):
         path = QFileDialog.getOpenFileName(self, 'Import Packet Format')
-        # Verifying if chosen file is a format
+        # TODO : Verifying if chosen file is a format
         pass
 
     def startSerial(self):
-        message = "Port : " + self.settings["SELECTED_PORT"] + "  Baud : "
-        message += self.settings["SELECTED_BAUD"] + "\nDo you wish to continue ?"
-        msg = MessageBox()
-        msg.setWindowIcon(self.mainIcon)
-        msg.setWindowTitle("Running Warning")
-        msg.setText(message)
-        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
-        msg.setStyleSheet("QLabel{min-width: 200px;}")
-        msg.exec_()
-        button = msg.clickedButton()
-        sb = msg.standardButton(button)
+        if not self.settings['EMULATOR_MODE']:
+            message = "Port : " + self.settings["SELECTED_PORT"] + "  Baud : "
+            message += self.settings["SELECTED_BAUD"] + "\nDo you wish to continue ?"
+            msg = MessageBox()
+            msg.setWindowIcon(self.mainIcon)
+            msg.setWindowTitle("Running Warning")
+            msg.setText(message)
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
+            msg.setStyleSheet("QLabel{min-width: 200px;}")
+            msg.exec_()
+            button = msg.clickedButton()
+            sb = msg.standardButton(button)
+        else:
+            message = "Starting Emulator Mode"
+            message += "\nDo you wish to continue ?"
+            msg = MessageBox()
+            msg.setWindowIcon(self.mainIcon)
+            msg.setWindowTitle("Running Warning")
+            msg.setText(message)
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
+            msg.setStyleSheet("QLabel{min-width: 200px;}")
+            msg.exec_()
+            button = msg.clickedButton()
+            sb = msg.standardButton(button)
         if sb == QMessageBox.Yes:
             serialPath = os.path.join(self.currentDir, "sources/SerialGS.py")
             if os.path.exists(serialPath):
@@ -670,6 +693,7 @@ class PyGS(QMainWindow):
                 cancelling.setStandardButtons(QMessageBox.Ok)
                 cancelling.setStyleSheet("QLabel{min-width: 200px;}")
                 cancelling.exec_()
+        self.populateToolsMenu()
 
     def stopSerial(self):
         if self.serial is not None:
@@ -677,6 +701,7 @@ class PyGS(QMainWindow):
             self.serial = None
             time.sleep(0.5)
             self.serialWindow.textedit.setDisabled(True)
+        self.populateToolsMenu()
 
     def newSerialData(self, content):
         self.displayTabWidget.updateTabDisplays(content)
@@ -856,7 +881,8 @@ class PyGS(QMainWindow):
         import webbrowser
         webbrowser.open("https://github.com/EnguerranVidal/PyGS")
 
-    def openAbout(self):
+    @staticmethod
+    def openAbout():
         dialog = AboutDialog()
         dialog.exec_()
 

@@ -15,10 +15,7 @@ from sources.databases.balloondata import BalloonPackageDatabase
 
 def nameGiving(nameList: list, baseName: str = '', parentheses=False, startingIndex=0):
     i = startingIndex
-    if parentheses:
-        name = baseName + ' (' + str(i) + ')'
-    else:
-        name = baseName + ' ' + str(i)
+    name = baseName
     while name in nameList:
         if parentheses:
             name = baseName + ' (' + str(i) + ')'
@@ -26,6 +23,16 @@ def nameGiving(nameList: list, baseName: str = '', parentheses=False, startingIn
             name = baseName + ' ' + str(i)
         i += 1
     return name
+
+
+def getWithoutExtension(filePath):
+    baseName = os.path.basename(filePath)
+    withoutExtension, _ = os.path.splitext(baseName)
+    return withoutExtension
+
+
+def getModificationDate(filePath):
+    return os.path.getmtime(filePath)
 
 
 def testSaving(path):
