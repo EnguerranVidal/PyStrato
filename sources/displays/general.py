@@ -43,7 +43,7 @@ class DisplayTabWidget(QMainWindow):
     def addNewTab(self, name=None):
         if name is None:
             tabNames = [self.tabWidget.tabText(i) for i in range(self.tabWidget.count())]
-            name = nameGiving(tabNames, baseName='Tab')
+            name = nameGiving(tabNames, baseName='Tab', firstName=False)
         self.tabWidget.addTab(QMainWindow(), name)
 
     def onTabBarDoubleClicked(self, index):
@@ -81,7 +81,7 @@ class DisplayTabWidget(QMainWindow):
             self.addNewTab()
         currentTabWidget = self.tabWidget.currentWidget()
         widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
-        newIndicatorName = nameGiving(widgetNames, baseName='Indicator')
+        newIndicatorName = nameGiving(widgetNames, baseName='Indicator', firstName=False)
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=SingleIndicator(path=self.currentDir))
         currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
@@ -90,7 +90,7 @@ class DisplayTabWidget(QMainWindow):
             self.addNewTab()
         currentTabWidget = self.tabWidget.currentWidget()
         widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
-        newIndicatorName = nameGiving(widgetNames, baseName='Grid')
+        newIndicatorName = nameGiving(widgetNames, baseName='Grid', firstName=False)
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=GridIndicator(path=self.currentDir))
         currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
@@ -99,7 +99,7 @@ class DisplayTabWidget(QMainWindow):
             self.addNewTab()
         currentTabWidget = self.tabWidget.currentWidget()
         widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
-        newIndicatorName = nameGiving(widgetNames, baseName='Graph')
+        newIndicatorName = nameGiving(widgetNames, baseName='Graph', firstName=False)
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=MultiCurveGraph(path=self.currentDir))
         currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
@@ -126,7 +126,10 @@ class DisplayTabWidget(QMainWindow):
         return description
 
     def applyLayoutDescription(self, description: dict):
-        pass
+        for tabName, tabContents in description.items():
+            self.addNewTab(name=tabName)
+            for tabContent, value in tabContents.items():
+                print(f"Key: {tabContent}, Value: {value}")
 
 
 class DisplayDockWidget(QDockWidget):

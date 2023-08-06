@@ -83,6 +83,8 @@ class PyGS(QMainWindow):
         self._createActions()
         self._createMenuBar()
         self._createToolBars()
+        self._initializeDisplayLayout()
+
         # Populate Menus
         self.populateFileMenu()
         self.populateToolsMenu()
@@ -419,6 +421,12 @@ class PyGS(QMainWindow):
         frameGeometry.moveCenter(screenCenter)
         self.move(frameGeometry.topLeft())
 
+    def _initializeDisplayLayout(self):
+        currentLayout = self.settings['CURRENT_LAYOUT']
+        if currentLayout != '':
+            path = os.path.join(self.presetPath, f"{currentLayout}.json")
+            self.loadLayout(path, warning=False)
+
     def newFormatTab(self):
         self.newFormatWindow = NewPackageWindow()
         self.newFormatWindow.buttons.accepted.connect(self.acceptNewFormatTab)
@@ -512,7 +520,7 @@ class PyGS(QMainWindow):
         displayedLayout = self.displayTabWidget.getLayoutDescription()
         currentLayout = self.settings['CURRENT_LAYOUT']
         # AUTOMATIC AUTOSAVE WITHOUT ANY CURRENT LAYOUT
-        if autosave and currentLayout == '':
+        if autosave:
             current_datetime = datetime.now()
             timestamp = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
             filename = os.path.join(self.autosavePath, f"autosave_{timestamp}.json")
@@ -529,7 +537,7 @@ class PyGS(QMainWindow):
         # MANUAL SAVE WITH SAVE AS
         elif not autosave and currentLayout == '':
             self.saveLayoutAs()
-        # MANUAL OR AUTOMATIC SAVE
+        # MANUAL SAVE INTO CURRENTLY LOADED SAVE
         else:
             filename = os.path.join(self.presetPath, f"{currentLayout}.json")
             with open(filename, "w") as file:

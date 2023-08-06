@@ -13,9 +13,15 @@ from ecom.datatypes import TypeInfo, DefaultValueInfo, EnumType
 from sources.databases.balloondata import BalloonPackageDatabase
 
 
-def nameGiving(nameList: list, baseName: str = '', parentheses=False, startingIndex=0):
+def nameGiving(nameList: list, baseName: str = '', parentheses=False, firstName=True, startingIndex=0):
     i = startingIndex
-    name = baseName
+    if firstName:
+        name = baseName
+    else:
+        if parentheses:
+            name = baseName + ' (' + str(i) + ')'
+        else:
+            name = baseName + ' ' + str(i)
     while name in nameList:
         if parentheses:
             name = baseName + ' (' + str(i) + ')'

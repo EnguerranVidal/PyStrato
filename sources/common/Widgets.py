@@ -818,7 +818,7 @@ class LayoutManagerDialog(QDialog):
     def generateNewName(self):
         userItems = os.listdir(self.presetPath)
         userSaves = [item for item in userItems if os.path.isfile(os.path.join(self.presetPath, item))]
-        name = nameGiving(userSaves, baseName='New_Layout', parentheses=True, startingIndex=1)
+        name = nameGiving(userSaves, baseName='New_Layout', parentheses=True, startingIndex=1, firstName=True)
         return name
 
     def onSaveButtonClicked(self, button):

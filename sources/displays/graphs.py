@@ -144,7 +144,7 @@ class MultiCurveGraphEditDialog(QWidget):
             lineColor = self.colorCycler.next(inHexCode=True)
         bkColor = self.backgroundColorFrame.colorLabel.text()
         names = [self.tabWidget.widget(i).name for i in range(self.tabWidget.count())]
-        name = nameGiving(names, 'Curve', startingIndex=1)
+        name = nameGiving(names, 'Curve', startingIndex=1, firstName=False)
         curveEditor = CurveEditor(self.currentDir, self, name=name, lineColor=lineColor, bkColor=bkColor)
         self.tabWidget.addTab(curveEditor, name)
         self.tabWidget.widget(count).nameChange.connect(self.changeTabNames)

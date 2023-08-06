@@ -376,7 +376,7 @@ class GridIndicatorEditDialog(QWidget):
             for row in range(self.nbRows, newRowCount):
                 for column in range(self.nbColumns):
                     labelNames = [labelEditor.name for labelEditor in self.labelEditors.values()]
-                    editor = LabelEditor(nameGiving(labelNames, baseName='Value'), self.currentDir, self)
+                    editor = LabelEditor(nameGiving(labelNames, baseName='Value', firstName=False), self.currentDir, self)
                     editor.goBackToGrid.connect(self.openGridEditor)
                     self.labelEditors[(row, column)] = editor
             self.nbRows = newRowCount
@@ -385,7 +385,7 @@ class GridIndicatorEditDialog(QWidget):
             for row in range(self.nbRows):
                 for column in range(self.nbColumns, newColumnCount):
                     labelNames = [labelEditor.name for labelEditor in self.labelEditors.values()]
-                    editor = LabelEditor(nameGiving(labelNames, baseName='Value'), self.currentDir, self)
+                    editor = LabelEditor(nameGiving(labelNames, baseName='Value', firstName=False), self.currentDir, self)
                     editor.goBackToGrid.connect(self.openGridEditor)
                     self.labelEditors[(row, column)] = editor
             self.nbColumns = newColumnCount
