@@ -616,7 +616,9 @@ class PyGS(QMainWindow):
         dialog.setLayout(layout)
         dialog.exec_()
         if dialog.Accepted:
-            self.loadLayout(self.settings['CURRENT_LAYOUT'])
+            self.displayTabWidget.closeAllTabs()
+            path = os.path.join(self.presetPath, f"{self.settings['CURRENT_LAYOUT']}.json")
+            self.loadLayout(path)
 
     def startupAutosave(self):
         self.layoutAutosaveTimer = QTimer()

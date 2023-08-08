@@ -40,6 +40,10 @@ class DisplayTabWidget(QMainWindow):
         currentTabIndex = self.tabWidget.currentIndex()
         self.tabWidget.removeTab(currentTabIndex)
 
+    def closeAllTabs(self):
+        while self.tabWidget.count() > 0:
+            self.tabWidget.removeTab(0)
+
     def addNewTab(self, name=None):
         if name is None:
             tabNames = [self.tabWidget.tabText(i) for i in range(self.tabWidget.count())]
@@ -126,10 +130,18 @@ class DisplayTabWidget(QMainWindow):
         return description
 
     def applyLayoutDescription(self, description: dict):
-        for tabName, tabContents in description.items():
+        dockAreas = {1: Qt.TopDockWidgetArea, 2: Qt.BottomDockWidgetArea,
+                     4: Qt.LeftDockWidgetArea, 8: Qt.RightDockWidgetArea}
+        for i, (tabName, tabContents) in enumerate(description.items()):
             self.addNewTab(name=tabName)
-            for tabContent, value in tabContents.items():
-                print(f"Key: {tabContent}, Value: {value}")
+            tabWidget = self.tabWidget.widget(i)
+            for displayName, value in tabContents.items():
+                # Assuming you have some way to create the correct type of display widget
+                display = DisplayDockWidget(name=displayName, widget=BasicDisplay(self.currentDir))
+                dockAreaPlacement = value['AREA_PLACEMENT']
+                dockGeometry = value['GEOMETRY']
+                display.setGeometry(QRect(*dockGeometry))
+                tabWidget.addDockWidget(dockAreas.get(dockAreaPlacement, None), display)
 
 
 class DisplayDockWidget(QDockWidget):

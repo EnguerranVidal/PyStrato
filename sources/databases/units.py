@@ -187,7 +187,7 @@ class NewUnitWindow(QDialog):
 
 
 class DefaultUnitsCatalogue:
-    def __init__(self, path='sources//defaultUnits.csv'):
+    def __init__(self, path='sources//common//defaultUnits.csv'):
         self.csvPath = path
         if not os.path.exists(path):
             with open(path, 'w', encoding='utf-8', newline='') as file:
