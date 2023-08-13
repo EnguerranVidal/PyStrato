@@ -116,7 +116,6 @@ class DisplayTabWidget(QMainWindow):
 
         for tab, tabName in zip(tabs, tabNames):
             tabDescription = {}
-            dock_widgets = {}
 
             for dockWidget in tab.findChildren(QDockWidget):
                 if dockWidget.isVisible():
@@ -132,7 +131,6 @@ class DisplayTabWidget(QMainWindow):
                     }
 
                     tabDescription[displayName] = dockDescription
-                    dock_widgets[displayName] = dockWidget
 
             description[tabName] = tabDescription
 
@@ -161,7 +159,6 @@ class DisplayTabWidget(QMainWindow):
                 dockWidget.setGeometry(QRect(*geometry))
                 name = dockWidget.windowTitle()
                 dockWidget.repaint()
-
 
 
 class DisplayDockWidget(QDockWidget):
