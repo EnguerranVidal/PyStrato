@@ -545,27 +545,18 @@ class PyGS(QMainWindow):
 
     def saveLayoutAs(self):
         layoutDescription = self.displayTabWidget.getLayoutDescription()
-        # NEW NAME DIALOG
-        inputDialog = StringInputDialog('Save Layout As', 'Enter Layout Name')
         # EXISTING USER SAVES' NAMES
         userItems = os.listdir(self.presetPath)
         userSaves = [os.path.splitext(item)[0] for item in userItems if os.path.isfile(os.path.join(self.presetPath, item))]
-        while True:
-            if inputDialog.exec_() == QDialog.Accepted:
-                name = inputDialog.getStringInput()
-                if name not in userSaves:
-                    self.settings['CURRENT_LAYOUT'] = name
-                    filename = os.path.join(self.presetPath, f"{self.settings['CURRENT_LAYOUT']}.json")
-                    with open(filename, "w") as file:
-                        json.dump(layoutDescription, file)
-                else:
-                    error_dialog = QMessageBox()
-                    error_dialog.setIcon(QMessageBox.Warning)
-                    error_dialog.setWindowTitle("Error")
-                    error_dialog.setText("A save with this name already exists. Please enter a unique name.")
-                    error_dialog.exec_()
-            else:
-                break
+        # NEW NAME DIALOG
+        inputDialog = StringInputDialog('Save Layout As', 'Enter Layout Name', exclusives=userSaves)
+        result = inputDialog.exec_()
+        if result == QDialog.Accepted:
+            name = inputDialog.getStringInput()
+            self.settings['CURRENT_LAYOUT'] = name
+            filename = os.path.join(self.presetPath, f"{self.settings['CURRENT_LAYOUT']}.json")
+            with open(filename, "w") as file:
+                json.dump(layoutDescription, file)
         self.populateLayoutMenu()
 
     def importLayout(self):

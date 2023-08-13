@@ -84,7 +84,7 @@ class DisplayTabWidget(QMainWindow):
         if self.tabWidget.count() == 0:
             self.addNewTab()
         currentTabWidget = self.tabWidget.currentWidget()
-        widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
+        widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget) if dock.isVisible()]
         newIndicatorName = nameGiving(widgetNames, baseName='Indicator', firstName=False)
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=SingleIndicator(path=self.currentDir))
         currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
@@ -93,7 +93,7 @@ class DisplayTabWidget(QMainWindow):
         if self.tabWidget.count() == 0:
             self.addNewTab()
         currentTabWidget = self.tabWidget.currentWidget()
-        widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
+        widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget) if dock.isVisible()]
         newIndicatorName = nameGiving(widgetNames, baseName='Grid', firstName=False)
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=GridIndicator(path=self.currentDir))
         currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
@@ -102,46 +102,66 @@ class DisplayTabWidget(QMainWindow):
         if self.tabWidget.count() == 0:
             self.addNewTab()
         currentTabWidget = self.tabWidget.currentWidget()
-        widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget)]
+        widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget) if dock.isVisible()]
         newIndicatorName = nameGiving(widgetNames, baseName='Graph', firstName=False)
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=MultiCurveGraph(path=self.currentDir))
         currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
     def getLayoutDescription(self):
+        dockAreas = {1: Qt.LeftDockWidgetArea, 2: Qt.RightDockWidgetArea,
+                     4: Qt.TopDockWidgetArea, 8: Qt.BottomDockWidgetArea}
         tabs = [self.tabWidget.widget(index) for index in range(self.tabWidget.count())]
         tabNames = [self.tabWidget.tabText(index) for index in range(self.tabWidget.count())]
         description = {}
+
         for tab, tabName in zip(tabs, tabNames):
             tabDescription = {}
-            dockWidgets = [dockWidget for dockWidget in tab.findChildren(QDockWidget)]
-            displayDockWidgets = [dockWidget.display for dockWidget in dockWidgets]
-            parametersDockWidgets = [dockWidget.parametersEditWindow for dockWidget in dockWidgets]
-            for dockWidget, display, parameters in zip(dockWidgets, displayDockWidgets, parametersDockWidgets):
-                dockDescription = {}
-                name = dockWidget.windowTitle()
-                dockPlacement = int(tab.dockWidgetArea(dockWidget))
-                dockGeometry = dockWidget.geometry().getRect()
-                displayDescription = display.getDescription()
-                dockDescription['AREA_PLACEMENT'] = dockPlacement
-                dockDescription['GEOMETRY'] = dockGeometry
-                dockDescription['DISPLAY'] = displayDescription
-                tabDescription[name] = dockDescription
+            dock_widgets = {}
+
+            for dockWidget in tab.findChildren(QDockWidget):
+                if dockWidget.isVisible():
+                    displayName = dockWidget.windowTitle()
+                    dockPlacement = int(tab.dockWidgetArea(dockWidget))
+                    dockGeometry = dockWidget.geometry().getRect()
+                    displayDescription = dockWidget.widget().getDescription()
+
+                    dockDescription = {
+                        'AREA_PLACEMENT': dockPlacement,
+                        'GEOMETRY': dockGeometry,
+                        'DISPLAY': displayDescription,
+                    }
+
+                    tabDescription[displayName] = dockDescription
+                    dock_widgets[displayName] = dockWidget
+
             description[tabName] = tabDescription
+
         return description
 
     def applyLayoutDescription(self, description: dict):
-        dockAreas = {1: Qt.TopDockWidgetArea, 2: Qt.BottomDockWidgetArea,
-                     4: Qt.LeftDockWidgetArea, 8: Qt.RightDockWidgetArea}
+        dockAreas = {1: Qt.LeftDockWidgetArea, 2: Qt.RightDockWidgetArea,
+                     4: Qt.TopDockWidgetArea, 8: Qt.BottomDockWidgetArea}
+        self.tabWidget.clear()
+
         for i, (tabName, tabContents) in enumerate(description.items()):
             self.addNewTab(name=tabName)
             tabWidget = self.tabWidget.widget(i)
+            geometries = []
+            dock_widgets = {}
             for displayName, value in tabContents.items():
-                # Assuming you have some way to create the correct type of display widget
                 display = DisplayDockWidget(name=displayName, widget=BasicDisplay(self.currentDir))
-                dockAreaPlacement = value['AREA_PLACEMENT']
-                dockGeometry = value['GEOMETRY']
-                display.setGeometry(QRect(*dockGeometry))
-                tabWidget.addDockWidget(dockAreas.get(dockAreaPlacement, None), display)
+                geometries.append(value['GEOMETRY'])
+                dockPlacement = value['AREA_PLACEMENT']
+                tabWidget.addDockWidget(dockAreas.get(dockPlacement, Qt.NoDockWidgetArea), display)
+                dock_widgets[displayName] = display
+                print('loading after', displayName, display.geometry().getRect(), dockPlacement)
+
+            dockWidgets = [dock for dock in self.findChildren(QDockWidget)]
+            for dockWidget, geometry in zip(dockWidgets, geometries):
+                dockWidget.setGeometry(QRect(*geometry))
+                name = dockWidget.windowTitle()
+                dockWidget.repaint()
+
 
 
 class DisplayDockWidget(QDockWidget):
