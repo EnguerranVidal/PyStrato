@@ -18,6 +18,7 @@ from sources.common.Widgets import *
 
 from sources.databases.general import PacketTabWidget
 from sources.displays.general import DisplayTabWidget
+from sources.weather.general import WeatherWidget
 
 
 ######################## CLASSES ########################
@@ -103,11 +104,13 @@ class PyGS(QMainWindow):
         # Packet Tab Widget -----------------------------------------
         self.packetTabWidget = PacketTabWidget(self.currentDir)
         self.displayTabWidget = DisplayTabWidget(self.currentDir)
+        self.weatherWidget = WeatherWidget(self.currentDir)
         self.graphWidgetsList = []
 
         # Adding Tabs to Main Widget -------------------------------
         self.generalTabWidget.addTab(self.displayTabWidget, 'Display')
         self.generalTabWidget.addTab(self.packetTabWidget, 'Packets')
+        self.generalTabWidget.addTab(self.weatherWidget, 'Weather')
 
         self.generalTabWidget.currentChanged.connect(self.manageToolBars)
         self.setCentralWidget(self.generalTabWidget)
