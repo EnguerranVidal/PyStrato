@@ -1,6 +1,7 @@
 ######################## IMPORTS ########################
 import os
 
+import requests
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -16,46 +17,64 @@ class WeatherWidget(QWidget):
         super().__init__()
         self.currentDir = path
         self.settings = load_settings('settings')
-        self.api_key = self.settings['WEATHER_API_KEY']
+        self.apiKey = self.settings['WEATHER_API_KEY']
 
-        self.init_ui()
+        self.initUI()
 
-    def init_ui(self):
+    def initUI(self):
         layout = QGridLayout()
 
-        if not self.api_key:
+        if not self.apiKey:
             info_label = QLabel("This feature works with OpenWeatherMap.")
             info_label.setFont(QFont("Arial", 12, QFont.Bold))
             info_label.setAlignment(Qt.AlignCenter)
             layout.addWidget(info_label, 0, 0, 1, 2)
 
-            api_key_button = QPushButton("Enter API Key")
-            api_key_button.clicked.connect(self.show_api_key_dialog)
+            api_key_button = QPushButton("Enter API Key", self)
+            api_key_button.setFixedWidth(120)
+            api_key_button.clicked.connect(self.showAPIKeyDialog)
 
-            create_account_button = QPushButton("Create Account")
-            create_account_button.clicked.connect(self.create_openweathermap_account)
+            create_account_button = QPushButton("Create Account", self)
+            create_account_button.setFixedWidth(120)
+            create_account_button.clicked.connect(self.createAPIAccount)
 
-            button_layout = QHBoxLayout()
-            button_layout.addWidget(api_key_button)
-            button_layout.addWidget(create_account_button)
-
-            layout.addLayout(button_layout, 1, 0, 1, 2)
+            layout.addWidget(api_key_button, 1, 0, Qt.AlignRight)
+            layout.addWidget(create_account_button, 1, 1, Qt.AlignLeft)
 
         else:
             pass
 
         self.setLayout(layout)
 
-    def show_api_key_dialog(self):
+    def clear_layout(self):
+        for i in reversed(range(self.layout().count())):
+            widget = self.layout().itemAt(i).widget()
+            if widget is not None:
+                widget.deleteLater()
+
+    def showAPIKeyDialog(self):
         dialog = ApiKeyDialog(self)
         result = dialog.exec_()
         if result == QDialog.Accepted:
-            self.api_key = dialog.apiKeyLineEdit.text()
-            self.settings['WEATHER_API_KEY'] = self.api_key
-            save_settings(self.settings, 'settings')
+            new_api_key = dialog.apiKeyLineEdit.text()
+            if self.isValidAPIKey(new_api_key):
+                self.apiKey = new_api_key
+                self.settings['WEATHER_API_KEY'] = self.apiKey
+                save_settings(self.settings, 'settings')
+                self.clear_layout()
+                self.initUI()
+            else:
+                QMessageBox.critical(self, "Invalid API Key",
+                                     "The entered API key is invalid. Please enter a valid API key.")
 
     @staticmethod
-    def create_openweathermap_account():
+    def isValidAPIKey(api_key):
+        url = f"http://api.openweathermap.org/data/2.5/version?appid={api_key}"
+        response = requests.get(url)
+        return response.status_code == 200
+
+    @staticmethod
+    def createAPIAccount():
         import webbrowser
         webbrowser.open('https://home.openweathermap.org/users/sign_up')
 
