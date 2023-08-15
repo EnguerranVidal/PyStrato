@@ -12,64 +12,85 @@ from sources.common.FileHandling import load_settings, save_settings, nameGiving
 
 
 ######################## CLASSES ########################
-class WeatherWidget(QWidget):
+class WeatherWidget(QMainWindow):
     def __init__(self, path: str):
         super().__init__()
         self.currentDir = path
         self.settings = load_settings('settings')
         self.apiKey = self.settings['WEATHER_API_KEY']
+        self.central_widget = QStackedWidget()
+        self.setCentralWidget(self.central_widget)
 
-        self.initUI()
-
-    def initUI(self):
-        layout = QGridLayout()
+        self.weather_forecast_widget = WeatherForecastWidget(self)
+        self.central_widget.addWidget(self.weather_forecast_widget)
 
         if not self.apiKey:
-            info_label = QLabel("This feature works with OpenWeatherMap.")
-            info_label.setFont(QFont("Arial", 12, QFont.Bold))
-            info_label.setAlignment(Qt.AlignCenter)
-            layout.addWidget(info_label, 0, 0, 1, 2)
-
-            api_key_button = QPushButton("Enter API Key", self)
-            api_key_button.setFixedWidth(120)
-            api_key_button.clicked.connect(self.showAPIKeyDialog)
-
-            create_account_button = QPushButton("Create Account", self)
-            create_account_button.setFixedWidth(120)
-            create_account_button.clicked.connect(self.createAPIAccount)
-
-            layout.addWidget(api_key_button, 1, 0, Qt.AlignRight)
-            layout.addWidget(create_account_button, 1, 1, Qt.AlignLeft)
-
+            self.api_registration_widget = ApiRegistrationWidget(self)
+            self.api_registration_widget.validApiRegistration.connect(self.switch_to_forecast)
+            self.central_widget.addWidget(self.api_registration_widget)
+            self.central_widget.setCurrentWidget(self.api_registration_widget)
         else:
-            pass
+            self.central_widget.setCurrentWidget(self.weather_forecast_widget)
 
+    def getCityWeatherData(self, cityName='Paris', units='metric'):
+        url = f"http://api.openweathermap.org/data/2.5/weather?q={cityName}&appid={self.apiKey}&units={units}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
+
+    def switch_to_forecast(self, apiKey: str):
+        self.settings['WEATHER_API_KEY'] = apiKey
+        save_settings(self.settings, 'settings')
+        self.central_widget.setCurrentWidget(self.weather_forecast_widget)
+
+
+class WeatherForecastWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+
+
+class ApiRegistrationWidget(QWidget):
+    validApiRegistration = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.apiKey = None
+        layout = QGridLayout()
+        info_label = QLabel("This feature works with OpenWeatherMap.")
+        info_label.setFont(QFont("Arial", 12, QFont.Bold))
+        info_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(info_label, 0, 0, 1, 2)
+
+        api_key_button = QPushButton("Enter API Key", self)
+        api_key_button.setFixedWidth(120)
+        api_key_button.clicked.connect(self.showAPIKeyDialog)
+
+        create_account_button = QPushButton("Create Account", self)
+        create_account_button.setFixedWidth(120)
+        create_account_button.clicked.connect(self.createAPIAccount)
+
+        layout.addWidget(api_key_button, 1, 0, Qt.AlignRight)
+        layout.addWidget(create_account_button, 1, 1, Qt.AlignLeft)
         self.setLayout(layout)
-
-    def clear_layout(self):
-        for i in reversed(range(self.layout().count())):
-            widget = self.layout().itemAt(i).widget()
-            if widget is not None:
-                widget.deleteLater()
 
     def showAPIKeyDialog(self):
         dialog = ApiKeyDialog(self)
         result = dialog.exec_()
         if result == QDialog.Accepted:
-            new_api_key = dialog.apiKeyLineEdit.text()
-            if self.isValidAPIKey(new_api_key):
-                self.apiKey = new_api_key
-                self.settings['WEATHER_API_KEY'] = self.apiKey
-                save_settings(self.settings, 'settings')
-                self.clear_layout()
-                self.initUI()
+            newApiKey = dialog.apiKeyLineEdit.text()
+            if self.isValidAPIKey(newApiKey):
+                self.validApiRegistration.emit(newApiKey)
             else:
                 QMessageBox.critical(self, "Invalid API Key",
                                      "The entered API key is invalid. Please enter a valid API key.")
 
     @staticmethod
     def isValidAPIKey(api_key):
-        url = f"http://api.openweathermap.org/data/2.5/version?appid={api_key}"
+        url = f"http://api.openweathermap.org/data/2.5/weather?q=Paris&appid={api_key}"
         response = requests.get(url)
         return response.status_code == 200
 
