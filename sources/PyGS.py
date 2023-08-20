@@ -514,7 +514,6 @@ class PyGS(QMainWindow):
         with open(filePath, "r") as file:
             description = json.load(file)
         self.displayTabWidget.applyLayoutDescription(description)
-        print('done')
         self.settings['CURRENT_LAYOUT'] = os.path.splitext(os.path.basename(filePath))[0]
         save_settings(self.settings, 'settings')
 

@@ -922,6 +922,41 @@ class LayoutManagerDialog(QDialog):
                 self.refreshSaveTab()
 
 
+class SearchBar(QLineEdit):
+    suggestionSelected = pyqtSignal()
+    textChanged = pyqtSignal()
+
+    def __init__(self, nbSuggestions: int = None, options: list = None, caseSensitive=False):
+        super().__init__()
+
+        self.nbOptions = nbSuggestions
+        if options is not None:
+            self.options = options
+        else:
+            self.options = []
+        self.setPlaceholderText('Search Location ...')
+        self.completer = QCompleter(self.options)
+        self.completer.setCaseSensitivity(caseSensitive)
+        self.setCompleter(self.completer)
+        self.textChanged.connect(self.updateCompleter)
+        self.completer.activated.connect(self.completerSelected)
+
+    def updateCompleter(self, text):
+        suggestions = self.get_filtered_suggestions(text)
+        self.completer.model().setStringList(suggestions)
+
+    def getFilteredSuggestions(self, text):
+        suggestions = [item for item in self.completer.model().stringList() if text.lower() in item.lower()]
+        if self.nbOptions is not None:
+            return suggestions[:self.nbOptions]
+        else:
+            return suggestions
+
+    def completerSelected(self, option):
+        self.setText(option)
+        self.suggestionSelected.emit()
+
+
 class FlatButton(QPushButton):
     def __init__(self, icon: str, parent=None):
         super(QPushButton, self).__init__(parent)
