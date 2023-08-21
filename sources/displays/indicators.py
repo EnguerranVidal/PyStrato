@@ -19,6 +19,7 @@ from sources.databases.units import DefaultUnitsCatalogue
 class SingleIndicator(BasicDisplay):
     def __init__(self, path, parent=None):
         super().__init__(path, parent)
+        self.textAlignment = 0
         self.catalogue = DefaultUnitsCatalogue()
         self.indicatorLabel = QLabel('')
         self.settingsWidget = SingleIndicatorEditDialog(self.currentDir, self)
@@ -31,6 +32,26 @@ class SingleIndicator(BasicDisplay):
         self.argumentUnit = None
         self.showUnit = False
         self.argument = ''
+
+    def getDescription(self):
+        palette = self.palette()
+        bgColor = palette.color(QPalette.Base).name()
+
+        font = self.indicatorLabel.font()
+        fontFamily = font.family()
+        fontSize = font.pointSize()
+        fontColor = self.indicatorLabel.palette().color(QPalette.WindowText).name()
+        description = {'DISPLAY_TYPE': 'SINGLE_INDICATOR',
+                       'ARGUMENT': self.argument,
+                       'ARGUMENT_UNIT': self.argumentUnit,
+                       'SHOW_UNIT': int(self.showUnit),
+                       'FONT_FAMILY': fontFamily,
+                       'FONT_SIZE': fontSize,
+                       'FONT_COLOR': fontColor,
+                       'BACKGROUND_COLOR': bgColor,
+                       'TEXT_PLACEMENT': self.textAlignment
+                       }
+        return description
 
     def applyChanges(self, editWidget):
         backgroundColor = editWidget.backgroundColor.colorLabel.text()
@@ -54,10 +75,13 @@ class SingleIndicator(BasicDisplay):
         # Text Alignment
         if editWidget.positionLeftButton.isChecked():
             self.indicatorLabel.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            self.textAlignment = 0
         elif editWidget.positionCenterButton.isChecked():
             self.indicatorLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            self.textAlignment = 1
         elif editWidget.positionRightButton.isChecked():
             self.indicatorLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.textAlignment = 2
 
         self.showUnit = editWidget.unitCheckbox.isChecked()
         self.argumentUnit = editWidget.selectedUnit
@@ -222,26 +246,51 @@ class GridIndicator(BasicDisplay):
         self.labelGridLayout = QGridLayout()
         self.setLayout(self.labelGridLayout)
         self.settingsWidget = GridIndicatorEditDialog(self.currentDir, self)
+        self.nbRows, self.nbColumns = 1, 1
         self.indicators = {(0, 0): LabeledIndicator('Value 0', self.settingsWidget.labelEditors[(0, 0)], self)}
 
         self.fillGrid()
 
+    def getDescription(self):
+        palette = self.palette()
+        bgColor = palette.color(QPalette.Base).name()
+        gridDescription = {'DISPLAY_TYPE': 'GRID_INDICATOR',
+                           'BACKGROUND_COLOR': bgColor,
+                           'DIMENSIONS': [self.nbRows, self.nbColumns]}
+        for i in range(self.nbRows):
+            for j in range(self.nbColumns):
+                indicator = self.indicators[(i, j)]
+                font = indicator.label.font()
+                fontFamily = font.family()
+                fontSize = font.pointSize()
+                fontColor = indicator.label.palette().color(QPalette.WindowText).name()
+                description = {'NAME': indicator.title(),
+                               'ARGUMENT': indicator.argument,
+                               'ARGUMENT_UNIT': indicator.argumentUnit,
+                               'SHOW_UNIT': int(indicator.showUnit),
+                               'FONT_FAMILY': fontFamily,
+                               'FONT_SIZE': fontSize,
+                               'FONT_COLOR': fontColor,
+                               'TEXT_PLACEMENT': indicator.textAlignment}
+                key = str(i) + str(j)
+                gridDescription[key] = description
+        return gridDescription
+
     def fillGrid(self, editWidget=None):
         if editWidget is None:
             editWidget = self.settingsWidget
-        rows = editWidget.rowSpinBox.value()
-        columns = editWidget.columnSpinBox.value()
         # Removing Old Widgets
         while self.labelGridLayout.count() > 0:
             widget = self.labelGridLayout.itemAt(0).widget()
             self.labelGridLayout.removeWidget(widget)
             widget.setParent(None)
         # Adding New Widgets
-        for i in range(rows):
-            for j in range(columns):
+        for i in range(self.nbRows):
+            for j in range(self.nbColumns):
                 labelEditor = editWidget.labelEditors[(i, j)]
                 if (i, j) not in self.indicators:
-                    self.indicators[(i, j)] = LabeledIndicator(labelEditor.name, self.settingsWidget.labelEditors[(i, j)], self)
+                    self.indicators[(i, j)] = LabeledIndicator(labelEditor.name,
+                                                               self.settingsWidget.labelEditors[(i, j)], self)
                 self.labelGridLayout.addWidget(self.indicators[(i, j)], i, j, 1, 1)
                 self.indicators[(i, j)].applyEditorSettings(labelEditor)
 
@@ -250,6 +299,8 @@ class GridIndicator(BasicDisplay):
             editWidget = self.settingsWidget
         backgroundColor = editWidget.backgroundColor.colorLabel.text()
         self.bgColor = backgroundColor
+        self.nbRows = editWidget.rowSpinBox.value()
+        self.nbColumns = editWidget.columnSpinBox.value()
         # Fill and update Grid
         self.fillGrid(editWidget)
         self.updateContent()
@@ -325,7 +376,7 @@ class GridIndicatorEditDialog(QWidget):
             for row in range(self.nbRows, newRowCount):
                 for column in range(self.nbColumns):
                     labelNames = [labelEditor.name for labelEditor in self.labelEditors.values()]
-                    editor = LabelEditor(nameGiving(labelNames, baseName='Value'), self.currentDir, self)
+                    editor = LabelEditor(nameGiving(labelNames, baseName='Value', firstName=False), self.currentDir, self)
                     editor.goBackToGrid.connect(self.openGridEditor)
                     self.labelEditors[(row, column)] = editor
             self.nbRows = newRowCount
@@ -334,7 +385,7 @@ class GridIndicatorEditDialog(QWidget):
             for row in range(self.nbRows):
                 for column in range(self.nbColumns, newColumnCount):
                     labelNames = [labelEditor.name for labelEditor in self.labelEditors.values()]
-                    editor = LabelEditor(nameGiving(labelNames, baseName='Value'), self.currentDir, self)
+                    editor = LabelEditor(nameGiving(labelNames, baseName='Value', firstName=False), self.currentDir, self)
                     editor.goBackToGrid.connect(self.openGridEditor)
                     self.labelEditors[(row, column)] = editor
             self.nbColumns = newColumnCount
@@ -549,12 +600,13 @@ class LabelEditor(QWidget):
 class LabeledIndicator(QGroupBox):
     def __init__(self, name: str, editor: LabelEditor = None, parent: GridIndicator = None):
         super().__init__(parent)
+        self.textAlignment = 0
         self.lastValue = None
         self.catalogue = DefaultUnitsCatalogue()
         self.generalSettings = load_settings('settings')
-        self.argument = None
+        self.argument = ''
         self.argumentUnit = None
-        self.showUnit = None
+        self.showUnit = False
         self.setTitle(name)
         self.parentWidget = parent
         self.editor = editor
@@ -586,10 +638,13 @@ class LabeledIndicator(QGroupBox):
         # Text Alignment
         if labelEditor.positionLeftButton.isChecked():
             self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            self.textAlignment = 0
         elif labelEditor.positionCenterButton.isChecked():
             self.label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            self.textAlignment = 1
         elif labelEditor.positionRightButton.isChecked():
             self.label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.textAlignment = 2
 
         self.showUnit = labelEditor.unitCheckbox.isChecked()
         self.argumentUnit = labelEditor.selectedUnit

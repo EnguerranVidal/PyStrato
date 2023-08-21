@@ -13,12 +13,15 @@ from ecom.datatypes import TypeInfo, DefaultValueInfo, EnumType
 from sources.databases.balloondata import BalloonPackageDatabase
 
 
-def nameGiving(nameList: list, baseName: str = '', parentheses=False, startingIndex=0):
+def nameGiving(nameList: list, baseName: str = '', parentheses=False, firstName=True, startingIndex=0):
     i = startingIndex
-    if parentheses:
-        name = baseName + ' (' + str(i) + ')'
+    if firstName:
+        name = baseName
     else:
-        name = baseName + ' ' + str(i)
+        if parentheses:
+            name = baseName + ' (' + str(i) + ')'
+        else:
+            name = baseName + ' ' + str(i)
     while name in nameList:
         if parentheses:
             name = baseName + ' (' + str(i) + ')'
@@ -26,6 +29,16 @@ def nameGiving(nameList: list, baseName: str = '', parentheses=False, startingIn
             name = baseName + ' ' + str(i)
         i += 1
     return name
+
+
+def getWithoutExtension(filePath):
+    baseName = os.path.basename(filePath)
+    withoutExtension, _ = os.path.splitext(baseName)
+    return withoutExtension
+
+
+def getModificationDate(filePath):
+    return os.path.getmtime(filePath)
 
 
 def testSaving(path):
@@ -101,7 +114,7 @@ def load_settings(path):
                 parameters[line[0]] = []
             else:
                 parameters[line[0]] = splitSetting
-        elif line[0] in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE', 'RSSI']:
+        elif line[0] in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE', 'LAYOUT_AUTOSAVE']:
             parameters[line[0]] = bool(int(line[1].rstrip("\n")))
         else:
             parameters[line[0]] = line[1].rstrip("\n")
@@ -117,7 +130,7 @@ def save_settings(parameters, path):
             setting = line[0]
             if setting in ['AVAILABLE_BAUDS', 'FORMAT_FILES', 'OPENED_RECENTLY']:
                 file.write(setting + '=' + ','.join(parameters[setting]) + '\n')
-            elif setting in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE', 'RSSI']:
+            elif setting in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE', 'LAYOUT_AUTOSAVE']:
                 file.write(setting + '=' + str(int(parameters[setting])) + '\n')
             else:
                 file.write(setting + '=' + str(parameters[setting]) + '\n')

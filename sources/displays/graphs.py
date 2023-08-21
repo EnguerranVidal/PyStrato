@@ -32,7 +32,15 @@ class MultiCurveGraph(BasicDisplay):
         self.backgroundColor = backgroundColor
         self.showLegend = False
         layout.addWidget(self.plotWidget)
-        self.settingsWidget = CustomGraphEditDialog(self.currentDir, self)
+        self.settingsWidget = MultiCurveGraphEditDialog(self.currentDir, self)
+
+    def getDescription(self):
+        graphDescription = {'DISPLAY_TYPE': 'MULTI_CURVE_GRAPH',
+                            'BACKGROUND_COLOR': self.backgroundColor,
+                            'NB_CURVES': len(self.curveProperties)}
+        for i in range(len(self.curveProperties)):
+            graphDescription[i] = self.curveProperties[i]
+        return graphDescription
 
     def applyChanges(self, editWidget):
         editWidget = self.settingsWidget
@@ -76,7 +84,7 @@ class MultiCurveGraph(BasicDisplay):
                         self.plotWidget.plot(valueX, valueY, pen=pen)
 
 
-class CustomGraphEditDialog(QWidget):
+class MultiCurveGraphEditDialog(QWidget):
     def __init__(self, path, graph: MultiCurveGraph = None):
         super().__init__(parent=graph)
         self.currentDir = path
@@ -136,7 +144,7 @@ class CustomGraphEditDialog(QWidget):
             lineColor = self.colorCycler.next(inHexCode=True)
         bkColor = self.backgroundColorFrame.colorLabel.text()
         names = [self.tabWidget.widget(i).name for i in range(self.tabWidget.count())]
-        name = nameGiving(names, 'Curve', startingIndex=1)
+        name = nameGiving(names, 'Curve', startingIndex=1, firstName=False)
         curveEditor = CurveEditor(self.currentDir, self, name=name, lineColor=lineColor, bkColor=bkColor)
         self.tabWidget.addTab(curveEditor, name)
         self.tabWidget.widget(count).nameChange.connect(self.changeTabNames)

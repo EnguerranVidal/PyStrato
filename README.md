@@ -1,4 +1,4 @@
-# Stratospheric Weather Balloon Customizable Ground Station
+# Weather Balloon Customizable Ground Station
 
 ## Project Introduction
 
