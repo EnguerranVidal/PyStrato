@@ -977,6 +977,36 @@ class FlatButton(QPushButton):
         return self.iconSize()
 
 
+class ArrowWidget(QLabel):
+    def __init__(self, iconPath: str, angle: int = 0):
+        super().__init__()
+        self.sizeIntegers = (25, 25)
+        self.iconPath = iconPath
+        self.angle = angle
+
+        self.setAlignment(Qt.AlignCenter)
+        self.setFixedSize(self.sizeIntegers[0], self.sizeIntegers[1])
+        self.updateIcon(self.angle)
+
+    def setSize(self, height: int = 25, width: int = 25):
+        self.sizeIntegers = (height, width)
+        self.setFixedSize(self.sizeIntegers[0], self.sizeIntegers[1])
+        self.updateIcon(self.angle)
+
+    def updateIcon(self, angle):
+        pixmap = QPixmap(self.iconPath)
+        pixmap = pixmap.scaledToWidth(100)
+        rotated_pixmap = pixmap.transformed(
+            QTransform().rotate(angle), Qt.SmoothTransformation
+        ).scaled(self.sizeIntegers[0], self.sizeIntegers[1],
+                 Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.setPixmap(rotated_pixmap)
+
+    def setAngle(self, angle):
+        self.angle = angle
+        self.updateIcon(self.angle)
+
+
 class ValueWidget(QWidget):
     def __init__(self, cType, value=''):
         super(QWidget, self).__init__()
