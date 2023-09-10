@@ -18,7 +18,7 @@ from sources.common.Widgets import *
 
 from sources.databases.general import PacketTabWidget
 from sources.displays.general import DisplayTabWidget
-from sources.weather.general import WeatherTabWindow
+from sources.weather.general import WeatherWindow
 
 
 ######################## CLASSES ########################
@@ -40,7 +40,7 @@ class PyGS(QMainWindow):
         self.setGeometry(500, 500, 1000, 600)
         self.setWindowTitle('Weather Balloon Ground Station')
         self.setWindowIcon(self.mainIcon)
-        self.settings = load_settings("settings")
+        self.settings = loadSettings("settings")
         self._center()
         # FPS in StatusBar
         self.lastUpdate = time.perf_counter()
@@ -104,13 +104,13 @@ class PyGS(QMainWindow):
         # Packet Tab Widget -----------------------------------------
         self.packetTabWidget = PacketTabWidget(self.currentDir)
         self.displayTabWidget = DisplayTabWidget(self.currentDir)
-        self.weatherWidget = WeatherTabWindow(self.currentDir)
+        self.weatherTabWidget = WeatherWindow(self.currentDir)
         self.graphWidgetsList = []
 
         # Adding Tabs to Main Widget -------------------------------
-        self.generalTabWidget.addTab(self.displayTabWidget, 'Display')
-        self.generalTabWidget.addTab(self.packetTabWidget, 'Packets')
-        self.generalTabWidget.addTab(self.weatherWidget, 'Weather')
+        self.generalTabWidget.addTab(self.displayTabWidget, 'DISPLAY')
+        self.generalTabWidget.addTab(self.packetTabWidget, 'PACKETS')
+        self.generalTabWidget.addTab(self.weatherTabWidget, 'WEATHER')
 
         self.generalTabWidget.currentChanged.connect(self.manageToolBars)
         self.setCentralWidget(self.generalTabWidget)
@@ -148,23 +148,34 @@ class PyGS(QMainWindow):
         self.displaysToolBar.addAction(self.runSerialAct)
         self.displaysToolBar.addAction(self.stopSerialAct)
 
+        ########### WEATHER ###########
+        self.weatherToolBar = QToolBar("Weather", self)
+        self.locationSearchBar = SearchBar(options=self.weatherTabWidget.forecastTabDisplay.citiesDataFrame['format'])
+        self.locationSearchBar.setFixedHeight(25)
+        self.locationSearchBar.suggestionSelected.connect(self.onLocationSearchedClicked)
+        self.weatherToolBar.addWidget(self.locationSearchBar)
+
         ########### APPEARANCE ###########
         self.addToolBar(self.databasesToolBar)
         self.addToolBar(self.displaysToolBar)
+        self.addToolBar(self.weatherToolBar)
         self.generalTabWidget.currentChanged.connect(self.manageToolBars)
         self.manageToolBars(0)
 
     def manageToolBars(self, index):
         # Show the ToolBar based on the appearing tab
-        if index == 0:
+        if index == 0:  # DISPLAYS
             self.databasesToolBar.hide()
             self.displaysToolBar.show()
-        elif index == 1:
+            self.weatherToolBar.hide()
+        elif index == 1:  # PACKAGES
             self.databasesToolBar.show()
             self.displaysToolBar.hide()
-        elif index == 2:
+            self.weatherToolBar.hide()
+        elif index == 2:  # WEATHER
             self.databasesToolBar.hide()
-            self.displaysToolBar.show()
+            self.displaysToolBar.hide()
+            self.weatherToolBar.show()
 
     def _createActions(self):
         ########### FORMATS ###########
@@ -460,7 +471,7 @@ class PyGS(QMainWindow):
         self.settings['OPENED_RECENTLY'] = openedRecently
         if len(self.settings['OPENED_RECENTLY']) == 5:
             self.settings['OPENED_RECENTLY'].pop()
-        save_settings(self.settings, 'settings')
+        saveSettings(self.settings, 'settings')
 
     def openRecentFile(self, filename):
         filenames = [os.path.basename(path) for path in self.settings['OPENED_RECENTLY']]
@@ -499,7 +510,7 @@ class PyGS(QMainWindow):
     def editTrackedFormats(self):
         trackedFormats = self.trackedFormatsWindow.getListedValues()
         self.settings['FORMAT_FILES'] = trackedFormats
-        save_settings(self.settings, 'settings')
+        saveSettings(self.settings, 'settings')
         self.trackedFormatsWindow.close()
         self.graphsTabWidget.fillComboBox()
 
@@ -515,7 +526,7 @@ class PyGS(QMainWindow):
             description = json.load(file)
         self.displayTabWidget.applyLayoutDescription(description)
         self.settings['CURRENT_LAYOUT'] = os.path.splitext(os.path.basename(filePath))[0]
-        save_settings(self.settings, 'settings')
+        saveSettings(self.settings, 'settings')
 
     def saveLayout(self, autosave=False):
         # SAVING LAYOUT PRESET
@@ -620,7 +631,7 @@ class PyGS(QMainWindow):
 
     def setLayoutAutoSave(self, action):
         self.settings["LAYOUT_AUTOSAVE"] = action
-        save_settings(self.settings, "settings")
+        saveSettings(self.settings, "settings")
         if self.settings["LAYOUT_AUTOSAVE"]:
             self.layoutAutosaveTimer = QTimer()
             self.layoutAutosaveTimer.timeout.connect(lambda: self.saveLayout(autosave=True))
@@ -733,7 +744,7 @@ class PyGS(QMainWindow):
 
     def setAutoscale(self, action):
         self.settings["AUTOSCALE"] = action
-        save_settings(self.settings, "settings")
+        saveSettings(self.settings, "settings")
 
     def setEmulatorMode(self, action):
         if action:
@@ -749,12 +760,12 @@ class PyGS(QMainWindow):
             sb = msg.standardButton(button)
             if sb == QMessageBox.Yes:
                 self.settings["EMULATOR_MODE"] = action
-                save_settings(self.settings, "settings")
+                saveSettings(self.settings, "settings")
                 if self.serial is not None:
                     self.stopSerial()
         else:
             self.settings["EMULATOR_MODE"] = action
-            save_settings(self.settings, "settings")
+            saveSettings(self.settings, "settings")
             if self.serial is not None:
                 self.stopSerial()
 
@@ -811,7 +822,7 @@ class PyGS(QMainWindow):
             self.stopSerialAct.setDisabled(True)
             self.portMenu.setDisabled(True)
             self.settings["SELECTED_PORT"] = ""
-            save_settings(self.settings, "settings")
+            saveSettings(self.settings, "settings")
         else:
             self.portMenu.clear()
             port_group = QActionGroup(self.portMenu)
@@ -829,7 +840,7 @@ class PyGS(QMainWindow):
                     port_group.addAction(action)
                 self.portMenu.setTitle('&Port    ' + self.available_ports[0])
                 self.settings["SELECTED_PORT"] = self.available_ports[0]
-                save_settings(self.settings, "settings")
+                saveSettings(self.settings, "settings")
             port_group.setExclusive(True)
             port_group.triggered.connect(self.selectPort)
         if self.serial is None:
@@ -842,7 +853,7 @@ class PyGS(QMainWindow):
     def selectBaud(self, action):
         self.baudMenu.setTitle('&Baud    ' + action.text())
         self.settings["SELECTED_BAUD"] = action.text()
-        save_settings(self.settings, "settings")
+        saveSettings(self.settings, "settings")
         # Restart Serial Connection if on
         if self.serial is not None:
             self.stopSerial()
@@ -851,24 +862,29 @@ class PyGS(QMainWindow):
     def selectPort(self, action):
         self.portMenu.setTitle('&Port    ' + action.text())
         self.settings["SELECTED_PORT"] = action.text()
-        save_settings(self.settings, "settings")
+        saveSettings(self.settings, "settings")
         # Stop Serial Connection if on
         if self.serial is not None:
             self.stopSerial()
 
     def setRssi(self, action):
         self.settings["RSSI"] = action
-        save_settings(self.settings, "settings")
+        saveSettings(self.settings, "settings")
         # Restart Serial Connection if on
         if self.serial is not None:
             self.stopSerial()
             self.startSerial()
 
     def checkSerialMonitor(self):
-        self.settings = load_settings("settings")
+        self.settings = loadSettings("settings")
         if self.serial is not None and not self.serial.isRunning():
             self.stopSerial()
             self.serialWindow.textedit.setDisabled(True)
+
+    def onLocationSearchedClicked(self):
+        formattedCityName = self.locationSearchBar.text()
+        dataSlice = self.weatherTabWidget.forecastTabDisplay.citiesDataFrame[self.weatherTabWidget.forecastTabDisplay.citiesDataFrame['format'] == formattedCityName]
+        self.weatherTabWidget.forecastTabDisplay.addLocationTab(dataSlice.iloc[0])
 
     def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()

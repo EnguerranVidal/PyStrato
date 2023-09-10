@@ -14,71 +14,120 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, save_settings, nameGiving
+from sources.common.FileHandling import loadSettings, saveSettings, nameGiving
 from sources.common.Widgets import FlatButton, SearchBar
-from sources.weather.openweathermap import ApiRegistrationWidget
+from sources.weather.openweathermap import *
 
 
 ######################## CLASSES ########################
-class WeatherTabWindow(QMainWindow):
+class WeatherWindow(QMainWindow):
     def __init__(self, path: str = os.path.dirname(__file__)):
         super().__init__()
         self.currentDir = path
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         self.apiKey = self.settings['WEATHER_API_KEY']
-        self.central_widget = QStackedWidget()
-        self.setCentralWidget(self.central_widget)
+        self.stackedWidget = QStackedWidget()
+        self.setCentralWidget(self.stackedWidget)
 
-        self.weather_forecast_widget = WeatherWidget(self, self.currentDir)
-        self.central_widget.addWidget(self.weather_forecast_widget)
-
-        if not self.apiKey:
-            self.api_registration_widget = ApiRegistrationWidget(self)
-            self.api_registration_widget.validApiRegistration.connect(self.switchToForecast)
-            self.central_widget.addWidget(self.api_registration_widget)
-            self.central_widget.setCurrentWidget(self.api_registration_widget)
+        if not self.apiKey or not isValidAPIKey(self.apiKey):
+            self.apiRegistrationWidget = ApiRegistrationWidget(self)
+            self.apiRegistrationWidget.validApiRegistration.connect(self.switchToForecast)
+            self.stackedWidget.addWidget(self.apiRegistrationWidget)
+            self.stackedWidget.setCurrentWidget(self.apiRegistrationWidget)
         else:
-            self.central_widget.setCurrentWidget(self.weather_forecast_widget)
+            self.forecastTabDisplay = ForecastTabDisplay(self, self.currentDir)
+            self.stackedWidget.addWidget(self.forecastTabDisplay)
+            self.stackedWidget.setCurrentWidget(self.forecastTabDisplay)
 
-    def switchToForecast(self, apiKey: str):
+    def validateApiKey(self, apiKey: str):
         self.apiKey = apiKey
         self.settings['WEATHER_API_KEY'] = apiKey
-        save_settings(self.settings, 'settings')
-        self.central_widget.setCurrentWidget(self.weather_forecast_widget)
+        saveSettings(self.settings, 'settings')
+        self.switchToForecast()
+
+    def switchToForecast(self):
+        self.stackedWidget.setCurrentWidget(self.forecastTabDisplay)
+
+    def addToFavourites(self):
+        """ To add to the favourites """
+        pass
+
+    def switchToFavourites(self):
+        """ To switch panel to the favourites """
+        pass
+
+    def loadFavouriteLocation(self):
+        """ To load a favourite location """
+        pass
 
 
-class WeatherWidget(QWidget):
+class ForecastTabDisplay(QTabWidget):
     def __init__(self, parent=None, path: str = os.path.dirname(__file__)):
         super().__init__(parent)
         self.currentDir = path
-        self.forecastLabel = None
-        self.parent = parent
-        self.citiesDataFrame = None
-        layout = QVBoxLayout()
-        self.forecastLabel = QLabel("Weather Forecast:")
-        layout.addWidget(self.forecastLabel, alignment=Qt.AlignCenter)
-        self.mapButton = QPushButton("Open Map")
-        self.mapButton.clicked.connect(self.showMapDialog)
-        layout.addWidget(self.mapButton, alignment=Qt.AlignCenter)
-        self.setLayout(layout)
+
+        # LOADING LOCATIONS
+        self.citiesDataFrame = self.loadSearchItemsFromJson()
+        self.settings = loadSettings('settings')
+        self.apiKey = self.settings['WEATHER_API_KEY']
+        self.locations = []
+        for location in self.settings['LOCATIONS']:
+            dataSlice = self.findCitySlice(location[0], location[1], location[2])
+            self.locations.append(dataSlice.iloc[0])
 
     def showMapDialog(self):
-        dialog = MapDialog(self, self.currentDir)
+        dialog = MapDialog(self.citiesDataFrame, parent=self, path=self.currentDir)
         if dialog.exec_() == QDialog.Accepted:
             lastMarker = dialog.markers[-1]
             cityData = lastMarker[0]
-            print(cityData['coord'])
-            latitude, longitude = cityData['coord']['lat'], cityData['coord']['lon']
-            print("Marker Popup:", cityData['format'])
-            print("City Name:", cityData['name'])
-            print("Latitude:", latitude)
-            print("Longitude:", longitude)
+            print(type(cityData))
+            print(cityData)
+
+    def addLocationTab(self, cityData):
+        displayWidget, displayLayout = QWidget(), QHBoxLayout()
+        name, state, country = cityData['name'], cityData['state'], cityData['country']
+        observationData = getObservationWeatherData(name, state, country, self.apiKey)
+        forecastData = getForecastWeatherData(name, state, country, self.apiKey)
+        pollutionData = getAirPollutionData(name, state, country, self.apiKey)
+        observationDisplay = WeatherObservationDisplay(observationData, pollutionData, metric=True)
+        forecastDisplay = WeatherForecastWidget(observationData, forecastData, metric=True)
+        displayLayout.addWidget(observationDisplay)
+        displayLayout.addWidget(forecastDisplay)
+        displayWidget.setLayout(displayLayout)
+        self.addTab(displayWidget, name)
+
+
+    def findCitySlice(self, cityName='', state='', country=''):
+        mask = ((self.citiesDataFrame['name'] == cityName) &
+                (self.citiesDataFrame['state'] == state) &
+                (self.citiesDataFrame['country'] == country))
+        return self.citiesDataFrame[mask]
+
+
+    def loadSearchItemsFromJson(self):
+        path = os.path.join(self.currentDir, 'sources/weather/city.list.json')
+        citiesDataFrame = pd.read_json(path)
+        citiesDataFrame['format'] = citiesDataFrame.apply(
+            lambda row: f"{row['name']}, {row['state']}, {row['country']}" if row[
+            'state'] else f"{row['name']}, {row['country']}",
+        axis=1)
+        return citiesDataFrame
+
+
+    def getGpsLocation(self):
+        g = geocoder.ip('me')
+        if g.status == 'OK':
+            cityName = g.city
+            stateName = g.state
+            countryName = g.country
+            dataSlice = self.findCitySlice(cityName, stateName, countryName).iloc[0]
 
 
 class MapDialog(QDialog):
-    def __init__(self, parent: WeatherWidget = None, path: str = os.path.dirname(__file__), cityData: dict = None):
+    def __init__(self, citiesDataFrame, parent: ForecastTabDisplay = None, path: str = os.path.dirname(__file__),
+                 cityData: dict = None):
         super().__init__(parent)
-        self.citiesDataFrame = None
+        self.citiesDataFrame = citiesDataFrame
         self.currentDir = path
         self.iconPath = os.path.join(self.currentDir, 'sources/icons')
         self.foliumMap = None
@@ -89,7 +138,6 @@ class MapDialog(QDialog):
         topLayout = QHBoxLayout()
 
         # SEARCH BAR
-        self.loadSearchItemsFromJson()
         self.searchBar = SearchBar(options=self.citiesDataFrame['format'])
         self.searchBar.setFixedHeight(25)
         self.searchBar.suggestionSelected.connect(self.onSearchResultClicked)
@@ -101,16 +149,11 @@ class MapDialog(QDialog):
         self.gpsButton.clicked.connect(self.useGpsLocation)
         topLayout.addWidget(self.gpsButton)
 
-        # FAVOURITES BUTTON
-        self.favouritesButton = FlatButton(os.path.join(self.iconPath, 'light-theme/icons8-star-empty-96.png'))
-        self.favouritesButton.clicked.connect(self.showFavourites)
-        # topLayout.addWidget(self.favouritesButton)
-
-        layout.addLayout(topLayout)
         self.mapView = QWebEngineView()
-        layout.addWidget(self.mapView)
         self.doneButton = QPushButton("Done")
         self.doneButton.clicked.connect(self.accept)
+        layout.addLayout(topLayout)
+        layout.addWidget(self.mapView)
         layout.addWidget(self.doneButton)
         self.setLayout(layout)
 
@@ -119,18 +162,11 @@ class MapDialog(QDialog):
             self.useGpsLocation()
         else:
             self.addMarker(cityData)
-    
-    def loadSearchItemsFromJson(self):
-        path = os.path.join(self.currentDir, 'sources/weather/city.list.json')
-        self.citiesDataFrame = pd.read_json(path)
-        self.citiesDataFrame['format'] = self.citiesDataFrame.apply(
-            lambda row: f"{row['name']}, {row['state']}, {row['country']}" if row[
-                'state'] else f"{row['name']}, {row['country']}",
-            axis=1)
 
     def findClosestCity(self, latitude, longitude):
         self.citiesDataFrame['distance'] = ((self.citiesDataFrame['coord'].apply(lambda x: x['lat']) - latitude) ** 2 +
-                                            (self.citiesDataFrame['coord'].apply(lambda x: x['lon']) - longitude) ** 2) ** 0.5
+                                            (self.citiesDataFrame['coord'].apply(
+                                                lambda x: x['lon']) - longitude) ** 2) ** 0.5
         closestCityIndex = self.citiesDataFrame['distance'].idxmin()
         cityData = self.citiesDataFrame.loc[closestCityIndex]
         return cityData
@@ -152,7 +188,6 @@ class MapDialog(QDialog):
             closestCity = self.findClosestCity(g.latlng[0], g.latlng[1])
             self.addMarker(closestCity)
             self.setMapView(g.latlng[0], g.latlng[1], 12)
-            print("IP Location:", g.latlng)
 
     def onSearchResultClicked(self):
         formattedCityName = self.searchBar.text()
@@ -197,4 +232,3 @@ class MapDialog(QDialog):
             self.foliumMap.zoom_start = zoom
         self.foliumMap.save(os.path.join(os.path.dirname(__file__), 'map.html'))
         self.mapView.reload()
-

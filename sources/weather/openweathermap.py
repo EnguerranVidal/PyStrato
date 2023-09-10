@@ -1,16 +1,16 @@
 ######################## IMPORTS ########################
 from collections import Counter
 from datetime import datetime, timedelta
-
 import geocoder
 import numpy as np
 import pyqtgraph as pg
 import requests
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+from scipy.interpolate import make_interp_spline
+
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
-from scipy.interpolate import make_interp_spline
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
 from sources.common.Functions import getTextHeight
@@ -48,17 +48,10 @@ class ApiRegistrationWidget(QWidget):
         result = dialog.exec_()
         if result == QDialog.Accepted:
             newApiKey = dialog.apiKeyLineEdit.text()
-            if self.isValidAPIKey(newApiKey):
+            if isValidAPIKey(newApiKey):
                 self.validApiRegistration.emit(newApiKey)
             else:
-                QMessageBox.critical(self, "Invalid API Key",
-                                     "The entered API key is invalid. Please enter a valid API key.")
-
-    @staticmethod
-    def isValidAPIKey(api_key):
-        url = f"http://api.openweathermap.org/data/2.5/weather?q=Paris&appid={api_key}"
-        response = requests.get(url)
-        return response.status_code == 200
+                QMessageBox.critical(self, "Invalid API Key", "The entered API key is invalid. Please enter a valid API key.")
 
     @staticmethod
     def createAPIAccount():
@@ -116,7 +109,7 @@ class WeatherObservationDisplay(QWidget):
         self.metric = metric
         self.observationData = observationData
         self.pollutionData = pollutionData
-        self.observationTime = datetime.datetime.fromtimestamp(self.observationData['dt'])
+        self.observationTime = datetime.fromtimestamp(self.observationData['dt'])
 
         # OBSERVATION LAYOUT ----------------------------------
         observationFrame = QFrame()
@@ -162,7 +155,7 @@ class WeatherObservationDisplay(QWidget):
         topRowLayout.addWidget(feelLikeTemperatureLabel, 1, 4, alignment=Qt.AlignLeft)
         # Wind Speed and Direction
         windTitleLabel = QLabel("Wind")
-        bottomRow.addWidget(windTitleLabel, 0, 0, alignment=Qt.AlignLeft)
+        bottomRow.addWidget(windTitleLabel, 0, 0)
         windInfoLayout = QHBoxLayout()
         windSpeed = self.observationData['wind']['speed'] * 3.6 if self.metric else self.observationData['wind']['speed']
         windSpeedLabel = QLabel(f"<b>{int(windSpeed):.1f} km/h</b>")
@@ -172,24 +165,22 @@ class WeatherObservationDisplay(QWidget):
         bottomRow.addLayout(windInfoLayout, 1, 0, 1, 1, alignment=Qt.AlignLeft)
         # Humidity Level
         humidityTitleLabel = QLabel("Humidity")
-        bottomRow.addWidget(humidityTitleLabel, 0, 2, alignment=Qt.AlignLeft)
+        bottomRow.addWidget(humidityTitleLabel, 0, 2)
         humidityLabel = QLabel(f"<b>{self.observationData['main']['humidity']}%</b>")
-        bottomRow.addWidget(humidityLabel, 1, 2, alignment=Qt.AlignLeft)
+        bottomRow.addWidget(humidityLabel, 1, 2)
         # Visibility Level
         visibilityTitleLabel = QLabel("Visibility")
-        bottomRow.addWidget(visibilityTitleLabel, 0, 3, alignment=Qt.AlignLeft)
+        bottomRow.addWidget(visibilityTitleLabel, 0, 3)
         visibilityValue = self.observationData['visibility'] / 1000 if self.metric else self.observationData['visibility'] / 1609.34
         visibilityLabel = QLabel(f"<b>{int(visibilityValue)} km</b>")
-        bottomRow.addWidget(visibilityLabel, 1, 3, alignment=Qt.AlignLeft)
+        bottomRow.addWidget(visibilityLabel, 1, 3)
         # Air Pressure
         pressureTitleLabel = QLabel("Pressure")
-        bottomRow.addWidget(pressureTitleLabel, 0, 4, alignment=Qt.AlignLeft)
+        bottomRow.addWidget(pressureTitleLabel, 0, 4)
         pressureValue = self.observationData['main']['pressure']
         pressureUnit = 'hPa' if self.metric else 'inHg'
         pressureLabel = QLabel(f"<b>{pressureValue} {pressureUnit}</b>")
-        bottomRow.addWidget(pressureLabel, 1, 4, alignment=Qt.AlignLeft)
-
-        bottomRow.setColumnStretch(1, 1)
+        bottomRow.addWidget(pressureLabel, 1, 4)
         observationLayout.addLayout(topRowLayout)
         observationLayout.addLayout(bottomRow)
         # Storing Labels
@@ -266,6 +257,7 @@ class WeatherObservationDisplay(QWidget):
         mainLayout.addWidget(airQualityLabel)
         mainLayout.addWidget(airQualityFrame)
         self.setLayout(mainLayout)
+        self.setFixedSize(self.sizeHint())
 
     def updateWeatherData(self, observationData):
         self.observationData = observationData
@@ -316,8 +308,130 @@ class WeatherObservationDisplay(QWidget):
         self.nh3Label.setText(f"<b>{nh3Value} μg/m<sup>3</sup></b>")
 
 
+class WeatherForecastWidget(QWidget):
+    def __init__(self, observationData, forecastData, metric=True):
+        super().__init__()
+        self.forecastedData = None
+        self.forecastInterpolated = None
+        self.metric = metric
+        self.observationData = observationData
+        self.forecastData = list(forecastData)
+        self.selectedDate = datetime.now().strftime('%Y-%m-%d')
+
+        mainLayout = QVBoxLayout()
+        self.dayWidgets = []
+        topLayout = QHBoxLayout()
+        now = datetime.now()
+        today = now.strftime('%Y-%m-%d')
+        for index, dayData in enumerate(self.forecastData):
+            if not index:
+                newDayData = dayData.copy()
+                # Before 18:00
+                if newDayData["date"] == today and len(newDayData["time"]) > 2:
+                    dayFrame = DayFrame(newDayData)
+                # After 18:00
+                elif newDayData["date"] == today:
+                    times = newDayData["time"] + self.forecastData[index + 1]["time"]
+                    data = newDayData['temperatures'] + self.forecastData[index + 1]["temperatures"]
+                    icons = newDayData['icons'] + self.forecastData[index + 1]["icons"]
+                    newDayData["times"], newDayData['temperatures'], newDayData['icons'] = times, data, icons
+                    dayFrame = DayFrame(newDayData, tonight=True)
+                # After 21:00
+                else:
+                    # Add a Tonight Day Widget
+                    dayFrame = DayFrame(dayData, date=today, tonight=True)
+                    dayFrame.day_clicked.connect(self.updateSelectedDate)
+                    self.dayWidgets.append(dayFrame)
+                    topLayout.addWidget(dayFrame)
+                    # Add the Normal Day Widget
+                    dayFrame = DayFrame(dayData)
+                dayFrame.dayClicked.connect(self.updateSelectedDate)
+                self.dayWidgets.append(dayFrame)
+                topLayout.addWidget(dayFrame)
+
+            if index and len(dayData["time"]) == 8:
+                dayFrame = DayFrame(dayData)
+                dayFrame.dayClicked.connect(self.updateSelectedDate)
+                self.dayWidgets.append(dayFrame)
+                topLayout.addWidget(dayFrame)
+
+        mainLayout.addLayout(topLayout)
+        self.plotView = pg.PlotWidget()
+        mainLayout.addWidget(self.plotView)
+
+        self.setLayout(mainLayout)
+        self.updateWeatherForecast(self.observationData, self.forecastData)
+        self.updatePlot()
+        self.setFixedSize(self.sizeHint())
+
+    def updateSelectedDate(self, date):
+        self.selectedDate = date
+        self.updatePlot()
+
+    def updateWeatherForecast(self, observationData, forecastData):
+        self.observationData = observationData
+        self.forecastData = forecastData
+        now = datetime.utcnow().replace(second=0, microsecond=0)
+        temperature = int(self.observationData["main"]["temp"])
+        times, data = [now], [temperature]
+        for dayData in self.forecastData:
+            dt = datetime.strptime(dayData['date'], '%Y-%m-%d')
+            times += [dt.replace(hour=int(time.split(':')[0]), minute=int(time.split(':')[1]), second=0, microsecond=0)
+                      for time in dayData['time']]
+            data += dayData['temperatures']
+
+        self.forecastedData = (np.array(times), np.array(data))
+        totalIntervals = int((times[-1] - times[1]).total_seconds() / 60) + 1
+        xSmooth = np.linspace(0, (times[-1] - times[0]).total_seconds(), totalIntervals)
+        timeInSeconds = np.linspace(0, (times[-1] - times[0]).total_seconds(), len(times))
+        xSmoothTime = np.array([times[0] + timedelta(seconds=delta) for delta in xSmooth])
+        xSmoothTime = np.array([dt.replace(second=0, microsecond=0) for dt in xSmoothTime])
+        xSmoothTimestamps = np.array([dt.timestamp() for dt in xSmoothTime])
+        spl = make_interp_spline(timeInSeconds, data, k=3)
+        dataSmooth = spl(xSmooth)
+        self.forecastInterpolated = (xSmoothTime, dataSmooth)
+        self.plotView.clear()
+
+        # Create a single brush for the fill area
+        fillBrush = pg.mkBrush(pg.mkColor('#a0c8f0'))
+        self.plotView.plot(xSmoothTimestamps, dataSmooth, fillLevel=0, fillBrush=fillBrush)
+
+        # Add annotations and text items
+        for x, y in zip(self.forecastedData[0][1:], self.forecastedData[1][1:]):
+            self.plotView.plot([x.timestamp()], [y], pen=None, symbol='o', symbolPen='w', symbolBrush='w',
+                               symbolSize=10)
+
+            text_item = pg.TextItem(text=str(int(y)), anchor=(0, 1), color=(255, 255, 255))
+            self.plotView.addItem(text_item)
+            text_item.setPos(x.timestamp(), y)
+        y_buffer = 1  # Adjust the buffer as needed
+        min_temp_smooth = min(dataSmooth) - y_buffer
+        max_temp_smooth = max(dataSmooth) + y_buffer
+
+        # Set y-axis range for the plotView
+        self.plotView.setYRange(min_temp_smooth, max_temp_smooth)
+
+    def updatePlot(self):
+        for weatherData in self.forecastData:
+            if weatherData['date'] == self.selectedDate:
+                if self.selectedDate == datetime.now().strftime('%Y-%m-%d'):
+                    startTime = self.forecastInterpolated[0][0]
+                    finishTime = startTime + timedelta(hours=24)
+                else:
+                    dateObject = datetime.strptime(weatherData['date'], '%Y-%m-%d')
+                    startTime = dateObject.replace(hour=0, minute=0, second=0, microsecond=0)
+                    finishTime = startTime + timedelta(hours=24)
+                self.plotView.setXRange(startTime.timestamp(), finishTime.timestamp())
+                return
+        if self.selectedDate == datetime.now().strftime('%Y-%m-%d'):
+            startTime = self.forecastInterpolated[0][0]
+            finishTime = startTime + timedelta(hours=24)
+            self.plotView.setXRange(startTime.timestamp(), finishTime.timestamp())
+            return
+
+
 class DayFrame(QFrame):
-    day_clicked = pyqtSignal(str)
+    dayClicked = pyqtSignal(str)
 
     def __init__(self, day_data, parent=None, date=None, tonight=False):
         super().__init__(parent)
@@ -404,137 +518,14 @@ class DayFrame(QFrame):
         self.minTempLabel.setText(minTempText)
 
     def mousePressEvent(self, event):
-        self.day_clicked.emit(self.date)
-
-
-class WeatherForecastWidget(QWidget):
-    def __init__(self, observationData, forecastData, metric=True):
-        super().__init__()
-        self.forecastedData = None
-        self.forecastInterpolated = None
-        self.metric = metric
-        self.observationData = observationData
-        self.forecastData = list(forecastData)
-        self.selectedDate = datetime.now().strftime('%Y-%m-%d')
-
-        mainLayout = QVBoxLayout()
-        self.dayWidgets = []
-        topLayout = QHBoxLayout()
-        now = datetime.now()
-        today = now.strftime('%Y-%m-%d')
-        for index, dayData in enumerate(self.forecastData):
-            if not index:
-                # Before 18:00
-                if dayData["date"] == today and len(dayData["time"]) > 2:
-                    dayFrame = DayFrame(dayData)
-                # After 18:00
-                elif dayData["date"] == today:
-                    times = dayData["times"] + self.forecastData[index + 1]["times"]
-                    data = dayData['temperatures'] + self.forecastData[index + 1]["temperatures"]
-                    icons = dayData['icons'] + self.forecastData[index + 1]["icons"]
-                    dayData["times"], dayData['temperatures'], dayData['icons'] = times, data, icons
-                    dayFrame = DayFrame(dayData, tonight=True)
-
-                # After 21:00
-                else:
-                    # Add a Tonight Day Widget
-                    dayFrame = DayFrame(dayData, date=today, tonight=True)
-                    dayFrame.day_clicked.connect(self.updateSelectedDate)
-                    self.dayWidgets.append(dayFrame)
-                    topLayout.addWidget(dayFrame)
-                    # Add the Normal Day Widget
-                    dayFrame = DayFrame(dayData)
-                dayFrame.day_clicked.connect(self.updateSelectedDate)
-                self.dayWidgets.append(dayFrame)
-                topLayout.addWidget(dayFrame)
-
-            if index and len(dayData["time"]) == 8:
-                dayFrame = DayFrame(dayData)
-                dayFrame.day_clicked.connect(self.updateSelectedDate)
-                self.dayWidgets.append(dayFrame)
-                topLayout.addWidget(dayFrame)
-
-        mainLayout.addLayout(topLayout)
-        self.plotView = pg.PlotWidget()
-        mainLayout.addWidget(self.plotView)
-
-        self.setLayout(mainLayout)
-        self.updateWeatherForecast(self.observationData, self.forecastData)
-        self.updatePlot()
-        self.setFixedSize(self.sizeHint())
-
-    def updateSelectedDate(self, date):
-        self.selectedDate = date
-        self.updatePlot()
-
-    def updateWeatherForecast(self, observationData, forecastData):
-        self.observationData = observationData
-        self.forecastData = forecastData
-        now = datetime.utcnow().replace(second=0, microsecond=0)
-        temperature = int(self.observationData["main"]["temp"])
-        times, data = [now], [temperature]
-        for dayData in self.forecastData:
-            dt = datetime.strptime(dayData['date'], '%Y-%m-%d')
-            times += [dt.replace(hour=int(time.split(':')[0]), minute=int(time.split(':')[1]), second=0, microsecond=0)
-                      for time in dayData['time']]
-            data += dayData['temperatures']
-
-        self.forecastedData = (np.array(times), np.array(data))
-        totalIntervals = int((times[-1] - times[1]).total_seconds() / 60) + 1
-        xSmooth = np.linspace(0, (times[-1] - times[0]).total_seconds(), totalIntervals)
-        timeInSeconds = np.linspace(0, (times[-1] - times[0]).total_seconds(), len(times))
-        xSmoothTime = np.array([times[0] + timedelta(seconds=delta) for delta in xSmooth])
-        xSmoothTime = np.array([dt.replace(second=0, microsecond=0) for dt in xSmoothTime])
-        xSmoothTimestamps = np.array([dt.timestamp() for dt in xSmoothTime])
-        spl = make_interp_spline(timeInSeconds, data, k=3)
-        dataSmooth = spl(xSmooth)
-        self.forecastInterpolated = (xSmoothTime, dataSmooth)
-        self.plotView.clear()
-
-        # Create a single brush for the fill area
-        fillBrush = pg.mkBrush(pg.mkColor('#a0c8f0'))
-        self.plotView.plot(xSmoothTimestamps, dataSmooth, fillLevel=0, fillBrush=fillBrush)
-
-        # Add annotations and text items
-        for x, y in zip(self.forecastedData[0][1:], self.forecastedData[1][1:]):
-            self.plotView.plot([x.timestamp()], [y], pen=None, symbol='o', symbolPen='w', symbolBrush='w',
-                               symbolSize=10)
-
-            text_item = pg.TextItem(text=str(int(y)), anchor=(0, 1), color=(255, 255, 255))
-            self.plotView.addItem(text_item)
-            text_item.setPos(x.timestamp(), y)
-        y_buffer = 1  # Adjust the buffer as needed
-        min_temp_smooth = min(dataSmooth) - y_buffer
-        max_temp_smooth = max(dataSmooth) + y_buffer
-
-        # Set y-axis range for the plotView
-        self.plotView.setYRange(min_temp_smooth, max_temp_smooth)
-
-    def updatePlot(self):
-        for weatherData in self.forecastData:
-            if weatherData['date'] == self.selectedDate:
-                if self.selectedDate == datetime.now().strftime('%Y-%m-%d'):
-                    startTime = self.forecastInterpolated[0][0]
-                    finishTime = startTime + timedelta(hours=24)
-                else:
-                    dateObject = datetime.strptime(weatherData['date'], '%Y-%m-%d')
-                    startTime = dateObject.replace(hour=0, minute=0, second=0, microsecond=0)
-                    finishTime = startTime + timedelta(hours=24)
-                self.plotView.setXRange(startTime.timestamp(), finishTime.timestamp())
-                return
-        if self.selectedDate == datetime.now().strftime('%Y-%m-%d'):
-            startTime = self.forecastInterpolated[0][0]
-            finishTime = startTime + timedelta(hours=24)
-            self.plotView.setXRange(startTime.timestamp(), finishTime.timestamp())
-            return
+        self.dayClicked.emit(self.date)
 
 
 ######################## FUNCTIONS ########################
 def getForecastWeatherData(city, state, country, api_key, metric=True):
     baseUrl = "http://api.openweathermap.org/data/2.5/forecast"
-    location = f"{city},{state},{country}"
     params = {
-        "q": location,
+        "q": f"{city},{state},{country}",
         "appid": api_key,
         "units": "metric" if metric else "imperial"
     }
@@ -602,25 +593,25 @@ def getObservationWeatherData(city, state, country, api_key, metric=True):
         return data
 
 
-def getAirPollutionData(api_key, city, state, country):
+def getAirPollutionData(city, state, country, api_key):
     location = f"{city}, {state}, {country}"
+    print(location)
     g = geocoder.osm(location)
-
+    print(g.latlng)
     if g.ok:
         latitude, longitude = g.latlng
     else:
         print("Error: Unable to retrieve coordinates.")
         return None
-
     base_url = "http://api.openweathermap.org/data/2.5/air_pollution"
-    params = {
-        "lat": latitude,
-        "lon": longitude,
-        "appid": api_key
-    }
-
+    params = {"lat": latitude, "lon": longitude, "appid": api_key}
     response = requests.get(base_url, params=params)
     data = response.json()
-
     if data.get("list"):
         return data
+
+
+def isValidAPIKey(api_key):
+    url = f"http://api.openweathermap.org/data/2.5/weather?q=Paris&appid={api_key}"
+    response = requests.get(url)
+    return response.status_code == 200

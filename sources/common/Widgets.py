@@ -14,7 +14,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, save_settings, nameGiving, getWithoutExtension, \
+from sources.common.FileHandling import loadSettings, saveSettings, nameGiving, getWithoutExtension, \
     getModificationDate
 from sources.databases.balloondata import BalloonPackageDatabase
 from sources.databases.units import DefaultUnitsCatalogue
@@ -24,7 +24,7 @@ from sources.databases.units import DefaultUnitsCatalogue
 class BasicDisplay(QWidget):
     def __init__(self, path, parent=None):
         super().__init__(parent)
-        self.generalSettings = load_settings('settings')
+        self.generalSettings = loadSettings('settings')
         self.catalogue = DefaultUnitsCatalogue()
         self.settingsWidget = QWidget()
         self.currentDir = path
@@ -43,12 +43,12 @@ class BasicDisplay(QWidget):
 
 class ContentStorage:
     def __init__(self, path):
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         self.currentDir = path
         self.storage = {}
 
     def fill(self):
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         paths = self.settings['FORMAT_FILES']
         for path in paths:
             path = os.path.join(self.currentDir, 'formats', path)
@@ -154,7 +154,7 @@ class ArgumentSelectorWidget(QWidget):
         self.typeFilter = typeFilter
         self.formatPath = os.path.join(self.currentDir, "formats")
         self.databases = None
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         # Set up combo box
         self.comboBox = QComboBox()
         self.fillComboBox()
@@ -200,7 +200,7 @@ class ArgumentSelectorWidget(QWidget):
         self.changeComboBox()
 
     def fillComboBox(self):
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         files = self.settings['FORMAT_FILES']
         if len(files) == 1 and len(files[0]) == 0:
             files = []
@@ -376,7 +376,7 @@ class SerialWindow(QWidget):
         self.setLayout(self.layout)
         # Loading settings
         self.settings = {}
-        self.settings = load_settings("settings")
+        self.settings = loadSettings("settings")
         # Text edit box
         self.textedit = QTextEdit(self)
         self.textedit.setText('Run Serial listening to display incoming info ...')
@@ -396,7 +396,7 @@ class SerialWindow(QWidget):
 
     def changeAutoscroll(self):
         self.settings["AUTOSCROLL"] = int(not bool(self.settings["AUTOSCROLL"]))
-        save_settings(self.settings, "settings")
+        saveSettings(self.settings, "settings")
         self.autoscroll_box.setChecked(bool(self.settings["AUTOSCROLL"]))
 
     def clearOutput(self):
@@ -447,7 +447,7 @@ class TrackedBalloonsWindow(QWidget):
         self.format_path = os.path.join(self.current_dir, "formats")
         self.setWindowTitle('Tracked Balloons')
         self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
-        self.settings = load_settings("settings")
+        self.settings = loadSettings("settings")
         # Selected Balloon List
         self.selectedList = BalloonsListWidget()
         self.selectedLabel = QLabel('Tracked Formats')

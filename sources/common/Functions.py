@@ -14,7 +14,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, save_settings, nameGiving
+from sources.common.FileHandling import loadSettings, saveSettings, nameGiving
 from sources.common.Widgets import FlatButton, SearchBar
 
 
