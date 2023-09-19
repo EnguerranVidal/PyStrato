@@ -357,6 +357,7 @@ class WeatherForecastWidget(QWidget):
 
         mainLayout.addLayout(topLayout)
         self.plotView = pg.PlotWidget()
+        self.plotView.resize(self.plotView.width(), 200)
         mainLayout.addWidget(self.plotView)
 
         self.setLayout(mainLayout)
@@ -371,39 +372,34 @@ class WeatherForecastWidget(QWidget):
     def updateWeatherForecast(self, observationData, forecastData):
         self.observationData = observationData
         self.forecastData = forecastData
-        now = datetime.utcnow().replace(second=0, microsecond=0)
+        now = self.observationData['dt']
         temperature = int(self.observationData["main"]["temp"])
         times, data = [now], [temperature]
         for dayData in self.forecastData:
-            dt = datetime.strptime(dayData['date'], '%Y-%m-%d')
-            times += [dt.replace(hour=int(time.split(':')[0]), minute=int(time.split(':')[1]), second=0, microsecond=0)
-                      for time in dayData['time']]
+            times += [int(dt.timestamp()) for dt in dayData['time']]
             data += dayData['temperatures']
-
-        self.forecastedData = (np.array(times), np.array(data))
-        totalIntervals = int((times[-1] - times[1]).total_seconds() / 60) + 1
-        xSmooth = np.linspace(0, (times[-1] - times[0]).total_seconds(), totalIntervals)
-        timeInSeconds = np.linspace(0, (times[-1] - times[0]).total_seconds(), len(times))
-        xSmoothTime = np.array([times[0] + timedelta(seconds=delta) for delta in xSmooth])
-        xSmoothTime = np.array([dt.replace(second=0, microsecond=0) for dt in xSmoothTime])
-        xSmoothTimestamps = np.array([dt.timestamp() for dt in xSmoothTime])
-        spl = make_interp_spline(timeInSeconds, data, k=3)
+        sortedIndices = np.argsort(times)
+        times, data = np.array(times)[sortedIndices], np.array(data)[sortedIndices]
+        self.forecastedData = (times, data)
+        totalIntervals = int((times[-1] - times[1]) / 60)
+        xSmooth = np.linspace(times[1], times[-1], totalIntervals)
+        spl = make_interp_spline(times, data, k=3)
         dataSmooth = spl(xSmooth)
-        self.forecastInterpolated = (xSmoothTime, dataSmooth)
+        self.forecastInterpolated = (xSmooth, dataSmooth)
         self.plotView.clear()
 
         # Create a single brush for the fill area
         fillBrush = pg.mkBrush(pg.mkColor('#a0c8f0'))
-        self.plotView.plot(xSmoothTimestamps, dataSmooth, fillLevel=0, fillBrush=fillBrush)
+        self.plotView.plot(xSmooth, dataSmooth, fillLevel=0, fillBrush=fillBrush)
 
         # Add annotations and text items
         for x, y in zip(self.forecastedData[0][1:], self.forecastedData[1][1:]):
-            self.plotView.plot([x.timestamp()], [y], pen=None, symbol='o', symbolPen='w', symbolBrush='w',
+            self.plotView.plot([x], [y], pen=None, symbol='o', symbolPen='w', symbolBrush='w',
                                symbolSize=10)
 
             text_item = pg.TextItem(text=str(int(y)), anchor=(0, 1), color=(255, 255, 255))
             self.plotView.addItem(text_item)
-            text_item.setPos(x.timestamp(), y)
+            text_item.setPos(x, y)
         y_buffer = 1  # Adjust the buffer as needed
         min_temp_smooth = min(dataSmooth) - y_buffer
         max_temp_smooth = max(dataSmooth) + y_buffer
@@ -416,17 +412,18 @@ class WeatherForecastWidget(QWidget):
             if weatherData['date'] == self.selectedDate:
                 if self.selectedDate == datetime.now().strftime('%Y-%m-%d'):
                     startTime = self.forecastInterpolated[0][0]
-                    finishTime = startTime + timedelta(hours=24)
+                    finishTime = startTime + 3600 * 24
+                    self.plotView.setXRange(startTime, finishTime)
                 else:
                     dateObject = datetime.strptime(weatherData['date'], '%Y-%m-%d')
                     startTime = dateObject.replace(hour=0, minute=0, second=0, microsecond=0)
-                    finishTime = startTime + timedelta(hours=24)
-                self.plotView.setXRange(startTime.timestamp(), finishTime.timestamp())
+                    finishTime = startTime.timestamp() + 3600 * 24
+                    self.plotView.setXRange(startTime.timestamp(), finishTime)
                 return
         if self.selectedDate == datetime.now().strftime('%Y-%m-%d'):
             startTime = self.forecastInterpolated[0][0]
-            finishTime = startTime + timedelta(hours=24)
-            self.plotView.setXRange(startTime.timestamp(), finishTime.timestamp())
+            finishTime = startTime + 3600 * 24
+            self.plotView.setXRange(startTime, finishTime)
             return
 
 
@@ -474,7 +471,7 @@ class DayFrame(QFrame):
         iconImage = requests.get(weatherIconUrl)
         pixmap = QPixmap()
         pixmap.loadFromData(iconImage.content)
-        iconSize = QSize(80, 80)
+        iconSize = QSize(40, 40)
         pixmap = pixmap.scaled(iconSize, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.weatherIconLabel.setPixmap(pixmap)
         self.dayLayout.addWidget(self.weatherIconLabel, 1, 0, 2, 2)
@@ -522,11 +519,12 @@ class DayFrame(QFrame):
 
 
 ######################## FUNCTIONS ########################
-def getForecastWeatherData(city, state, country, api_key, metric=True):
+def get5Day3HoursForecastWeatherData(city, state, country, apiKey, metric=True):
     baseUrl = "http://api.openweathermap.org/data/2.5/forecast"
+    location = f"{city},{state},{country}"
     params = {
-        "q": f"{city},{state},{country}",
-        "appid": api_key,
+        "q": location,
+        "appid": apiKey,
         "units": "metric" if metric else "imperial"
     }
     response = requests.get(baseUrl, params=params)
@@ -535,28 +533,28 @@ def getForecastWeatherData(city, state, country, api_key, metric=True):
         weatherData = {}
         for singleForecast in data["list"]:
             date = datetime.utcfromtimestamp(singleForecast["dt"]).strftime('%Y-%m-%d')
-            time = datetime.utcfromtimestamp(singleForecast["dt"]).strftime('%H:%M')
-            weather_icon = singleForecast["weather"][0]["icon"]
+            time = datetime.utcfromtimestamp(singleForecast["dt"])
+            weatherIcon = singleForecast["weather"][0]["icon"]
             temperature = singleForecast["main"]["temp"]
             rainProbability = singleForecast.get("rain", {}).get("3h", 0)
             if date not in weatherData:
                 weatherData[date] = {
                     "date": date,
                     "time": [time],
-                    "weather_icon": [weather_icon],
+                    "weather_icon": [weatherIcon],
                     "max_temp": temperature,
                     "min_temp": temperature,
                     "temperatures": [temperature],
                     "rain_probabilities": [rainProbability],
-                    "icons": [weather_icon]
+                    "icons": [weatherIcon]
                 }
             else:
                 if temperature > weatherData[date]["max_temp"]:
                     weatherData[date]["max_temp"] = temperature
                 if temperature < weatherData[date]["min_temp"]:
                     weatherData[date]["min_temp"] = temperature
-                weatherData[date]["weather_icon"].append(weather_icon)
-                weatherData[date]["icons"].append(weather_icon)
+                weatherData[date]["weather_icon"].append(weatherIcon)
+                weatherData[date]["icons"].append(weatherIcon)
                 weatherData[date]["time"].append(time)
                 weatherData[date]["temperatures"].append(temperature)
                 weatherData[date]["rain_probabilities"].append(rainProbability)
@@ -567,9 +565,7 @@ def getForecastWeatherData(city, state, country, api_key, metric=True):
                 mostCommonIcon = Counter(day_icons).most_common(1)[0][0]
             else:
                 target = datetime.strptime("12:00", '%H:%M').time()
-                timeDiffs = [abs((datetime.combine(datetime.today(),
-                                                   datetime.strptime(time_str, '%H:%M').time()) - datetime.combine(
-                    datetime.today(), target)).seconds) for time_str in dayData["time"]]
+                timeDiffs = [abs((dateTime - datetime.combine(datetime.today(), target)).seconds) for dateTime in dayData["time"]]
                 closestTimeIndex = timeDiffs.index(min(timeDiffs))
                 mostCommonIcon = dayData["weather_icon"][closestTimeIndex]
             weatherData[date]["weather_icon"] = mostCommonIcon

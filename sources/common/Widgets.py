@@ -610,8 +610,12 @@ class AboutDialog(QDialog):
 
         <p align="justify">Key Features:</p>
         <ul>
-        <li>Real-time telemetry data visualization: Visualize information in real_time through several diagram types and plots.</li>
-        <li>Payload Telemetry Data Editing : Set up the telecommunication payload layout.</li>
+        <li><strong>Real-time telemetry data visualization :</strong>
+        Visualize information in real_time through several diagram types and plots.</li>
+        <li><strong>Payload Telemetry Data Editing :</strong> 
+        Set up the telecommunication payload layout as to customize its constituents.</li>
+        <li><strong>Weather Forecast :</strong> 
+        Be able to get weather forecasts and air pollution levels from OpenWeatherMap.</li>
         </ul>
 
         <p align="justify">This software is written in Python, utilizing the power and flexibility of the language to provide an intuitive user experience. We recommend using Python 3.9 for optimal performance.</p>

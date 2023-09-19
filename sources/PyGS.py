@@ -886,6 +886,9 @@ class PyGS(QMainWindow):
         dataSlice = self.weatherTabWidget.forecastTabDisplay.citiesDataFrame[self.weatherTabWidget.forecastTabDisplay.citiesDataFrame['format'] == formattedCityName]
         self.weatherTabWidget.forecastTabDisplay.addLocationTab(dataSlice.iloc[0])
 
+    def locationWeatherUpdate(self):
+        pass
+
     def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()
         self.dateLabel.setText(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
