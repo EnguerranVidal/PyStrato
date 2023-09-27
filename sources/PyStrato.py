@@ -903,7 +903,7 @@ class PyStratoGui(QMainWindow):
     @staticmethod
     def openGithub():
         import webbrowser
-        webbrowser.open("https://github.com/EnguerranVidal/PyGS")
+        webbrowser.open("https://github.com/EnguerranVidal/PyStrato")
 
     @staticmethod
     def openAbout():
