@@ -128,7 +128,7 @@ class NewTelecommandWindow(QDialog):
         super().__init__()
         self.database = database
         self.setWindowTitle('Add New Telecommand')
-        # self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        # self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
         self.resize(400, 100)
         self.dlgLayout = QVBoxLayout()
         self.formWidget = QWidget(self)

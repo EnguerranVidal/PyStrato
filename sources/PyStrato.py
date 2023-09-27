@@ -13,7 +13,7 @@ from PyQt5.QtCore import QDateTime, QThread
 
 # --------------------- Sources ----------------------- #
 from sources.SerialGS import SerialMonitor
-from sources.common.FileHandling import nameGiving
+from sources.common.FileHandling import nameGiving, loadSearchItemsFromJson
 from sources.common.Widgets import *
 
 from sources.databases.general import PacketTabWidget
@@ -22,11 +22,13 @@ from sources.weather.general import WeatherWindow
 
 
 ######################## CLASSES ########################
-class PyGS(QMainWindow):
+class PyStratoGui(QMainWindow):
     def __init__(self, path):
         super().__init__()
+        self.loadingData = None
+        self.hide()
         self.currentDir = path
-        self.mainIcon = QIcon('sources/icons/iconPyGSCopy')
+        self.mainIcon = QIcon('sources/icons/PyStrato')
         # FOLDER PATHS
         self.formatPath = os.path.join(self.currentDir, "formats")
         self.dataPath = os.path.join(self.currentDir, "data")
@@ -38,7 +40,7 @@ class PyGS(QMainWindow):
 
         # Main Window Settings
         self.setGeometry(500, 500, 1000, 600)
-        self.setWindowTitle('Weather Balloon Ground Station')
+        self.setWindowTitle('PyStrato')
         self.setWindowIcon(self.mainIcon)
         self.settings = loadSettings("settings")
         self._center()
@@ -78,9 +80,11 @@ class PyGS(QMainWindow):
         self.trackedFormatsWindow = None
         self.layoutAutosaveTimer = None
 
+    def initializeUI(self, data=None):
+        self.loadingData = data
         # Initialize Interface
         self._checkEnvironment()
-        self._generateUI()
+        self._generateTabs()
         self._createActions()
         self._createMenuBar()
         self._createToolBars()
@@ -94,9 +98,7 @@ class PyGS(QMainWindow):
         if self.settings['LAYOUT_AUTOSAVE']:
             self.startupAutosave()
 
-        self.show()
-
-    def _generateUI(self):
+    def _generateTabs(self):
         self.generalTabWidget = QTabWidget(self)
         self.generalTabWidget.setTabBar(QTabBar(self.generalTabWidget))
         self.generalTabWidget.setTabPosition(self.generalTabWidget.West)
@@ -104,7 +106,7 @@ class PyGS(QMainWindow):
         # Packet Tab Widget -----------------------------------------
         self.packetTabWidget = PacketTabWidget(self.currentDir)
         self.displayTabWidget = DisplayTabWidget(self.currentDir)
-        self.weatherTabWidget = WeatherWindow(self.currentDir)
+        self.weatherTabWidget = WeatherWindow(self.loadingData, self.currentDir)
         self.graphWidgetsList = []
 
         # Adding Tabs to Main Widget -------------------------------
@@ -920,3 +922,73 @@ class PyGS(QMainWindow):
             event.accept()
         else:
             event.ignore()
+
+
+class LoadingSplashScreen(QSplashScreen):
+    workerFinished = pyqtSignal(dict)
+
+    def __init__(self, imagePath, currentDir):
+        application = QApplication.instance()
+        super().__init__(QPixmap(imagePath))
+        self.currentDir = currentDir
+
+        # PROGRESS BAR
+        self.progressBar = QProgressBar(self)
+        self.goal, self.currentValue, self.maximumValue = 0, 0, 200
+        self.progressBar.setStyleSheet("QProgressBar::chunk { background-color: teal; }")
+        self.progressBar.setTextVisible(False)
+        self.progressBar.setGeometry(10, self.size().height() - 60, self.size().width() - 20, 20)
+        self.progressBar.setFixedHeight(10)
+        self.progressBar.setValue(0)
+        self.progressBar.setMaximum(self.maximumValue)
+        self.progressTimer = QTimer(self)
+        self.progressTimer.timeout.connect(self.updateProgress)
+        self.progressTimer.start(5)
+
+        # ADVANCEMENT LABEL
+        self.advancementLabel = QLabel(self)
+        self.advancementLabel.setText("Progress:")
+        paletteAdvancement = self.advancementLabel.palette()
+        paletteAdvancement.setColor(QPalette.WindowText, Qt.white)
+        self.advancementLabel.setPalette(paletteAdvancement)
+        self.advancementLabel.setAlignment(Qt.AlignCenter)
+        self.advancementLabel.setGeometry(10, self.size().height() - 100, self.size().width() - 20, 20)
+        application.processEvents()
+
+        # WORKER THREAD
+        self.worker = LoadingTasksWorker(self.currentDir)
+        self.worker.progress.connect(self.handleWorkerProgress)
+        self.worker.finished.connect(self.handleWorkerFinished)
+        self.workerThread = QThread()
+        self.worker.moveToThread(self.workerThread)
+        self.workerThread.started.connect(self.worker.loadingTasks)
+        self.workerThread.start()
+
+    def updateProgress(self):
+        if self.currentValue < self.goal:
+            self.currentValue += 1
+            self.progressBar.setValue(self.currentValue)
+
+    def handleWorkerProgress(self, progressTuple):
+        self.goal = int(progressTuple[0] / 100 * self.maximumValue)
+        self.advancementLabel.setText(progressTuple[1])
+
+    def handleWorkerFinished(self, resultDict):
+        self.workerFinished.emit(resultDict)
+
+
+class LoadingTasksWorker(QObject):
+    progress = pyqtSignal(tuple)
+    finished = pyqtSignal(dict)
+
+    def __init__(self, currentDirectory):
+        super().__init__()
+        self.currentDir = currentDirectory
+
+    def loadingTasks(self):
+        resultDict = {}
+        self.progress.emit((80, 'Loading Cities DataBase'))
+        resultDict['CITIES'] = loadSearchItemsFromJson(self.currentDir)
+        self.progress.emit((100, 'Loading User Interface'))
+        time.sleep(2)
+        self.finished.emit(resultDict)

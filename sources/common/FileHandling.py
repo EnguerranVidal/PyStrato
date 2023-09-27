@@ -209,3 +209,12 @@ def csvHeader(path):
         if columnNames[i] != 'Internal Clock':
             columnNames[i] = columnNames[i].replace(' ', '_')
     return columnNames
+
+
+def loadSearchItemsFromJson(path):
+    path = os.path.join(path, 'sources/weather/city.list.json')
+    citiesDataFrame = pd.read_json(path)
+    citiesDataFrame['format'] = citiesDataFrame.apply(
+        lambda row: f"{row['name']}, {row['state']}, {row['country']}" if row['state'] else f"{row['name']}, {row['country']}",
+        axis=1)
+    return citiesDataFrame

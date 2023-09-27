@@ -22,14 +22,14 @@ from sources.weather.openweathermap import *
 
 ######################## CLASSES ########################
 class WeatherWindow(QMainWindow):
-    def __init__(self, path: str = os.path.dirname(__file__)):
+    def __init__(self, loadingData, path: str = os.path.dirname(__file__), ):
         super().__init__()
         self.currentDir = path
         self.settings = loadSettings('settings')
         self.apiKey = self.settings['WEATHER_API_KEY']
         self.stackedWidget = QStackedWidget()
         self.setCentralWidget(self.stackedWidget)
-        self.forecastTabDisplay = ForecastTabDisplay(self, self.currentDir)
+        self.forecastTabDisplay = ForecastTabDisplay(citiesDataFrame=loadingData['CITIES'], parent=self, path=self.currentDir)
         self.stackedWidget.addWidget(self.forecastTabDisplay)
         if isInternetAvailable():
             if not self.apiKey or not isValidAPIKey(self.apiKey):
@@ -105,27 +105,25 @@ class NoInternetDisplay(QWidget):
 
 
 class ForecastTabDisplay(QTabWidget):
-    def __init__(self, parent=None, path: str = os.path.dirname(__file__)):
+    def __init__(self, parent=None, path: str = os.path.dirname(__file__), citiesDataFrame=None):
         super().__init__(parent)
         self.currentDir = path
-
-        # LOADING LOCATIONS
-        self.citiesDataFrame = self.loadSearchItemsFromJson()
+        self.citiesDataFrame = citiesDataFrame
         self.settings = loadSettings('settings')
         self.apiKey = self.settings['WEATHER_API_KEY']
-        self.locations = []
-        self.locationsWidgets = []
-        for location in self.settings['LOCATIONS']:
-            dataSlice = self.findCitySlice(location[0], location[1], location[2])
-            self.locations.append(dataSlice.iloc[0])
+        self.locations, self.locationsWidgets = [], []
+        if self.citiesDataFrame is not None:
+            self.loadLocations()
 
     def loadLocations(self):
-        self.locations, self.locationsWidgets = [], []
-        self.settings = loadSettings('settings')
-        for locationIndex, location in enumerate(self.settings['LOCATIONS']):
-            dataSlice = self.findCitySlice(location[0], location[1], location[2])
-            self.locations.append(dataSlice.iloc[0])
-            self.addLocationTab(self.locations[locationIndex])
+        if self.citiesDataFrame is not None:
+            self.settings = loadSettings('settings')
+            self.apiKey = self.settings['WEATHER_API_KEY']
+            self.locations, self.locationsWidgets = [], []
+            for location in self.settings['LOCATIONS']:
+                dataSlice = self.findCitySlice(location[0], location[1], location[2])
+                self.locations.append(dataSlice.iloc[0])
+                self.addLocationTab(dataSlice.iloc[0])
 
     def showMapDialog(self):
         dialog = MapDialog(self.citiesDataFrame, parent=self, path=self.currentDir)
@@ -161,15 +159,6 @@ class ForecastTabDisplay(QTabWidget):
                 (self.citiesDataFrame['state'] == state) &
                 (self.citiesDataFrame['country'] == country))
         return self.citiesDataFrame[mask]
-
-    def loadSearchItemsFromJson(self):
-        path = os.path.join(self.currentDir, 'sources/weather/city.list.json')
-        citiesDataFrame = pd.read_json(path)
-        citiesDataFrame['format'] = citiesDataFrame.apply(
-            lambda row: f"{row['name']}, {row['state']}, {row['country']}" if row[
-            'state'] else f"{row['name']}, {row['country']}",
-        axis=1)
-        return citiesDataFrame
 
     def getGpsLocation(self):
         g = geocoder.ip('me')
@@ -257,7 +246,6 @@ class MapDialog(QDialog):
                 self.clearMarkers()
                 self.addMarker(cityData.iloc[0])
                 self.setMapView(g.latlng[1], g.latlng[0])
-                print("Location:", g.latlng)
 
     def clearMarkers(self):
         zoom = self.foliumMap.options['zoom']

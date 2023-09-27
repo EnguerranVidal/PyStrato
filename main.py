@@ -1,13 +1,22 @@
-from sources.PyGS import *
+from sources.PyStrato import *
 import sys
 
 
 def main(*args):
     app = QApplication(sys.argv)
-    # Force the style to be the same on all OSs:
+    currentDirectory = os.path.dirname(os.path.realpath(__file__))
+    splashScreenPath = os.path.join(currentDirectory, "sources/icons/SplashScreen.png")
+    splashScreen = LoadingSplashScreen(splashScreenPath, currentDirectory)
+    pyStratoGui = PyStratoGui(currentDirectory)
+
+    def showPyStratoGui(loadingData):
+        pyStratoGui.initializeUI(loadingData)
+        pyStratoGui.show()
+        splashScreen.close()
+
+    splashScreen.workerFinished.connect(showPyStratoGui)
+    splashScreen.show()
     app.setStyle('Windows')
-    path = os.path.dirname(os.path.realpath(__file__))
-    ex = PyGS(path)
     sys.exit(app.exec_())
 
 

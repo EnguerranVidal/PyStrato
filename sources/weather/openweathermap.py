@@ -26,21 +26,21 @@ class ApiRegistrationWidget(QWidget):
         self.parent = parent
         self.apiKey = None
         layout = QGridLayout()
-        info_label = QLabel("This feature works with OpenWeatherMap.")
-        info_label.setFont(QFont("Arial", 12, QFont.Bold))
-        info_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(info_label, 0, 0, 1, 2)
+        infoLabel = QLabel("This feature works with OpenWeatherMap.")
+        infoLabel.setFont(QFont("Arial", 12, QFont.Bold))
+        infoLabel.setAlignment(Qt.AlignCenter)
+        layout.addWidget(infoLabel, 0, 0, 1, 2)
 
-        api_key_button = QPushButton("Enter API Key", self)
-        api_key_button.setFixedWidth(120)
-        api_key_button.clicked.connect(self.showAPIKeyDialog)
+        apiKeyButton = QPushButton("Enter API Key", self)
+        apiKeyButton.setFixedWidth(120)
+        apiKeyButton.clicked.connect(self.showAPIKeyDialog)
 
-        create_account_button = QPushButton("Create Account", self)
-        create_account_button.setFixedWidth(120)
-        create_account_button.clicked.connect(self.createAPIAccount)
+        createAccountButton = QPushButton("Create Account", self)
+        createAccountButton.setFixedWidth(120)
+        createAccountButton.clicked.connect(self.createAPIAccount)
 
-        layout.addWidget(api_key_button, 1, 0, Qt.AlignRight)
-        layout.addWidget(create_account_button, 1, 1, Qt.AlignLeft)
+        layout.addWidget(apiKeyButton, 1, 0, Qt.AlignRight)
+        layout.addWidget(createAccountButton, 1, 1, Qt.AlignLeft)
         self.setLayout(layout)
 
     def showAPIKeyDialog(self):
@@ -160,7 +160,7 @@ class WeatherObservationDisplay(QWidget):
         windSpeed = self.observationData['wind']['speed'] * 3.6 if self.metric else self.observationData['wind']['speed']
         windSpeedLabel = QLabel(f"<b>{int(windSpeed):.1f} km/h</b>")
         windInfoLayout.addWidget(windSpeedLabel, alignment=Qt.AlignLeft)
-        windDirectionWidget = ArrowWidget("../sources/icons/light-theme/icons8-navigation-96.png", self.observationData["wind"]["deg"] + 180)
+        windDirectionWidget = ArrowWidget("sources/icons/light-theme/icons8-navigation-96.png", self.observationData["wind"]["deg"] + 180)
         windInfoLayout.addWidget(windDirectionWidget, alignment=Qt.AlignLeft)
         bottomRow.addLayout(windInfoLayout, 1, 0, 1, 1, alignment=Qt.AlignLeft)
         # Humidity Level
@@ -311,6 +311,8 @@ class WeatherObservationDisplay(QWidget):
 class WeatherForecastWidget(QWidget):
     def __init__(self, observationData, forecastData, metric=True):
         super().__init__()
+        self.maxTempSmooth = None
+        self.minTempSmooth = None
         self.forecastedData = None
         self.forecastInterpolated = None
         self.metric = metric
@@ -401,13 +403,14 @@ class WeatherForecastWidget(QWidget):
             self.plotView.addItem(text_item)
             text_item.setPos(x, y)
         y_buffer = 1  # Adjust the buffer as needed
-        min_temp_smooth = min(dataSmooth) - y_buffer
-        max_temp_smooth = max(dataSmooth) + y_buffer
+        self.minTempSmooth = min(dataSmooth) - y_buffer
+        self.maxTempSmooth = max(dataSmooth) + y_buffer
 
         # Set y-axis range for the plotView
-        self.plotView.setYRange(min_temp_smooth, max_temp_smooth)
+        self.plotView.setYRange(self.minTempSmooth, self.maxTempSmooth)
 
     def updatePlot(self):
+        self.plotView.setYRange(self.minTempSmooth, self.maxTempSmooth)
         for weatherData in self.forecastData:
             if weatherData['date'] == self.selectedDate:
                 if self.selectedDate == datetime.now().strftime('%Y-%m-%d'):
@@ -425,6 +428,7 @@ class WeatherForecastWidget(QWidget):
             finishTime = startTime + 3600 * 24
             self.plotView.setXRange(startTime, finishTime)
             return
+
 
 
 class DayFrame(QFrame):
@@ -591,9 +595,7 @@ def getObservationWeatherData(city, state, country, api_key, metric=True):
 
 def getAirPollutionData(city, state, country, api_key):
     location = f"{city}, {state}, {country}"
-    print(location)
     g = geocoder.osm(location)
-    print(g.latlng)
     if g.ok:
         latitude, longitude = g.latlng
     else:

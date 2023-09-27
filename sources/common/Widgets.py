@@ -370,7 +370,7 @@ class SerialWindow(QWidget):
         super(SerialWindow, self).__init__()
         self.resize(450, 350)
         self.setWindowTitle('Serial Monitor')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
         # General Layout
         self.layout = QGridLayout(self)
         self.setLayout(self.layout)
@@ -423,7 +423,7 @@ class NewPackageWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Create New Package')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
         self.dataChanged = False
         self.saveChanged = False
         self.resize(400, 100)
@@ -446,7 +446,7 @@ class TrackedBalloonsWindow(QWidget):
         self.current_dir = path
         self.format_path = os.path.join(self.current_dir, "formats")
         self.setWindowTitle('Tracked Balloons')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
         self.settings = loadSettings("settings")
         # Selected Balloon List
         self.selectedList = BalloonsListWidget()
@@ -604,7 +604,7 @@ class AboutDialog(QDialog):
         aboutText = """
         <html>
         <body>
-        <p align="justify">About the PyGS Software</p>
+        <p align="justify">About the PyStrato Software</p>
 
         <p align="justify">Our Stratospheric Balloon Ground Station software is an open-source solution designed specifically for student projects involving stratospheric balloon missions. Developed by <a href='https://github.com/EnguerranVidal'>KeplerDream</a> for the TSI Master located in Toulouse (France), with ease of use and functionality in mind, our software provides a comprehensive suite of tools and features to support ground station operations.</p>
 
@@ -626,7 +626,7 @@ class AboutDialog(QDialog):
             <a href='https://github.com/Abestanis'>Abestanis</a>
         </p>
 
-        <p align="justify">To get started with our Stratospheric Balloon Ground Station software, please visit our GitHub repository <a href='https://github.com/EnguerranVidal/PyGS'>PyGS</a> for the latest version, installation instructions, and detailed documentation. We welcome contributions from the community and encourage you to provide feedback and suggestions to help us improve the software.</p>
+        <p align="justify">To get started with our Stratospheric Balloon Ground Station software, please visit our GitHub repository <a href='https://github.com/EnguerranVidal/PyGS'>PyStratoGui</a> for the latest version, installation instructions, and detailed documentation. We welcome contributions from the community and encourage you to provide feedback and suggestions to help us improve the software.</p>
 
         <p align="justify">Thank you for choosing our software for your stratospheric balloon project. We hope it facilitates your mission and contributes to the success of your endeavors.</p>
         </body>
@@ -671,7 +671,7 @@ class LayoutManagerDialog(QDialog):
         self.setModal(True)
         self.setFixedSize(600, 600)
         self.setWindowTitle('Layout Preset Selection')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
         self.currentDir = currentDir
         self.dataPath = os.path.join(self.currentDir, "data")
         self.presetPath = os.path.join(self.dataPath, 'presets')
