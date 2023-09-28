@@ -164,6 +164,7 @@ class DatabaseEditor(QTabWidget):
 class PacketTabWidget(QMainWindow):
     def __init__(self, path):
         super(QWidget, self).__init__()
+        self.hide()
         self.currentDirectory = path
         self.formatPath = os.path.join(self.currentDirectory, "formats")
         self.databases = {}

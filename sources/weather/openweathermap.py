@@ -342,7 +342,7 @@ class WeatherForecastWidget(QWidget):
                 else:
                     # Add a Tonight Day Widget
                     dayFrame = DayFrame(dayData, date=today, tonight=True)
-                    dayFrame.day_clicked.connect(self.updateSelectedDate)
+                    dayFrame.dayClicked.connect(self.updateSelectedDate)
                     self.dayWidgets.append(dayFrame)
                     topLayout.addWidget(dayFrame)
                     # Add the Normal Day Widget
@@ -390,23 +390,20 @@ class WeatherForecastWidget(QWidget):
         self.forecastInterpolated = (xSmooth, dataSmooth)
         self.plotView.clear()
 
-        # Create a single brush for the fill area
+        # FILL AREA BRUSH
         fillBrush = pg.mkBrush(pg.mkColor('#a0c8f0'))
         self.plotView.plot(xSmooth, dataSmooth, fillLevel=0, fillBrush=fillBrush)
 
-        # Add annotations and text items
+        # TEMPERATURE ANNOTATIONS
         for x, y in zip(self.forecastedData[0][1:], self.forecastedData[1][1:]):
-            self.plotView.plot([x], [y], pen=None, symbol='o', symbolPen='w', symbolBrush='w',
-                               symbolSize=10)
-
+            self.plotView.plot([x], [y], pen=None, symbol='o', symbolPen='w', symbolBrush='w', symbolSize=10)
             text_item = pg.TextItem(text=str(int(y)), anchor=(0, 1), color=(255, 255, 255))
             self.plotView.addItem(text_item)
             text_item.setPos(x, y)
-        y_buffer = 1  # Adjust the buffer as needed
-        self.minTempSmooth = min(dataSmooth) - y_buffer
-        self.maxTempSmooth = max(dataSmooth) + y_buffer
 
-        # Set y-axis range for the plotView
+        # Y-AXIS RANGE
+        self.minTempSmooth = min(dataSmooth) - 1
+        self.maxTempSmooth = max(dataSmooth) + 1
         self.plotView.setYRange(self.minTempSmooth, self.maxTempSmooth)
 
     def updatePlot(self):
@@ -428,7 +425,6 @@ class WeatherForecastWidget(QWidget):
             finishTime = startTime + 3600 * 24
             self.plotView.setXRange(startTime, finishTime)
             return
-
 
 
 class DayFrame(QFrame):

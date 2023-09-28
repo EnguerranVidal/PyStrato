@@ -25,6 +25,7 @@ class WeatherWindow(QMainWindow):
     def __init__(self, loadingData, path: str = os.path.dirname(__file__), ):
         super().__init__()
         self.currentDir = path
+        self.hide()
         self.settings = loadSettings('settings')
         self.apiKey = self.settings['WEATHER_API_KEY']
         self.stackedWidget = QStackedWidget()

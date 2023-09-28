@@ -1,10 +1,4 @@
 ######################## IMPORTS ########################
-import json
-import time
-import os
-import shutil
-import sys
-import subprocess
 from datetime import datetime
 from functools import partial
 
@@ -108,7 +102,10 @@ class PyStratoGui(QMainWindow):
         self.displayTabWidget = DisplayTabWidget(self.currentDir)
         self.weatherTabWidget = WeatherWindow(self.loadingData, self.currentDir)
         self.graphWidgetsList = []
-
+        # Show created tabs
+        self.packetTabWidget.show()
+        self.displayTabWidget.show()
+        self.weatherTabWidget.show()
         # Adding Tabs to Main Widget -------------------------------
         self.generalTabWidget.addTab(self.displayTabWidget, 'DISPLAY')
         self.generalTabWidget.addTab(self.packetTabWidget, 'PACKETS')

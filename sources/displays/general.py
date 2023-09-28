@@ -18,6 +18,7 @@ from sources.displays.indicators import SingleIndicator, GridIndicator
 class DisplayTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
+        self.hide()
         self.currentDir = path
         self.dockSpaces = [Qt.LeftDockWidgetArea, Qt.RightDockWidgetArea, Qt.TopDockWidgetArea, Qt.BottomDockWidgetArea]
         self.formatPath = os.path.join(self.currentDir, 'formats')
@@ -33,8 +34,6 @@ class DisplayTabWidget(QMainWindow):
         self.setCentralWidget(self.tabWidget)
         self.tabWidget.tabBarDoubleClicked.connect(self.onTabBarDoubleClicked)
         self.tabWidget.currentChanged.connect(self.tabChanged)
-
-        self.show()
 
     def closeCurrentTab(self):
         currentTabIndex = self.tabWidget.currentIndex()
