@@ -143,7 +143,7 @@ class ForecastTabDisplay(QTabWidget):
 
     def addLocationTab(self, cityData):
         displayWidget, displayLayout = QWidget(), QHBoxLayout()
-        name, state, country = cityData['name'], cityData['state'], cityData['country']
+        name, state, country, formattedName = cityData['name'], cityData['state'], cityData['country'], cityData['format']
         observationData = getObservationWeatherData(name, state, country, self.apiKey)
         forecastData = get5Day3HoursForecastWeatherData(name, state, country, self.apiKey)
         pollutionData = getAirPollutionData(name, state, country, self.apiKey)
@@ -153,7 +153,7 @@ class ForecastTabDisplay(QTabWidget):
         displayLayout.addWidget(forecastDisplay)
         displayWidget.setLayout(displayLayout)
         self.locationsWidgets.append((observationDisplay, forecastDisplay))
-        self.addTab(displayWidget, name)
+        self.addTab(displayWidget, formattedName)
 
     def findCitySlice(self, cityName='', state='', country=''):
         mask = ((self.citiesDataFrame['name'] == cityName) &

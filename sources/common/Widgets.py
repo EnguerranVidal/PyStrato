@@ -927,38 +927,46 @@ class LayoutManagerDialog(QDialog):
 
 
 class SearchBar(QLineEdit):
-    suggestionSelected = pyqtSignal()
-    textChanged = pyqtSignal()
+    searchDone = pyqtSignal()
 
-    def __init__(self, nbSuggestions: int = None, options: list = None, caseSensitive=False):
-        super().__init__()
+    def __init__(self, path, searchOptions, maxSuggestions=5, parent=None):
+        super(SearchBar, self).__init__(parent)
+        self.selection = ''
+        self.currentDir = path
+        self.searchOptions = searchOptions
+        self.maxSuggestions = maxSuggestions
 
-        self.nbOptions = nbSuggestions
-        if options is not None:
-            self.options = options
-        else:
-            self.options = []
+        # LINE EDIT
         self.setPlaceholderText('Search Location ...')
-        self.completer = QCompleter(self.options)
-        self.completer.setCaseSensitivity(caseSensitive)
-        self.setCompleter(self.completer)
-        self.textChanged.connect(self.updateCompleter)
-        self.completer.activated.connect(self.completerSelected)
+        searchCompleter = QCompleter(self.searchOptions, self)
+        searchCompleter.setCaseSensitivity(Qt.CaseInsensitive)
+        searchCompleter.setFilterMode(Qt.MatchStartsWith)
+        searchCompleter.setCompletionMode(QCompleter.PopupCompletion)
+        searchCompleter.setMaxVisibleItems(self.maxSuggestions)
+        self.setCompleter(searchCompleter)
+        searchCompleter.activated.connect(self.onCompleterActivated)
 
-    def updateCompleter(self, text):
-        suggestions = self.get_filtered_suggestions(text)
-        self.completer.model().setStringList(suggestions)
+        # SEARCH ACTION BUTTON
+        searchButtonAction = QAction(self)
+        searchButtonAction.setIcon(QIcon(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-search-96.png')))
+        searchButtonAction.triggered.connect(self.performSearch)
+        self.addAction(searchButtonAction, QLineEdit.TrailingPosition)
 
-    def getFilteredSuggestions(self, text):
-        suggestions = [item for item in self.completer.model().stringList() if text.lower() in item.lower()]
-        if self.nbOptions is not None:
-            return suggestions[:self.nbOptions]
-        else:
-            return suggestions
+    def performSearch(self):
+        if self.text() != '':
+            closest_suggestion = self.completer().currentCompletion()
+            self.selection = closest_suggestion
+            self.searchDone.emit()
+            QTimer.singleShot(0, self.clearLineEdit)
 
-    def completerSelected(self, option):
-        self.setText(option)
-        self.suggestionSelected.emit()
+    def onCompleterActivated(self, text):
+        self.selection = text
+        self.searchDone.emit()
+        QTimer.singleShot(0, self.clearLineEdit)
+
+    def clearLineEdit(self):
+        self.clear()
+        self.setPlaceholderText('Search Location ...')
 
 
 class FlatButton(QPushButton):

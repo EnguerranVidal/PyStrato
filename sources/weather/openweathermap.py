@@ -397,7 +397,7 @@ class WeatherForecastWidget(QWidget):
         # TEMPERATURE ANNOTATIONS
         for x, y in zip(self.forecastedData[0][1:], self.forecastedData[1][1:]):
             self.plotView.plot([x], [y], pen=None, symbol='o', symbolPen='w', symbolBrush='w', symbolSize=10)
-            text_item = pg.TextItem(text=str(int(y)), anchor=(0, 1), color=(255, 255, 255))
+            text_item = pg.TextItem(text=str(int(y)), anchor=(0.5, 1.2), color=(255, 255, 255))
             self.plotView.addItem(text_item)
             text_item.setPos(x, y)
 

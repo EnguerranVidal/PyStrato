@@ -3,7 +3,7 @@ from datetime import datetime
 from functools import partial
 
 # ------------------- PyQt Modules -------------------- #
-from PyQt5.QtCore import QDateTime, QThread
+from PyQt5.QtCore import QDateTime, QThread, Qt
 
 # --------------------- Sources ----------------------- #
 from sources.SerialGS import SerialMonitor
@@ -149,10 +149,20 @@ class PyStratoGui(QMainWindow):
 
         ########### WEATHER ###########
         self.weatherToolBar = QToolBar("Weather", self)
-        self.locationSearchBar = SearchBar(options=self.weatherTabWidget.forecastTabDisplay.citiesDataFrame['format'])
-        self.locationSearchBar.setFixedHeight(25)
-        self.locationSearchBar.suggestionSelected.connect(self.onLocationSearchedClicked)
+
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.weatherToolBar.addWidget(spacer)
+        searchOptions = self.weatherTabWidget.forecastTabDisplay.citiesDataFrame['format']
+        self.locationSearchBar = SearchBar(self.currentDir, searchOptions)
+        self.locationSearchBar.setFixedWidth(300)
+        self.locationSearchBar.setFixedHeight(30)
+        self.locationSearchBar.searchDone.connect(self.onLocationSearchedClicked)
         self.weatherToolBar.addWidget(self.locationSearchBar)
+
+        # TODO :   change search bar with integrated button and make it empty itself once done.
+
+
 
         ########### APPEARANCE ###########
         self.addToolBar(self.databasesToolBar)
@@ -881,12 +891,9 @@ class PyStratoGui(QMainWindow):
             self.serialWindow.textedit.setDisabled(True)
 
     def onLocationSearchedClicked(self):
-        formattedCityName = self.locationSearchBar.text()
+        formattedCityName = self.locationSearchBar.selection
         dataSlice = self.weatherTabWidget.forecastTabDisplay.citiesDataFrame[self.weatherTabWidget.forecastTabDisplay.citiesDataFrame['format'] == formattedCityName]
         self.weatherTabWidget.forecastTabDisplay.addLocationTab(dataSlice.iloc[0])
-
-    def locationWeatherUpdate(self):
-        pass
 
     def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()
