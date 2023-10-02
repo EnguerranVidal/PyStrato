@@ -926,6 +926,69 @@ class LayoutManagerDialog(QDialog):
                 self.refreshSaveTab()
 
 
+class ScrollableContainer(QScrollArea):
+    def __init__(self, parent=None):
+        super(ScrollableContainer, self).__init__(parent)
+        self.setWidgetResizable(True)
+        self.containerWidget = QWidget(self)
+        self.containerLayout = QHBoxLayout(self.containerWidget)
+        self.setWidget(self.containerWidget)
+        self.setFrameShape(QFrame.NoFrame)
+
+    def addWidget(self, widget):
+        self.containerLayout.addWidget(widget)
+
+
+class ScrollableWidget(QWidget):
+    def __init__(self, path, widgetList, widgetsToScroll=3):
+        super(ScrollableWidget, self).__init__()
+
+        # SCROLLING BUTTONS AND AREA
+        # Scroll Left Button
+        self.currentDir = path
+        self.scrollLeftButton = FlatButton(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-back-96.png'), self)
+        self.scrollLeftButton.clicked.connect(self.scrollLeft)
+        self.scrollLeftButton.setFixedWidth(30)
+        # Scroll Right Button
+        self.scrollRightButton = FlatButton(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-forward-96.png'), self)
+        self.scrollRightButton.clicked.connect(self.scrollRight)
+        self.scrollRightButton.setFixedWidth(30)
+        # Scroll Area
+        self.scrollArea = ScrollableContainer(self)
+        self.currentScrollPosition = 0
+        self.widgetsToScroll = widgetsToScroll
+        self.widgetWidth = widgetList[0].sizeHint().width() if widgetList else 0
+        self.widgetHeight = widgetList[0].sizeHint().height() if widgetList else 0
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.scrollAnimation = QPropertyAnimation(self.scrollArea.horizontalScrollBar(), b"value")
+        self.scrollAnimation.setEasingCurve(QEasingCurve.OutCubic)
+        self.scrollAnimation.setDuration(500)
+
+        # CONTAINER & LAYOUT
+        for widget in widgetList:
+            self.scrollArea.addWidget(widget)
+        mainLayout = QVBoxLayout(self)
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(self.scrollLeftButton)
+        buttonLayout.addWidget(self.scrollArea)
+        buttonLayout.addWidget(self.scrollRightButton)
+        mainLayout.addLayout(buttonLayout)
+
+    def scrollLeft(self):
+        self.currentScrollPosition -= self.widgetsToScroll
+        self.scrollAnimation.stop()
+        self.scrollAnimation.setStartValue(self.scrollArea.horizontalScrollBar().value())
+        self.scrollAnimation.setEndValue(self.currentScrollPosition * self.widgetWidth)
+        self.scrollAnimation.start()
+
+    def scrollRight(self):
+        self.currentScrollPosition += self.widgetsToScroll
+        self.scrollAnimation.stop()
+        self.scrollAnimation.setStartValue(self.scrollArea.horizontalScrollBar().value())
+        self.scrollAnimation.setEndValue(self.currentScrollPosition * self.widgetWidth)
+        self.scrollAnimation.start()
+
+
 class SearchBar(QLineEdit):
     searchDone = pyqtSignal()
 

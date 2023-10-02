@@ -14,7 +14,7 @@ from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
 from sources.common.Functions import getTextHeight
-from sources.common.Widgets import ArrowWidget
+from sources.common.Widgets import ArrowWidget, ScrollableWidget
 
 
 ######################## CLASSES ########################
@@ -251,11 +251,11 @@ class WeatherObservationDisplay(QWidget):
         airQualityFrame.setLayout(pollutionLayout)
 
         # MAIN LAYOUT ----------------------------------
-        mainLayout = QVBoxLayout()
-        mainLayout.addWidget(observationLabel)
-        mainLayout.addWidget(observationFrame)
-        mainLayout.addWidget(airQualityLabel)
-        mainLayout.addWidget(airQualityFrame)
+        mainLayout = QGridLayout()
+        mainLayout.addWidget(observationLabel, 0, 0, 1, 1)
+        mainLayout.addWidget(observationFrame, 1, 0, 1, 1)
+        mainLayout.addWidget(airQualityLabel, 0, 1, 1, 1)
+        mainLayout.addWidget(airQualityFrame, 1, 1, 1, 1)
         self.setLayout(mainLayout)
         self.setFixedSize(self.sizeHint())
 
@@ -308,21 +308,20 @@ class WeatherObservationDisplay(QWidget):
         self.nh3Label.setText(f"<b>{nh3Value} μg/m<sup>3</sup></b>")
 
 
-class WeatherForecastWidget(QWidget):
-    def __init__(self, observationData, forecastData, metric=True):
+class WeatherDisplay(QWidget):
+    def __init__(self, path, observationData, pollutionData, forecastData, metric=True):
         super().__init__()
-        self.maxTempSmooth = None
-        self.minTempSmooth = None
-        self.forecastedData = None
-        self.forecastInterpolated = None
+        self.currentDir = path
+        self.maxTempSmooth, self.minTempSmooth = None, None
+        self.forecastedData, self.forecastInterpolated = None, None
         self.metric = metric
         self.observationData = observationData
+        self.pollutionData = pollutionData
         self.forecastData = list(forecastData)
         self.selectedDate = datetime.now().strftime('%Y-%m-%d')
 
-        mainLayout = QVBoxLayout()
+        # DAY WIDGETS
         self.dayWidgets = []
-        topLayout = QHBoxLayout()
         now = datetime.now()
         today = now.strftime('%Y-%m-%d')
         for index, dayData in enumerate(self.forecastData):
@@ -344,28 +343,31 @@ class WeatherForecastWidget(QWidget):
                     dayFrame = DayFrame(dayData, date=today, tonight=True)
                     dayFrame.dayClicked.connect(self.updateSelectedDate)
                     self.dayWidgets.append(dayFrame)
-                    topLayout.addWidget(dayFrame)
                     # Add the Normal Day Widget
                     dayFrame = DayFrame(dayData)
                 dayFrame.dayClicked.connect(self.updateSelectedDate)
                 self.dayWidgets.append(dayFrame)
-                topLayout.addWidget(dayFrame)
-
             if index and len(dayData["time"]) == 8:
                 dayFrame = DayFrame(dayData)
                 dayFrame.dayClicked.connect(self.updateSelectedDate)
                 self.dayWidgets.append(dayFrame)
-                topLayout.addWidget(dayFrame)
+        self.scrollableDayWidget = ScrollableWidget(self.currentDir, self.dayWidgets)
 
-        mainLayout.addLayout(topLayout)
+        # TEMPERATURE PLOT WIDGET
         self.plotView = pg.PlotWidget()
-        self.plotView.resize(self.plotView.width(), 200)
-        mainLayout.addWidget(self.plotView)
-
-        self.setLayout(mainLayout)
+        self.plotView.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.updateWeatherForecast(self.observationData, self.forecastData)
         self.updatePlot()
-        self.setFixedSize(self.sizeHint())
+
+        # OBSERVATION AND POLLUTION DISPLAY
+        self.observationDisplay = WeatherObservationDisplay(observationData, pollutionData, metric=True)
+
+        # MAIN LAYOUT
+        mainLayout = QGridLayout()
+        mainLayout.addWidget(self.observationDisplay, 0, 0, 1, 1)
+        mainLayout.addWidget(self.scrollableDayWidget, 0, 1, 1, 2)
+        mainLayout.addWidget(self.plotView, 1, 0, 1, 3)
+        self.setLayout(mainLayout)
 
     def updateSelectedDate(self, date):
         self.selectedDate = date

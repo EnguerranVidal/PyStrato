@@ -897,7 +897,8 @@ class PyStratoGui(QMainWindow):
 
     def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()
-        self.dateLabel.setText(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
+        formattedDate = self.datetime.toString('dd.MM.yyyy  hh:mm:ss')
+        self.dateLabel.setText(formattedDate)
         now = time.perf_counter()
         fps = 1000 / (now - self.lastUpdate)
         self.lastUpdate = now

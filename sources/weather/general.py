@@ -30,7 +30,7 @@ class WeatherWindow(QMainWindow):
         self.apiKey = self.settings['WEATHER_API_KEY']
         self.stackedWidget = QStackedWidget()
         self.setCentralWidget(self.stackedWidget)
-        self.forecastTabDisplay = ForecastTabDisplay(citiesDataFrame=loadingData['CITIES'], parent=self, path=self.currentDir)
+        self.forecastTabDisplay = ForecastTabWidget(citiesDataFrame=loadingData['CITIES'], parent=self, path=self.currentDir)
         self.stackedWidget.addWidget(self.forecastTabDisplay)
         if isInternetAvailable():
             if not self.apiKey or not isValidAPIKey(self.apiKey):
@@ -105,14 +105,20 @@ class NoInternetDisplay(QWidget):
         self.retry.emit()
 
 
-class ForecastTabDisplay(QTabWidget):
+class ForecastTabWidget(QTabWidget):
     def __init__(self, parent=None, path: str = os.path.dirname(__file__), citiesDataFrame=None):
         super().__init__(parent)
         self.currentDir = path
+        self.setTabsClosable(True)
+        self.setMovable(True)
+        self.tabBar().tabMoved.connect(self.tabMoved)
+        # self.tabBar().installEventFilter(self)
+        self.tabCloseRequested.connect(self.closeTab)
+        self.setStyleSheet("QTabBar::tab { min-width: 150px; max-width: 150px; }")
         self.citiesDataFrame = citiesDataFrame
         self.settings = loadSettings('settings')
         self.apiKey = self.settings['WEATHER_API_KEY']
-        self.locations, self.locationsWidgets = [], []
+        self.locations = []
         if self.citiesDataFrame is not None:
             self.loadLocations()
 
@@ -120,11 +126,11 @@ class ForecastTabDisplay(QTabWidget):
         if self.citiesDataFrame is not None:
             self.settings = loadSettings('settings')
             self.apiKey = self.settings['WEATHER_API_KEY']
-            self.locations, self.locationsWidgets = [], []
+            self.locations = []
             for location in self.settings['LOCATIONS']:
                 dataSlice = self.findCitySlice(location[0], location[1], location[2])
                 self.locations.append(dataSlice.iloc[0])
-                self.addLocationTab(dataSlice.iloc[0])
+                self.addLocationTab(dataSlice.iloc[0], firstLoading=True)
 
     def showMapDialog(self):
         dialog = MapDialog(self.citiesDataFrame, parent=self, path=self.currentDir)
@@ -135,25 +141,29 @@ class ForecastTabDisplay(QTabWidget):
             print(cityData)
 
     def removeLocation(self, index):
-        self.locationsWidgets.pop(index)
-        self.removeTab(index)
         self.locations.pop(index)
         self.settings['LOCATIONS'].pop(index)
         saveSettings(self.settings, 'settings')
 
-    def addLocationTab(self, cityData):
-        displayWidget, displayLayout = QWidget(), QHBoxLayout()
-        name, state, country, formattedName = cityData['name'], cityData['state'], cityData['country'], cityData['format']
-        observationData = getObservationWeatherData(name, state, country, self.apiKey)
-        forecastData = get5Day3HoursForecastWeatherData(name, state, country, self.apiKey)
-        pollutionData = getAirPollutionData(name, state, country, self.apiKey)
-        observationDisplay = WeatherObservationDisplay(observationData, pollutionData, metric=True)
-        forecastDisplay = WeatherForecastWidget(observationData, forecastData, metric=True)
-        displayLayout.addWidget(observationDisplay)
-        displayLayout.addWidget(forecastDisplay)
-        displayWidget.setLayout(displayLayout)
-        self.locationsWidgets.append((observationDisplay, forecastDisplay))
-        self.addTab(displayWidget, formattedName)
+    def addLocationTab(self, cityData, firstLoading=False):
+        inLocations = True in [cityData.equals(location) for location in self.locations]
+        if not inLocations or firstLoading:
+            displayWidget, displayLayout = QWidget(), QHBoxLayout()
+            name, state, country, formattedName = cityData['name'], cityData['state'], cityData['country'], cityData['format']
+            # OPENWEATHERMAP DATA QUERY
+            observationData = getObservationWeatherData(name, state, country, self.apiKey)
+            forecastData = get5Day3HoursForecastWeatherData(name, state, country, self.apiKey)
+            pollutionData = getAirPollutionData(name, state, country, self.apiKey)
+            observationDisplay = WeatherDisplay(self.currentDir, observationData, pollutionData, forecastData, metric=True)
+            self.addTab(observationDisplay, formattedName)
+            if not firstLoading:
+                location = (cityData['name'], cityData['state'], cityData['country'])
+                self.settings['LOCATIONS'].append(location)
+                saveSettings(self.settings, 'settings')
+
+        elif inLocations:
+            locationIndex = [1 if cityData.equals(location) else 0 for location in self.locations].index(1)
+            self.setCurrentIndex(locationIndex)
 
     def findCitySlice(self, cityName='', state='', country=''):
         mask = ((self.citiesDataFrame['name'] == cityName) &
@@ -168,10 +178,27 @@ class ForecastTabDisplay(QTabWidget):
             stateName = g.state
             countryName = g.country
             dataSlice = self.findCitySlice(cityName, stateName, countryName).iloc[0]
+            self.addLocationTab(dataSlice)
+
+    def tabMoved(self, fromIndex, toIndex):
+        movedLocation = self.locations.pop(fromIndex)
+        self.locations.insert(toIndex, movedLocation)
+        movedLocationSetting = self.settings['LOCATIONS'].pop(fromIndex)
+        self.settings['LOCATIONS'].insert(toIndex, movedLocationSetting)
+        saveSettings(self.settings, 'settings')
+
+    def closeTab(self, index):
+        print(index)
+        self.locations.pop(index)
+        self.settings['LOCATIONS'].pop(index)
+        saveSettings(self.settings, 'settings')
+        self.removeTab(index)
+
+
 
 
 class MapDialog(QDialog):
-    def __init__(self, citiesDataFrame, parent: ForecastTabDisplay = None, path: str = os.path.dirname(__file__),
+    def __init__(self, citiesDataFrame, parent: ForecastTabWidget = None, path: str = os.path.dirname(__file__),
                  cityData: dict = None):
         super().__init__(parent)
         self.citiesDataFrame = citiesDataFrame
