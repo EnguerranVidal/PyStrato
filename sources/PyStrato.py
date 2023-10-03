@@ -149,20 +149,20 @@ class PyStratoGui(QMainWindow):
 
         ########### WEATHER ###########
         self.weatherToolBar = QToolBar("Weather", self)
-
+        # SPACER
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.weatherToolBar.addWidget(spacer)
+        # GEOLOCATION
+        self.weatherToolBar.addAction(self.getGeolocationAct)
+
+        # SEARCH BAR
         searchOptions = self.weatherTabWidget.forecastTabDisplay.citiesDataFrame['format']
         self.locationSearchBar = SearchBar(self.currentDir, searchOptions)
         self.locationSearchBar.setFixedWidth(300)
         self.locationSearchBar.setFixedHeight(30)
         self.locationSearchBar.searchDone.connect(self.onLocationSearchedClicked)
         self.weatherToolBar.addWidget(self.locationSearchBar)
-
-        # TODO :   change search bar with integrated button and make it empty itself once done.
-
-
 
         ########### APPEARANCE ###########
         self.addToolBar(self.databasesToolBar)
@@ -314,6 +314,12 @@ class PyStratoGui(QMainWindow):
         self.openMonitorAct.setIcon(QIcon('sources/icons/light-theme/icons8-monitor-96.png'))
         self.openMonitorAct.setStatusTip('Open Serial Monitor')
         self.openMonitorAct.triggered.connect(self.openSerialMonitor)
+
+        ########### WEATHER ###########
+        self.getGeolocationAct = QAction('&Get GeoLocation Weather', self)
+        self.getGeolocationAct.setIcon(QIcon('sources/icons/light-theme/icons8-my-location-96.png'))
+        self.getGeolocationAct.setStatusTip('Get Weather From Geolocation')
+        self.getGeolocationAct.triggered.connect(self.getWeatherForGeolocation)
 
         ########### HELP ###########
         # Toggle Emulator Mode
@@ -872,14 +878,13 @@ class PyStratoGui(QMainWindow):
         self.portMenu.setTitle('&Port    ' + action.text())
         self.settings["SELECTED_PORT"] = action.text()
         saveSettings(self.settings, "settings")
-        # Stop Serial Connection if on
         if self.serial is not None:
             self.stopSerial()
+            self.startSerial()
 
     def setRssi(self, action):
         self.settings["RSSI"] = action
         saveSettings(self.settings, "settings")
-        # Restart Serial Connection if on
         if self.serial is not None:
             self.stopSerial()
             self.startSerial()
@@ -889,6 +894,9 @@ class PyStratoGui(QMainWindow):
         if self.serial is not None and not self.serial.isRunning():
             self.stopSerial()
             self.serialWindow.textedit.setDisabled(True)
+
+    def getWeatherForGeolocation(self):
+        self.weatherTabWidget.forecastTabDisplay.getGpsLocation()
 
     def onLocationSearchedClicked(self):
         formattedCityName = self.locationSearchBar.selection

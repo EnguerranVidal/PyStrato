@@ -959,6 +959,7 @@ class ScrollableWidget(QWidget):
         self.widgetsToScroll = widgetsToScroll
         self.widgetWidth = widgetList[0].sizeHint().width() if widgetList else 0
         self.widgetHeight = widgetList[0].sizeHint().height() if widgetList else 0
+        self.setFixedHeight(int(self.widgetHeight * 1.5))
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.scrollAnimation = QPropertyAnimation(self.scrollArea.horizontalScrollBar(), b"value")
         self.scrollAnimation.setEasingCurve(QEasingCurve.OutCubic)

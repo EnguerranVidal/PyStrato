@@ -129,7 +129,6 @@ class ForecastTabWidget(QTabWidget):
             self.locations = []
             for location in self.settings['LOCATIONS']:
                 dataSlice = self.findCitySlice(location[0], location[1], location[2])
-                self.locations.append(dataSlice.iloc[0])
                 self.addLocationTab(dataSlice.iloc[0], firstLoading=True)
 
     def showMapDialog(self):
@@ -148,15 +147,16 @@ class ForecastTabWidget(QTabWidget):
     def addLocationTab(self, cityData, firstLoading=False):
         inLocations = True in [cityData.equals(location) for location in self.locations]
         if not inLocations or firstLoading:
-            displayWidget, displayLayout = QWidget(), QHBoxLayout()
             name, state, country, formattedName = cityData['name'], cityData['state'], cityData['country'], cityData['format']
             # OPENWEATHERMAP DATA QUERY
             observationData = getObservationWeatherData(name, state, country, self.apiKey)
-            forecastData = get5Day3HoursForecastWeatherData(name, state, country, self.apiKey)
+            forecastDataHours = get5Day3HoursForecastWeatherData(name, state, country, self.apiKey)
             pollutionData = getAirPollutionData(name, state, country, self.apiKey)
-            observationDisplay = WeatherDisplay(self.currentDir, observationData, pollutionData, forecastData, metric=True)
+            observationDisplay = WeatherDisplay(self.currentDir, observationData, pollutionData, forecastDataHours, metric=True)
             self.addTab(observationDisplay, formattedName)
+            self.locations.append(cityData)
             if not firstLoading:
+                self.setCurrentIndex(self.count() - 1)
                 location = (cityData['name'], cityData['state'], cityData['country'])
                 self.settings['LOCATIONS'].append(location)
                 saveSettings(self.settings, 'settings')
@@ -174,9 +174,8 @@ class ForecastTabWidget(QTabWidget):
     def getGpsLocation(self):
         g = geocoder.ip('me')
         if g.status == 'OK':
-            cityName = g.city
-            stateName = g.state
-            countryName = g.country
+            latitude, longitude = g.latlng
+            cityName, stateName, countryName = getLocationInfo(latitude, longitude, self.apiKey)
             dataSlice = self.findCitySlice(cityName, stateName, countryName).iloc[0]
             self.addLocationTab(dataSlice)
 
@@ -188,13 +187,10 @@ class ForecastTabWidget(QTabWidget):
         saveSettings(self.settings, 'settings')
 
     def closeTab(self, index):
-        print(index)
         self.locations.pop(index)
         self.settings['LOCATIONS'].pop(index)
         saveSettings(self.settings, 'settings')
         self.removeTab(index)
-
-
 
 
 class MapDialog(QDialog):

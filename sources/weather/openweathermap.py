@@ -578,11 +578,11 @@ def get5Day3HoursForecastWeatherData(city, state, country, apiKey, metric=True):
         return None
 
 
-def getObservationWeatherData(city, state, country, api_key, metric=True):
+def getObservationWeatherData(city, state, country, apiKey, metric=True):
     base_url = "http://api.openweathermap.org/data/2.5/weather"
     params = {
         "q": f"{city},{state},{country}",
-        "appid": api_key,
+        "appid": apiKey,
         "units": "metric" if metric else "imperial"
     }
     response = requests.get(base_url, params=params)
@@ -591,7 +591,7 @@ def getObservationWeatherData(city, state, country, api_key, metric=True):
         return data
 
 
-def getAirPollutionData(city, state, country, api_key):
+def getAirPollutionData(city, state, country, apiKey):
     location = f"{city}, {state}, {country}"
     g = geocoder.osm(location)
     if g.ok:
@@ -600,11 +600,27 @@ def getAirPollutionData(city, state, country, api_key):
         print("Error: Unable to retrieve coordinates.")
         return None
     base_url = "http://api.openweathermap.org/data/2.5/air_pollution"
-    params = {"lat": latitude, "lon": longitude, "appid": api_key}
+    params = {"lat": latitude, "lon": longitude, "appid": apiKey}
     response = requests.get(base_url, params=params)
     data = response.json()
     if data.get("list"):
         return data
+
+
+def getLocationInfo(latitude, longitude, apiKey):
+    baseUrl = 'http://api.openweathermap.org/data/2.5/weather'
+    params = {'lat': latitude, 'lon': longitude, 'appid': apiKey}
+    response = requests.get(baseUrl, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        cityName = data['name']
+        state = data.get('sys', {}).get('state', '')
+        country = data['sys']['country']
+
+        return cityName, state, country
+    else:
+        print(f"Error: {response.status_code}")
+        return None
 
 
 def isValidAPIKey(api_key):
