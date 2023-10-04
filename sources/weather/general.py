@@ -118,7 +118,7 @@ class ForecastTabWidget(QTabWidget):
         self.citiesDataFrame = citiesDataFrame
         self.settings = loadSettings('settings')
         self.apiKey = self.settings['WEATHER_API_KEY']
-        self.locations = []
+        self.locations, self.dataTimers = [], []
         if self.citiesDataFrame is not None:
             self.loadLocations()
 
@@ -147,8 +147,8 @@ class ForecastTabWidget(QTabWidget):
     def addLocationTab(self, cityData, firstLoading=False):
         inLocations = True in [cityData.equals(location) for location in self.locations]
         if not inLocations or firstLoading:
-            name, state, country, formattedName = cityData['name'], cityData['state'], cityData['country'], cityData['format']
             # OPENWEATHERMAP DATA QUERY
+            name, state, country, formattedName = cityData['name'], cityData['state'], cityData['country'], cityData['format']
             observationData = getObservationWeatherData(name, state, country, self.apiKey)
             forecastDataHours = get5Day3HoursForecastWeatherData(name, state, country, self.apiKey)
             pollutionData = getAirPollutionData(name, state, country, self.apiKey)

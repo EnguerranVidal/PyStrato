@@ -374,6 +374,7 @@ class WeatherDisplay(QWidget):
         self.updatePlot()
 
     def updateWeatherForecast(self, observationData, forecastData):
+        self.plotView.clear()
         self.observationData = observationData
         self.forecastData = forecastData
         now = self.observationData['dt']
@@ -399,14 +400,36 @@ class WeatherDisplay(QWidget):
         # TEMPERATURE ANNOTATIONS
         for x, y in zip(self.forecastedData[0][1:], self.forecastedData[1][1:]):
             self.plotView.plot([x], [y], pen=None, symbol='o', symbolPen='w', symbolBrush='w', symbolSize=10)
-            text_item = pg.TextItem(text=str(int(y)), anchor=(0.5, 1.2), color=(255, 255, 255))
-            self.plotView.addItem(text_item)
-            text_item.setPos(x, y)
+            textItem = pg.TextItem(text=str(int(y)), anchor=(0.5, 1.2), color=(255, 255, 255))
+            self.plotView.addItem(textItem)
+            textItem.setPos(x, y)
+
+        # X-AXIS DATETIMES
+        xAxis = pg.AxisItem(orientation='bottom')
+        self.plotView.setAxisItems({'bottom': xAxis})
+        xTimes = oddFullHoursBetween(now, xSmooth[-1])
+        xTimes = [(dt.timestamp(), dt.strftime('%H:%M')) for dt in xTimes]
+        xAxis.setTicks([xTimes])
 
         # Y-AXIS RANGE
         self.minTempSmooth = min(dataSmooth) - 1
         self.maxTempSmooth = max(dataSmooth) + 1
         self.plotView.setYRange(self.minTempSmooth, self.maxTempSmooth)
+        self.plotView.getAxis('left').setStyle(showValues=False)
+        self.plotView.getAxis('left').setTicks([])
+        self.plotView.setMouseEnabled(y=False)
+
+        # MIDNIGHT LINES AND DAY LABELS
+        midnights = midnightsBetween(now, xSmooth[-1])
+        for midnight in midnights:
+            midnightLine = pg.InfiniteLine(midnight.timestamp(), angle=90, pen=(255, 255, 255, 50))
+            self.plotView.addItem(midnightLine)
+
+            # Add day label
+            dayLabel = midnight.strftime('%a %d')
+            textItem = pg.TextItem(text=dayLabel, anchor=(0.5, 0.5), color=(255, 255, 255, 200))
+            textItem.setPos(midnight.timestamp(), self.maxTempSmooth)
+            self.plotView.addItem(textItem)
 
     def updatePlot(self):
         self.plotView.setYRange(self.minTempSmooth, self.maxTempSmooth)
@@ -418,16 +441,15 @@ class WeatherDisplay(QWidget):
                     self.plotView.setXRange(startTime, finishTime)
                 else:
                     dateObject = datetime.strptime(weatherData['date'], '%Y-%m-%d')
-                    startTime = dateObject.replace(hour=0, minute=0, second=0, microsecond=0)
-                    finishTime = startTime.timestamp() + 3600 * 24
-                    self.plotView.setXRange(startTime.timestamp(), finishTime)
+                    startTime = dateObject.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+                    finishTime = startTime + 3600 * 24
+                    self.plotView.setXRange(startTime, finishTime)
                 return
         if self.selectedDate == datetime.now().strftime('%Y-%m-%d'):
             startTime = self.forecastInterpolated[0][0]
             finishTime = startTime + 3600 * 24
             self.plotView.setXRange(startTime, finishTime)
             return
-
 
 class DayFrame(QFrame):
     dayClicked = pyqtSignal(str)
@@ -621,6 +643,37 @@ def getLocationInfo(latitude, longitude, apiKey):
     else:
         print(f"Error: {response.status_code}")
         return None
+
+
+def oddFullHoursBetween(startTimestamp, endTimestamp):
+    startDateTime = datetime.utcfromtimestamp(startTimestamp)
+    endDateTime = datetime.utcfromtimestamp(endTimestamp)
+    startDateTime -= timedelta(minutes=startDateTime.minute, seconds=startDateTime.second, microseconds=startDateTime.microsecond)
+    endDateTime += timedelta(hours=1, minutes=-endDateTime.minute, seconds=-endDateTime.second, microseconds=-endDateTime.microsecond)
+    if startDateTime.hour % 2 == 0:
+        startDateTime += timedelta(hours=1)
+    currentDateTime = startDateTime
+    result = []
+    while currentDateTime < endDateTime:
+        result.append(currentDateTime)
+        currentDateTime += timedelta(hours=2)
+    return result
+
+
+def midnightsBetween(startTimestamp, endTimestamp, includeBorders=True):
+    startDateTime = datetime.utcfromtimestamp(startTimestamp)
+    endDateTime = datetime.utcfromtimestamp(endTimestamp)
+    startDateTime -= timedelta(days=startDateTime.day, hours=startDateTime.hour, minutes=startDateTime.minute, seconds=startDateTime.second, microseconds=startDateTime.microsecond)
+    endDateTime += timedelta(days=1, hours=-endDateTime.hour, minutes=-endDateTime.minute, seconds=-endDateTime.second, microseconds=-endDateTime.microsecond)
+    if not includeBorders:
+        startDateTime += timedelta(days=1)
+        endDateTime -= timedelta(days=1)
+    currentDateTime = startDateTime
+    result = []
+    while currentDateTime < endDateTime:
+        result.append(currentDateTime)
+        currentDateTime += timedelta(days=1)
+    return result
 
 
 def isValidAPIKey(api_key):
