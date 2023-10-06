@@ -160,7 +160,7 @@ class PyStratoGui(QMainWindow):
         self.weatherToolBar.addAction(self.getGeolocationAct)
 
         # SEARCH BAR
-        searchOptions = self.weatherTabWidget.forecastTabDisplay.citiesDataFrame['format']
+        searchOptions = self.weatherTabWidget.citiesDataFrame['format']
         self.locationSearchBar = SearchBar(self.currentDir, searchOptions)
         self.locationSearchBar.setFixedWidth(300)
         self.locationSearchBar.setFixedHeight(30)

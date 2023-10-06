@@ -47,12 +47,13 @@ class WeatherWindow(QMainWindow):
                 self.stackedWidget.setCurrentWidget(self.forecastTabDisplay)
         else:
             self.notAvailableDisplay = NoInternetDisplay(self, self.currentDir)
+            self.notAvailableDisplay.retry.connect(self.checkInternetAccess)
             self.stackedWidget.addWidget(self.notAvailableDisplay)
             self.stackedWidget.setCurrentWidget(self.notAvailableDisplay)
             # Creating time loop that checks for internet access
             self.internetAccessTimer = QTimer()
             self.internetAccessTimer.timeout.connect(self.checkInternetAccess)
-            self.internetAccessTimer.start(100)
+            self.internetAccessTimer.start(300000)
 
     def checkInternetAccess(self):
         if isInternetAvailable():
@@ -80,12 +81,13 @@ class WeatherWindow(QMainWindow):
     def switchToNoInternet(self):
         if self.notAvailableDisplay is None:
             self.notAvailableDisplay = NoInternetDisplay(self, self.currentDir)
+            self.notAvailableDisplay.retry.connect(self.checkInternetAccess)
             self.stackedWidget.addWidget(self.notAvailableDisplay)
         self.stackedWidget.setCurrentWidget(self.notAvailableDisplay)
         # INTERNET CHECKING TIME LOOP
         self.internetAccessTimer = QTimer()
         self.internetAccessTimer.timeout.connect(self.checkInternetAccess)
-        self.internetAccessTimer.start(100)
+        self.internetAccessTimer.start(300000)
 
 
 class NoInternetDisplay(QWidget):
@@ -95,26 +97,24 @@ class NoInternetDisplay(QWidget):
         super().__init__(parent)
         self.currentDir = path
         self.iconPath = os.path.join(self.currentDir, 'sources/icons')
-        layout = QVBoxLayout()
 
-        # Label to display the message
-        self.message_label = QLabel("No Internet Access")
-        self.message_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.message_label)
-
-        # Loading wheel animation
-        self.loading_label = QLabel(self)
-        self.loading_label.setAlignment(Qt.AlignCenter)
-        self.loading_movie = QMovie(os.path.join(self.iconPath, "loading.gif"))  # Replace "loading.gif" with your loading animation file
-        self.loading_label.setMovie(self.loading_movie)
-        self.loading_movie.start()
-        layout.addWidget(self.loading_label)
-
-        # Button to trigger reloading
-        self.retryButton = QPushButton("Retry")
-        layout.addWidget(self.retryButton)
-        self.setLayout(layout)
+        # RETRY BUTTON
+        self.retryButton = FlatButton(os.path.join(self.iconPath, 'light-theme/icons8-reset-96.png'), self)
         self.retryButton.clicked.connect(self.emitRetrySignal)
+
+        # NO INTERNET MESSAGE
+        font = QFont()
+        font.setPointSize(16)
+        self.messageLabel = QLabel("No Internet Access")
+        self.messageLabel.setAlignment(Qt.AlignCenter)
+        self.messageLabel.setFont(font)
+
+        # MAIN LAYOUT
+        mainLayout = QVBoxLayout()
+        mainLayout.addWidget(self.messageLabel, alignment=Qt.AlignCenter)
+        mainLayout.addWidget(self.retryButton, alignment=Qt.AlignCenter)
+        mainLayout.setSpacing(0)
+        self.setLayout(mainLayout)
 
     def emitRetrySignal(self):
         self.retry.emit()
