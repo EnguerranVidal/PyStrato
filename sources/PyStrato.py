@@ -94,7 +94,9 @@ class PyStratoGui(QMainWindow):
 
     def _generateTabs(self):
         self.generalTabWidget = QTabWidget(self)
-        self.generalTabWidget.setTabBar(QTabBar(self.generalTabWidget))
+        self.generalTabBar = QTabBar(self.generalTabWidget)
+        self.generalTabBar.setStyleSheet("QTabBar::tab { min-height: 125px; max-height: 125px; }")
+        self.generalTabWidget.setTabBar(self.generalTabBar)
         self.generalTabWidget.setTabPosition(self.generalTabWidget.West)
 
         # Packet Tab Widget -----------------------------------------
@@ -154,6 +156,7 @@ class PyStratoGui(QMainWindow):
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.weatherToolBar.addWidget(spacer)
         # GEOLOCATION
+        self.weatherToolBar.addAction(self.updatingWeatherAct)
         self.weatherToolBar.addAction(self.getGeolocationAct)
 
         # SEARCH BAR
@@ -316,6 +319,12 @@ class PyStratoGui(QMainWindow):
         self.openMonitorAct.triggered.connect(self.openSerialMonitor)
 
         ########### WEATHER ###########
+        # Updating Weather Tabs
+        self.updatingWeatherAct = QAction('&Update Weather Data', self)
+        self.updatingWeatherAct.setIcon(QIcon('sources/icons/light-theme/icons8-reset-96.png'))
+        self.updatingWeatherAct.setStatusTip('Updating All Weather Tabs')
+        self.updatingWeatherAct.triggered.connect(self.updateWeatherTabs)
+        # Using Geolocation
         self.getGeolocationAct = QAction('&Get GeoLocation Weather', self)
         self.getGeolocationAct.setIcon(QIcon('sources/icons/light-theme/icons8-my-location-96.png'))
         self.getGeolocationAct.setStatusTip('Get Weather From Geolocation')
@@ -897,6 +906,9 @@ class PyStratoGui(QMainWindow):
 
     def getWeatherForGeolocation(self):
         self.weatherTabWidget.forecastTabDisplay.getGpsLocation()
+
+    def updateWeatherTabs(self):
+        self.weatherTabWidget.forecastTabDisplay.updateTabs()
 
     def onLocationSearchedClicked(self):
         formattedCityName = self.locationSearchBar.selection

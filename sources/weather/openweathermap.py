@@ -188,6 +188,7 @@ class WeatherObservationDisplay(QWidget):
         self.weatherDescriptionLabel = weatherDescriptionLabel
         self.feelLikeTemperatureLabel = feelLikeTemperatureLabel
         self.windSpeedLabel = windSpeedLabel
+        self.windDirectionWidget = windDirectionWidget
         self.humidityLabel = humidityLabel
         self.visibilityLabel = visibilityLabel
         self.pressureLabel = pressureLabel
@@ -356,8 +357,8 @@ class WeatherDisplay(QWidget):
         # TEMPERATURE PLOT WIDGET
         self.plotView = pg.PlotWidget()
         self.plotView.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.updateWeatherForecast(self.observationData, self.forecastData)
-        self.updatePlot()
+        self.updateTemperaturePlot(self.observationData, self.forecastData)
+        self.updatePlotXRange()
 
         # OBSERVATION AND POLLUTION DISPLAY
         self.observationDisplay = WeatherObservationDisplay(observationData, pollutionData, metric=True)
@@ -369,11 +370,56 @@ class WeatherDisplay(QWidget):
         mainLayout.addWidget(self.plotView, 1, 0, 1, 3)
         self.setLayout(mainLayout)
 
+    def updateWeatherData(self, observationData, pollutionData, forecastData):
+        # DAY FRAME WIDGETS
+        for dayWidget in self.dayWidgets:
+            dayWidget.setParent(None)
+            dayWidget.deleteLater()
+        self.dayWidgets = []
+        now = datetime.now()
+        today = now.strftime('%Y-%m-%d')
+        for index, dayData in enumerate(forecastData):
+            if not index:
+                newDayData = dayData.copy()
+                if newDayData["date"] == today and len(newDayData["time"]) > 2:
+                    dayFrame = DayFrame(newDayData)
+                elif newDayData["date"] == today:
+                    times = newDayData["time"] + forecastData[index + 1]["time"]
+                    data = newDayData['temperatures'] + forecastData[index + 1]["temperatures"]
+                    icons = newDayData['icons'] + forecastData[index + 1]["icons"]
+                    newDayData["times"], newDayData['temperatures'], newDayData['icons'] = times, data, icons
+                    dayFrame = DayFrame(newDayData, tonight=True)
+                else:
+                    dayFrame = DayFrame(dayData, date=today, tonight=True)
+                    dayFrame.dayClicked.connect(self.updateSelectedDate)
+                    self.dayWidgets.append(dayFrame)
+                    dayFrame = DayFrame(dayData)
+                dayFrame.dayClicked.connect(self.updateSelectedDate)
+                self.dayWidgets.append(dayFrame)
+            if index and len(dayData["time"]) == 8:
+                dayFrame = DayFrame(dayData)
+                dayFrame.dayClicked.connect(self.updateSelectedDate)
+                self.dayWidgets.append(dayFrame)
+        self.scrollableDayWidget.setParent(None)
+        self.scrollableDayWidget.deleteLater()
+        self.scrollableDayWidget = ScrollableWidget(self.currentDir, self.dayWidgets)
+        layout = self.layout()
+        layout.removeWidget(self.scrollableDayWidget)
+        layout.addWidget(self.scrollableDayWidget, 0, 1, 1, 2)
+
+        # OBSERVATION DISPLAY
+        self.observationDisplay.updateWeatherData(observationData)
+        self.observationDisplay.updateAirQualityData(pollutionData)
+
+        # FORECAST TEMPERATURE DISPLAY
+        self.updateTemperaturePlot(observationData, forecastData)
+        self.updateSelectedDate(self.selectedDate)
+
     def updateSelectedDate(self, date):
         self.selectedDate = date
-        self.updatePlot()
+        self.updatePlotXRange()
 
-    def updateWeatherForecast(self, observationData, forecastData):
+    def updateTemperaturePlot(self, observationData, forecastData):
         self.plotView.clear()
         self.observationData = observationData
         self.forecastData = forecastData
@@ -431,7 +477,7 @@ class WeatherDisplay(QWidget):
             textItem.setPos(midnight.timestamp(), self.maxTempSmooth)
             self.plotView.addItem(textItem)
 
-    def updatePlot(self):
+    def updatePlotXRange(self):
         self.plotView.setYRange(self.minTempSmooth, self.maxTempSmooth)
         for weatherData in self.forecastData:
             if weatherData['date'] == self.selectedDate:
@@ -450,6 +496,7 @@ class WeatherDisplay(QWidget):
             finishTime = startTime + 3600 * 24
             self.plotView.setXRange(startTime, finishTime)
             return
+
 
 class DayFrame(QFrame):
     dayClicked = pyqtSignal(str)
@@ -512,31 +559,9 @@ class DayFrame(QFrame):
         minTempText = f"<b><font size='15'>{minTemp}°</font></b>"
         self.minTempLabel.setText(minTempText)
         self.minTempLabel.setAlignment(Qt.AlignRight)
-        self.dayLayout.addWidget(self.minTempLabel, 2, 2)  # Row 2, Column 2
+        self.dayLayout.addWidget(self.minTempLabel, 2, 2)
 
         self.setLayout(self.dayLayout)
-
-    def updateDayData(self, dayData):
-        # WEATHER ICON
-        self.dayData = dayData
-        weatherIconCode = self.dayData["weather_icon"]
-        weatherIconUrl = f"http://openweathermap.org/img/wn/{weatherIconCode}.png"
-        iconImage = requests.get(weatherIconUrl)
-        pixmap = QPixmap()
-        pixmap.loadFromData(iconImage.content)
-        iconSize = QSize(60, 60)
-        pixmap = pixmap.scaled(iconSize, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.weatherIconLabel.setPixmap(pixmap)
-        # DATE LABEL
-        dt = datetime.strptime(self.dayData["date"], '%Y-%m-%d')
-        self.dateLabel.setText(dt.strftime('%a %d'))
-        # TEMPERATURES
-        minTemp = int(self.dayData["min_temp"])
-        minTempText = f"<b><font size='15'>{minTemp}°</font></b>"
-        maxTemp = int(self.dayData["max_temp"])
-        maxTempText = f"<b><font size='15'>{maxTemp}°</font></b>"
-        self.maxTempLabel.setText(maxTempText)
-        self.minTempLabel.setText(minTempText)
 
     def mousePressEvent(self, event):
         self.dayClicked.emit(self.date)

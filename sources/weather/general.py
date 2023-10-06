@@ -1,6 +1,8 @@
 ######################## IMPORTS ########################
 import json
 import os
+import time
+
 import folium
 import geocoder
 import requests
@@ -26,12 +28,12 @@ class WeatherWindow(QMainWindow):
         super().__init__()
         self.currentDir = path
         self.hide()
+        self.notAvailableDisplay, self.apiRegistrationWidget, self.forecastTabDisplay = None, None, None
+        self.citiesDataFrame = loadingData['CITIES']
         self.settings = loadSettings('settings')
         self.apiKey = self.settings['WEATHER_API_KEY']
         self.stackedWidget = QStackedWidget()
         self.setCentralWidget(self.stackedWidget)
-        self.forecastTabDisplay = ForecastTabWidget(citiesDataFrame=loadingData['CITIES'], parent=self, path=self.currentDir)
-        self.stackedWidget.addWidget(self.forecastTabDisplay)
         if isInternetAvailable():
             if not self.apiKey or not isValidAPIKey(self.apiKey):
                 self.apiRegistrationWidget = ApiRegistrationWidget(self)
@@ -39,6 +41,9 @@ class WeatherWindow(QMainWindow):
                 self.stackedWidget.addWidget(self.apiRegistrationWidget)
                 self.stackedWidget.setCurrentWidget(self.apiRegistrationWidget)
             else:
+                self.forecastTabDisplay = ForecastTabWidget(self, self.currentDir, citiesDataFrame=self.citiesDataFrame)
+                self.forecastTabDisplay.noInternet.connect(self.switchToNoInternet)
+                self.stackedWidget.addWidget(self.forecastTabDisplay)
                 self.stackedWidget.setCurrentWidget(self.forecastTabDisplay)
         else:
             self.notAvailableDisplay = NoInternetDisplay(self, self.currentDir)
@@ -61,16 +66,26 @@ class WeatherWindow(QMainWindow):
         if isInternetAvailable():
             self.switchToForecast()
         else:
-            self.notAvailableDisplay = NoInternetDisplay(self, self.currentDir)
-            self.stackedWidget.addWidget(self.notAvailableDisplay)
-            self.stackedWidget.setCurrentWidget(self.notAvailableDisplay)
-            # Creating time loop that checks for internet access
-            self.internetAccessTimer = QTimer()
-            self.internetAccessTimer.timeout.connect(self.checkInternetAccess)
-            self.internetAccessTimer.start(100)
+            self.switchToNoInternet()
 
     def switchToForecast(self):
+        if self.forecastTabDisplay is None:
+            self.forecastTabDisplay = ForecastTabWidget(self, self.currentDir, citiesDataFrame=self.citiesDataFrame)
+            self.forecastTabDisplay.noInternet.connect(self.switchToNoInternet)
+            self.stackedWidget.addWidget(self.forecastTabDisplay)
+        else:
+            self.forecastTabDisplay.updateTabs()
         self.stackedWidget.setCurrentWidget(self.forecastTabDisplay)
+
+    def switchToNoInternet(self):
+        if self.notAvailableDisplay is None:
+            self.notAvailableDisplay = NoInternetDisplay(self, self.currentDir)
+            self.stackedWidget.addWidget(self.notAvailableDisplay)
+        self.stackedWidget.setCurrentWidget(self.notAvailableDisplay)
+        # INTERNET CHECKING TIME LOOP
+        self.internetAccessTimer = QTimer()
+        self.internetAccessTimer.timeout.connect(self.checkInternetAccess)
+        self.internetAccessTimer.start(100)
 
 
 class NoInternetDisplay(QWidget):
@@ -106,13 +121,14 @@ class NoInternetDisplay(QWidget):
 
 
 class ForecastTabWidget(QTabWidget):
+    noInternet = pyqtSignal()
+
     def __init__(self, parent=None, path: str = os.path.dirname(__file__), citiesDataFrame=None):
         super().__init__(parent)
         self.currentDir = path
         self.setTabsClosable(True)
         self.setMovable(True)
         self.tabBar().tabMoved.connect(self.tabMoved)
-        # self.tabBar().installEventFilter(self)
         self.tabCloseRequested.connect(self.closeTab)
         self.setStyleSheet("QTabBar::tab { min-width: 150px; max-width: 150px; }")
         self.citiesDataFrame = citiesDataFrame
@@ -121,14 +137,15 @@ class ForecastTabWidget(QTabWidget):
         self.locations, self.dataTimers = [], []
         if self.citiesDataFrame is not None:
             self.loadLocations()
+        self.currentChanged.connect(self.tabChanged)
 
     def loadLocations(self):
         if self.citiesDataFrame is not None:
             self.settings = loadSettings('settings')
             self.apiKey = self.settings['WEATHER_API_KEY']
-            self.locations = []
             for location in self.settings['LOCATIONS']:
                 dataSlice = self.findCitySlice(location[0], location[1], location[2])
+                self.dataTimers.append(time.time())
                 self.addLocationTab(dataSlice.iloc[0], firstLoading=True)
 
     def showMapDialog(self):
@@ -138,11 +155,6 @@ class ForecastTabWidget(QTabWidget):
             cityData = lastMarker[0]
             print(type(cityData))
             print(cityData)
-
-    def removeLocation(self, index):
-        self.locations.pop(index)
-        self.settings['LOCATIONS'].pop(index)
-        saveSettings(self.settings, 'settings')
 
     def addLocationTab(self, cityData, firstLoading=False):
         inLocations = True in [cityData.equals(location) for location in self.locations]
@@ -155,6 +167,7 @@ class ForecastTabWidget(QTabWidget):
             observationDisplay = WeatherDisplay(self.currentDir, observationData, pollutionData, forecastDataHours, metric=True)
             self.addTab(observationDisplay, formattedName)
             self.locations.append(cityData)
+            self.dataTimers.append(time.time())
             if not firstLoading:
                 self.setCurrentIndex(self.count() - 1)
                 location = (cityData['name'], cityData['state'], cityData['country'])
@@ -185,6 +198,26 @@ class ForecastTabWidget(QTabWidget):
         movedLocationSetting = self.settings['LOCATIONS'].pop(fromIndex)
         self.settings['LOCATIONS'].insert(toIndex, movedLocationSetting)
         saveSettings(self.settings, 'settings')
+
+    def tabChanged(self, index):
+        self.updateTabData(index)
+
+    def updateTabs(self):
+        for index in range(self.count()):
+            self.updateTabData(index)
+
+    def updateTabData(self, index):
+        if isInternetAvailable():
+            print(index)
+            name, state, country = self.locations[index]['name'], self.locations[index]['state'], self.locations[index]['country']
+            observationData = getObservationWeatherData(name, state, country, self.apiKey)
+            forecastDataHours = get5Day3HoursForecastWeatherData(name, state, country, self.apiKey)
+            pollutionData = getAirPollutionData(name, state, country, self.apiKey)
+            widget = self.widget(index)
+            widget.updateWeatherData(observationData, pollutionData, forecastDataHours)
+            self.dataTimers[index] = time.time()
+        else:
+            self.noInternet.emit()
 
     def closeTab(self, index):
         self.locations.pop(index)
