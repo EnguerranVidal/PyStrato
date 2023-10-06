@@ -9,7 +9,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, nameGiving
+from sources.common.FileHandling import loadSettings, nameGiving
 from sources.common.Widgets import BasicDisplay, ArgumentSelector
 from sources.displays.graphs import ColorEditor
 from sources.databases.units import DefaultUnitsCatalogue
@@ -90,7 +90,7 @@ class SingleIndicator(BasicDisplay):
         self.updateContent()
 
     def updateContent(self, content=None):
-        self.generalSettings = load_settings('settings')
+        self.generalSettings = loadSettings('settings')
         # If content is there, retrieve the Argument
         argumentMapping = self.argument.split('$')
         if argumentMapping != ['']:  # There is an argument in the parameters
@@ -603,7 +603,7 @@ class LabeledIndicator(QGroupBox):
         self.textAlignment = 0
         self.lastValue = None
         self.catalogue = DefaultUnitsCatalogue()
-        self.generalSettings = load_settings('settings')
+        self.generalSettings = loadSettings('settings')
         self.argument = ''
         self.argumentUnit = None
         self.showUnit = False
@@ -653,7 +653,7 @@ class LabeledIndicator(QGroupBox):
         self.updateLabelContent()
 
     def updateLabelContent(self, content=None):
-        self.generalSettings = load_settings('settings')
+        self.generalSettings = loadSettings('settings')
         argumentMapping = self.argument.split('$')
         if argumentMapping != ['']:  # There is an argument in the parameters
             if content is None:

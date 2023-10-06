@@ -8,7 +8,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, nameGiving
+from sources.common.FileHandling import loadSettings, nameGiving
 from sources.common.Widgets import BasicDisplay, ContentStorage
 from sources.displays.graphs import MultiCurveGraph
 from sources.displays.indicators import SingleIndicator, GridIndicator
@@ -18,12 +18,13 @@ from sources.displays.indicators import SingleIndicator, GridIndicator
 class DisplayTabWidget(QMainWindow):
     def __init__(self, path):
         super(QMainWindow, self).__init__()
+        self.hide()
         self.currentDir = path
         self.dockSpaces = [Qt.LeftDockWidgetArea, Qt.RightDockWidgetArea, Qt.TopDockWidgetArea, Qt.BottomDockWidgetArea]
         self.formatPath = os.path.join(self.currentDir, 'formats')
         self.content = ContentStorage(self.currentDir)
         self.content.fill()
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         self.formats = {}
 
         ######## CENTRAL WIDGET ########
@@ -33,8 +34,6 @@ class DisplayTabWidget(QMainWindow):
         self.setCentralWidget(self.tabWidget)
         self.tabWidget.tabBarDoubleClicked.connect(self.onTabBarDoubleClicked)
         self.tabWidget.currentChanged.connect(self.tabChanged)
-
-        self.show()
 
     def closeCurrentTab(self):
         currentTabIndex = self.tabWidget.currentIndex()

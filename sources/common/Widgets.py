@@ -14,7 +14,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, save_settings, nameGiving, getWithoutExtension, \
+from sources.common.FileHandling import loadSettings, saveSettings, nameGiving, getWithoutExtension, \
     getModificationDate
 from sources.databases.balloondata import BalloonPackageDatabase
 from sources.databases.units import DefaultUnitsCatalogue
@@ -24,7 +24,7 @@ from sources.databases.units import DefaultUnitsCatalogue
 class BasicDisplay(QWidget):
     def __init__(self, path, parent=None):
         super().__init__(parent)
-        self.generalSettings = load_settings('settings')
+        self.generalSettings = loadSettings('settings')
         self.catalogue = DefaultUnitsCatalogue()
         self.settingsWidget = QWidget()
         self.currentDir = path
@@ -43,12 +43,12 @@ class BasicDisplay(QWidget):
 
 class ContentStorage:
     def __init__(self, path):
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         self.currentDir = path
         self.storage = {}
 
     def fill(self):
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         paths = self.settings['FORMAT_FILES']
         for path in paths:
             path = os.path.join(self.currentDir, 'formats', path)
@@ -154,7 +154,7 @@ class ArgumentSelectorWidget(QWidget):
         self.typeFilter = typeFilter
         self.formatPath = os.path.join(self.currentDir, "formats")
         self.databases = None
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         # Set up combo box
         self.comboBox = QComboBox()
         self.fillComboBox()
@@ -200,7 +200,7 @@ class ArgumentSelectorWidget(QWidget):
         self.changeComboBox()
 
     def fillComboBox(self):
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         files = self.settings['FORMAT_FILES']
         if len(files) == 1 and len(files[0]) == 0:
             files = []
@@ -370,13 +370,13 @@ class SerialWindow(QWidget):
         super(SerialWindow, self).__init__()
         self.resize(450, 350)
         self.setWindowTitle('Serial Monitor')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
         # General Layout
         self.layout = QGridLayout(self)
         self.setLayout(self.layout)
         # Loading settings
         self.settings = {}
-        self.settings = load_settings("settings")
+        self.settings = loadSettings("settings")
         # Text edit box
         self.textedit = QTextEdit(self)
         self.textedit.setText('Run Serial listening to display incoming info ...')
@@ -396,7 +396,7 @@ class SerialWindow(QWidget):
 
     def changeAutoscroll(self):
         self.settings["AUTOSCROLL"] = int(not bool(self.settings["AUTOSCROLL"]))
-        save_settings(self.settings, "settings")
+        saveSettings(self.settings, "settings")
         self.autoscroll_box.setChecked(bool(self.settings["AUTOSCROLL"]))
 
     def clearOutput(self):
@@ -423,7 +423,7 @@ class NewPackageWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Create New Package')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
         self.dataChanged = False
         self.saveChanged = False
         self.resize(400, 100)
@@ -446,8 +446,8 @@ class TrackedBalloonsWindow(QWidget):
         self.current_dir = path
         self.format_path = os.path.join(self.current_dir, "formats")
         self.setWindowTitle('Tracked Balloons')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
-        self.settings = load_settings("settings")
+        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
+        self.settings = loadSettings("settings")
         # Selected Balloon List
         self.selectedList = BalloonsListWidget()
         self.selectedLabel = QLabel('Tracked Formats')
@@ -604,14 +604,18 @@ class AboutDialog(QDialog):
         aboutText = """
         <html>
         <body>
-        <p align="justify">About the PyGS Software</p>
+        <p align="justify">About the PyStrato Software</p>
 
         <p align="justify">Our Stratospheric Balloon Ground Station software is an open-source solution designed specifically for student projects involving stratospheric balloon missions. Developed by <a href='https://github.com/EnguerranVidal'>KeplerDream</a> for the TSI Master located in Toulouse (France), with ease of use and functionality in mind, our software provides a comprehensive suite of tools and features to support ground station operations.</p>
 
         <p align="justify">Key Features:</p>
         <ul>
-        <li>Real-time telemetry data visualization: Visualize information in real_time through several diagram types and plots.</li>
-        <li>Payload Telemetry Data Editing : Set up the telecommunication payload layout.</li>
+        <li><strong>Real-time telemetry data visualization :</strong>
+        Visualize information in real_time through several diagram types and plots.</li>
+        <li><strong>Payload Telemetry Data Editing :</strong> 
+        Set up the telecommunication payload layout as to customize its constituents.</li>
+        <li><strong>Weather Forecast :</strong> 
+        Be able to get weather forecasts and air pollution levels from OpenWeatherMap.</li>
         </ul>
 
         <p align="justify">This software is written in Python, utilizing the power and flexibility of the language to provide an intuitive user experience. We recommend using Python 3.9 for optimal performance.</p>
@@ -622,7 +626,7 @@ class AboutDialog(QDialog):
             <a href='https://github.com/Abestanis'>Abestanis</a>
         </p>
 
-        <p align="justify">To get started with our Stratospheric Balloon Ground Station software, please visit our GitHub repository <a href='https://github.com/EnguerranVidal/PyGS'>PyGS</a> for the latest version, installation instructions, and detailed documentation. We welcome contributions from the community and encourage you to provide feedback and suggestions to help us improve the software.</p>
+        <p align="justify">To get started with our Stratospheric Balloon Ground Station software, please visit our GitHub repository <a href='https://github.com/EnguerranVidal/PyStrato'>PyStratoGui</a> for the latest version, installation instructions, and detailed documentation. We welcome contributions from the community and encourage you to provide feedback and suggestions to help us improve the software.</p>
 
         <p align="justify">Thank you for choosing our software for your stratospheric balloon project. We hope it facilitates your mission and contributes to the success of your endeavors.</p>
         </body>
@@ -667,7 +671,7 @@ class LayoutManagerDialog(QDialog):
         self.setModal(True)
         self.setFixedSize(600, 600)
         self.setWindowTitle('Layout Preset Selection')
-        self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
         self.currentDir = currentDir
         self.dataPath = os.path.join(self.currentDir, "data")
         self.presetPath = os.path.join(self.dataPath, 'presets')
@@ -922,6 +926,113 @@ class LayoutManagerDialog(QDialog):
                 self.refreshSaveTab()
 
 
+class ScrollableContainer(QScrollArea):
+    def __init__(self, parent=None):
+        super(ScrollableContainer, self).__init__(parent)
+        self.setWidgetResizable(True)
+        self.containerWidget = QWidget(self)
+        self.containerLayout = QHBoxLayout(self.containerWidget)
+        self.setWidget(self.containerWidget)
+        self.setFrameShape(QFrame.NoFrame)
+
+    def addWidget(self, widget):
+        self.containerLayout.addWidget(widget)
+
+
+class ScrollableWidget(QWidget):
+    def __init__(self, path, widgetList, widgetsToScroll=3):
+        super(ScrollableWidget, self).__init__()
+
+        # SCROLLING BUTTONS AND AREA
+        # Scroll Left Button
+        self.currentDir = path
+        self.scrollLeftButton = FlatButton(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-back-96.png'), self)
+        self.scrollLeftButton.clicked.connect(self.scrollLeft)
+        self.scrollLeftButton.setFixedWidth(30)
+        # Scroll Right Button
+        self.scrollRightButton = FlatButton(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-forward-96.png'), self)
+        self.scrollRightButton.clicked.connect(self.scrollRight)
+        self.scrollRightButton.setFixedWidth(30)
+        # Scroll Area
+        self.scrollArea = ScrollableContainer(self)
+        self.currentScrollPosition = 0
+        self.widgetsToScroll = widgetsToScroll
+        self.widgetWidth = widgetList[0].sizeHint().width() if widgetList else 0
+        self.widgetHeight = widgetList[0].sizeHint().height() if widgetList else 0
+        self.setFixedHeight(int(self.widgetHeight * 1.5))
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.scrollAnimation = QPropertyAnimation(self.scrollArea.horizontalScrollBar(), b"value")
+        self.scrollAnimation.setEasingCurve(QEasingCurve.OutCubic)
+        self.scrollAnimation.setDuration(500)
+
+        # CONTAINER & LAYOUT
+        for widget in widgetList:
+            self.scrollArea.addWidget(widget)
+        mainLayout = QVBoxLayout(self)
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(self.scrollLeftButton)
+        buttonLayout.addWidget(self.scrollArea)
+        buttonLayout.addWidget(self.scrollRightButton)
+        mainLayout.addLayout(buttonLayout)
+
+    def scrollLeft(self):
+        self.currentScrollPosition -= self.widgetsToScroll
+        self.scrollAnimation.stop()
+        self.scrollAnimation.setStartValue(self.scrollArea.horizontalScrollBar().value())
+        self.scrollAnimation.setEndValue(self.currentScrollPosition * self.widgetWidth)
+        self.scrollAnimation.start()
+
+    def scrollRight(self):
+        self.currentScrollPosition += self.widgetsToScroll
+        self.scrollAnimation.stop()
+        self.scrollAnimation.setStartValue(self.scrollArea.horizontalScrollBar().value())
+        self.scrollAnimation.setEndValue(self.currentScrollPosition * self.widgetWidth)
+        self.scrollAnimation.start()
+
+
+class SearchBar(QLineEdit):
+    searchDone = pyqtSignal()
+
+    def __init__(self, path, searchOptions, maxSuggestions=5, parent=None):
+        super(SearchBar, self).__init__(parent)
+        self.selection = ''
+        self.currentDir = path
+        self.searchOptions = searchOptions
+        self.maxSuggestions = maxSuggestions
+
+        # LINE EDIT
+        self.setPlaceholderText('Search Location ...')
+        searchCompleter = QCompleter(self.searchOptions, self)
+        searchCompleter.setCaseSensitivity(Qt.CaseInsensitive)
+        searchCompleter.setFilterMode(Qt.MatchStartsWith)
+        searchCompleter.setCompletionMode(QCompleter.PopupCompletion)
+        searchCompleter.setMaxVisibleItems(self.maxSuggestions)
+        self.setCompleter(searchCompleter)
+        searchCompleter.activated.connect(self.onCompleterActivated)
+
+        # SEARCH ACTION BUTTON
+        searchButtonAction = QAction(self)
+        searchButtonAction.setIcon(QIcon(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-search-96.png')))
+        searchButtonAction.triggered.connect(self.performSearch)
+        self.addAction(searchButtonAction, QLineEdit.TrailingPosition)
+
+    def performSearch(self):
+        if self.text() != '':
+            closest_suggestion = self.completer().currentCompletion()
+            self.selection = closest_suggestion
+            self.searchDone.emit()
+            QTimer.singleShot(0, self.clearLineEdit)
+
+    def onCompleterActivated(self, text):
+        self.selection = text
+        self.searchDone.emit()
+        QTimer.singleShot(0, self.clearLineEdit)
+
+    def clearLineEdit(self):
+        self.clear()
+        self.setPlaceholderText('Search Location ...')
+
+
 class FlatButton(QPushButton):
     def __init__(self, icon: str, parent=None):
         super(QPushButton, self).__init__(parent)
@@ -940,6 +1051,36 @@ class FlatButton(QPushButton):
 
     def sizeHint(self):
         return self.iconSize()
+
+
+class ArrowWidget(QLabel):
+    def __init__(self, iconPath: str, angle: int = 0):
+        super().__init__()
+        self.sizeIntegers = (25, 25)
+        self.iconPath = iconPath
+        self.angle = angle
+
+        self.setAlignment(Qt.AlignCenter)
+        self.setFixedSize(self.sizeIntegers[0], self.sizeIntegers[1])
+        self.updateIcon(self.angle)
+
+    def setSize(self, height: int = 25, width: int = 25):
+        self.sizeIntegers = (height, width)
+        self.setFixedSize(self.sizeIntegers[0], self.sizeIntegers[1])
+        self.updateIcon(self.angle)
+
+    def updateIcon(self, angle):
+        pixmap = QPixmap(self.iconPath)
+        pixmap = pixmap.scaledToWidth(100)
+        rotated_pixmap = pixmap.transformed(
+            QTransform().rotate(angle), Qt.SmoothTransformation
+        ).scaled(self.sizeIntegers[0], self.sizeIntegers[1],
+                 Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.setPixmap(rotated_pixmap)
+
+    def setAngle(self, angle):
+        self.angle = angle
+        self.updateIcon(self.angle)
 
 
 class ValueWidget(QWidget):

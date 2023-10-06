@@ -9,7 +9,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings, nameGiving
+from sources.common.FileHandling import loadSettings, nameGiving
 from sources.common.Widgets import BasicDisplay, ArgumentSelector
 
 
@@ -66,7 +66,7 @@ class MultiCurveGraph(BasicDisplay):
         self.updateContent()
 
     def updateContent(self, content=None):
-        self.generalSettings = load_settings('settings')
+        self.generalSettings = loadSettings('settings')
         if content is not None:
             self.content = content
             self.plotWidget.clear()

@@ -126,7 +126,7 @@ class TelemetriesWidget(QStackedWidget):
         if name in names:
             warning_dialog = QMessageBox()
             warning_dialog.setWindowTitle("Warning")
-            warning_dialog.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+            warning_dialog.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
             warning_dialog.setText('This Telemetry name is already taken.')
             warning_dialog.setIcon(QMessageBox.Warning)
             warning_dialog.setStandardButtons(QMessageBox.Ok)
@@ -299,7 +299,7 @@ class TelemetryArgumentEditor(QWidget):
         if name in names:
             warning_dialog = QMessageBox()
             warning_dialog.setWindowTitle("Warning")
-            warning_dialog.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+            warning_dialog.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
             warning_dialog.setText('This Telemetry name is already taken.')
             warning_dialog.setIcon(QMessageBox.Warning)
             warning_dialog.setStandardButtons(QMessageBox.Ok)
@@ -338,7 +338,7 @@ class NewTelemetryArgumentWindow(QDialog):
         super().__init__()
         self.database = database
         self.setWindowTitle('Add New Argument to ' + telemetryName)
-        # self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        # self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
         self.resize(400, 100)
         self.dlgLayout = QVBoxLayout()
         self.formWidget = QWidget(self)
@@ -359,7 +359,7 @@ class NewTelemetryWindow(QDialog):
         super().__init__()
         self.database = database
         self.setWindowTitle('Add New Telemetry')
-        # self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        # self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
         self.resize(400, 100)
         self.dlgLayout = QVBoxLayout()
         self.formWidget = QWidget(self)

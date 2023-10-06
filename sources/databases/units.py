@@ -168,7 +168,7 @@ class NewUnitWindow(QDialog):
     def __init__(self, parent: UnitsWidget):
         super().__init__(parent)
         self.setWindowTitle('Add New Unit')
-        # self.setWindowIcon(QIcon('sources/icons/PyGS.jpg'))
+        # self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
         unitTypes = [baseType.value for baseType in TypeInfo.BaseType]
         self.resize(400, 100)
         self.dlgLayout = QVBoxLayout()

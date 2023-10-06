@@ -17,7 +17,7 @@ from serial import Serial
 import time
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import load_settings
+from sources.common.FileHandling import loadSettings
 from sources.databases.balloondata import BalloonPackageDatabase
 
 
@@ -99,14 +99,14 @@ class SerialMonitor(QThread):
         super().__init__()
         self.currentDir = path
         self._active = False
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         self.dataDir = os.path.join(self.currentDir, 'data')
         self.formatDir = os.path.join(self.currentDir, 'formats')
 
     def run(self):
         parsers = {}
         databases = {}
-        self.settings = load_settings('settings')
+        self.settings = loadSettings('settings')
         for path in self.settings['FORMAT_FILES']:
             path = os.path.join(self.formatDir, path)
             name, database = os.path.basename(path), BalloonPackageDatabase(path)

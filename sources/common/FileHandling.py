@@ -100,28 +100,38 @@ def testSaving(path):
             print(f'Default value {config.defaultValue!r} for config {config.name} is not valid')
 
 
-def load_settings(path):
+def loadSettings(path):
     parameters = {}
     with open(path, "r") as file:
         lines = file.readlines()
     for i in range(len(lines)):
         line = lines[i].split('=')
         if line[0] in ['AVAILABLE_BAUDS', 'FORMAT_FILES', 'OPENED_RECENTLY']:
-            splitSetting = line[1].split(',')
-            for j in range(len(splitSetting)):
-                splitSetting[j] = splitSetting[j].rstrip("\n")
-            if len(splitSetting) == 1 and splitSetting[0] == '':
+            split_setting = line[1].split(',')
+            for j in range(len(split_setting)):
+                split_setting[j] = split_setting[j].rstrip('\n')
+            if len(split_setting) == 1 and split_setting[0] == '':
                 parameters[line[0]] = []
             else:
-                parameters[line[0]] = splitSetting
+                parameters[line[0]] = split_setting
         elif line[0] in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE', 'LAYOUT_AUTOSAVE']:
             parameters[line[0]] = bool(int(line[1].rstrip("\n")))
+        elif line[0] in ['LOCATIONS']:
+            line[1] = line[1].rstrip("\n")
+            locations_data = line[1].split(';')
+            if len(locations_data) == 1 and locations_data[0] == '':
+                parameters[line[0]] = []
+            else:
+                locations = []
+                for location_data in locations_data:
+                    locations.append(location_data.split(','))
+                parameters[line[0]] = locations
         else:
             parameters[line[0]] = line[1].rstrip("\n")
     return parameters
 
 
-def save_settings(parameters, path):
+def saveSettings(parameters, path):
     with open(path, "r") as file:
         lines = file.readlines()
     with open(path, "w") as file:
@@ -132,6 +142,12 @@ def save_settings(parameters, path):
                 file.write(setting + '=' + ','.join(parameters[setting]) + '\n')
             elif setting in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE', 'LAYOUT_AUTOSAVE']:
                 file.write(setting + '=' + str(int(parameters[setting])) + '\n')
+            elif setting in ['LOCATIONS']:
+                locations_data = []
+                for location in parameters[setting]:
+                    location_str = ','.join(location)
+                    locations_data.append(location_str)
+                file.write(setting + '=' + ';'.join(locations_data) + '\n')
             else:
                 file.write(setting + '=' + str(parameters[setting]) + '\n')
 
@@ -193,3 +209,12 @@ def csvHeader(path):
         if columnNames[i] != 'Internal Clock':
             columnNames[i] = columnNames[i].replace(' ', '_')
     return columnNames
+
+
+def loadSearchItemsFromJson(path):
+    path = os.path.join(path, 'sources/weather/city.list.json')
+    citiesDataFrame = pd.read_json(path)
+    citiesDataFrame['format'] = citiesDataFrame.apply(
+        lambda row: f"{row['name']}, {row['state']}, {row['country']}" if row['state'] else f"{row['name']}, {row['country']}",
+        axis=1)
+    return citiesDataFrame
