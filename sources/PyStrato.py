@@ -129,7 +129,7 @@ class PyStratoGui(QMainWindow):
         self.displaysToolBar.addAction(self.newDisplayTabAct)
         self.displaysToolBar.addAction(self.closeDisplayTabAct)
         self.displaysToolBar.addSeparator()
-        # Indicators
+        # INDICATORS
         indicatorToolButton = QToolButton()
         indicatorToolButton.setDefaultAction(self.newSimpleIndicatorAct)
         indicatorSubMenu = QMenu()
@@ -137,7 +137,7 @@ class PyStratoGui(QMainWindow):
         indicatorSubMenu.addAction(self.newGridIndicatorAct)
         indicatorToolButton.setMenu(indicatorSubMenu)
         self.displaysToolBar.addWidget(indicatorToolButton)
-        # Graphs
+        # GRAPHS
         graphToolButton = QToolButton()
         graphToolButton.setDefaultAction(self.newMultiCurveAct)
         graphSubMenu = QMenu()
@@ -155,10 +155,9 @@ class PyStratoGui(QMainWindow):
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.weatherToolBar.addWidget(spacer)
-        # GEOLOCATION
+        # GEOLOCATION & DATA UPDATING
         self.weatherToolBar.addAction(self.updatingWeatherAct)
         self.weatherToolBar.addAction(self.getGeolocationAct)
-
         # SEARCH BAR
         searchOptions = self.weatherTabWidget.citiesDataFrame['format']
         self.locationSearchBar = SearchBar(self.currentDir, searchOptions)
