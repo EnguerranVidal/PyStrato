@@ -8,8 +8,9 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import loadSettings, nameGiving
-from sources.common.Widgets import BasicDisplay, ContentStorage
+from sources.common.utilities.FileHandling import loadSettings, nameGiving
+from sources.common.widgets.Widgets import ContentStorage
+from sources.common.widgets.basic import BasicDisplay
 from sources.displays.graphs import MultiCurveGraph
 from sources.displays.indicators import SingleIndicator, GridIndicator
 

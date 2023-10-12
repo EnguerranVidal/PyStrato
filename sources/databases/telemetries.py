@@ -8,7 +8,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.Widgets import TypeSelector
+from sources.common.widgets.Widgets import TypeSelector
 from sources.databases.balloondata import BalloonPackageDatabase
 
 

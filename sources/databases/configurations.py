@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-from sources.common.Widgets import ValueWidget, TypeSelector
+from sources.common.widgets.Widgets import ValueWidget, TypeSelector
 # --------------------- Sources ----------------------- #
 from sources.databases.balloondata import BalloonPackageDatabase, serializeTypedValue
 

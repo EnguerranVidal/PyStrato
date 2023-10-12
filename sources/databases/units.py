@@ -8,182 +8,158 @@ from ecom.datatypes import TypeInfo
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
 
+from sources.common.widgets.Widgets import FlatButton
 # --------------------- Sources ----------------------- #
-from sources.databases.balloondata import BalloonPackageDatabase
 
 
 ######################## CLASSES ########################
-class UnitsWidget(QMainWindow):
-    def __init__(self, database: BalloonPackageDatabase):
-        super(QMainWindow, self).__init__()
-        self.newUnitWindow = None
-        self.headerWidget = None
+class UnitsEditorWidget(QWidget):
+    def __init__(self, database):
+        super().__init__()
         self.database = database
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
-        self.centralWidget = QWidget(self)
-        self.centralLayout = QVBoxLayout(self.centralWidget)
 
-        self.scrollArea = QScrollArea(self.centralWidget)
-        self.scrollArea.setWidgetResizable(True)
+        # BUTTONS
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.addButton = FlatButton('sources/icons/light-theme/icons8-add-96.png', self)
+        self.deleteButton = FlatButton('sources/icons/light-theme/icons8-remove-96.png', self)
+        self.addButton.clicked.connect(self.addUnit)
+        self.deleteButton.clicked.connect(self.deleteUnit)
 
-        self.tableWidget = QWidget()
-        self.tableWidgetLayout = QGridLayout(self.tableWidget)
-        self.tableWidgetLayout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self.tableWidgetLayout.setColumnStretch(0, 0)
-        self.scrollArea.setWidget(self.tableWidget)
+        # UNIT TABLE
+        self.unitsTable = QTableWidget(self)
+        self.unitsTable.setColumnCount(3)
+        self.unitsTable.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.unitsTable.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self.unitsTable.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.unitsTable.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.unitsTable.setHorizontalHeaderLabels(['Name', 'Type', 'Description'])
+        self.populateUnitsTable()
 
-        self.buttonWidget = QWidget()
-        self.buttonAddUnit = QPushButton(self.buttonWidget)
-        self.buttonAddUnit.setIcon(QIcon('sources/icons/light-theme/icons8-add-96.png'))
-        self.buttonAddUnit.setText('ADD UNIT')
-        self.buttonDeleteUnit = QPushButton('', self.buttonWidget)
-        self.buttonDeleteUnit.setIcon(QIcon(QPixmap('sources/icons/light-theme/icons8-remove-96.png')))
-        self.buttonLayout = QHBoxLayout(self.buttonWidget)
-        self.buttonLayout.addWidget(self.buttonAddUnit)
-        self.buttonLayout.addWidget(self.buttonDeleteUnit)
+        # LAYOUT
+        topLayout = QHBoxLayout()
+        topLayout.addWidget(self.addButton)
+        topLayout.addWidget(self.deleteButton)
+        topLayout.addWidget(spacer)
+        self.layout = QVBoxLayout(self)
+        self.layout.addLayout(topLayout)
+        self.layout.addWidget(self.unitsTable)
 
-        self.centralLayout.addWidget(self.buttonWidget)
-        self.centralLayout.addWidget(self.scrollArea)
-        self.setCentralWidget(self.centralWidget)
+    def populateUnitsTable(self):
+        self.unitsTable.setRowCount(0)
+        units = self.database.units.values()
+        for unit in units:
+            self.addRow(name=unit[0].name, baseType=unit[0].baseTypeName, description=unit[0].description)
+        self.unitsTable.itemChanged.connect(lambda item: self.changingNameOrDescription(item.row(), item.column(), item.text()))
+        self.unitsTable.itemSelectionChanged.connect(self.handleSelectionChange)
+        self.handleSelectionChange()
 
-        self.buttonAddUnit.clicked.connect(self.addNewUnit)
-        self.buttonDeleteUnit.clicked.connect(self.removeSelected)
+    def addRow(self, name, baseType, description=''):
+        rowPosition = self.unitsTable.rowCount()
+        self.unitsTable.insertRow(rowPosition)
+        nameItem = QTableWidgetItem(name)
+        self.unitsTable.setItem(rowPosition, 0, nameItem)
+        baseTypeComboBox = QComboBox()
+        baseTypeComboBox.addItems(self.baseTypeNames)
+        baseTypeComboBox.setCurrentIndex(self.baseTypesValues.index(baseType))
+        baseTypeComboBox.currentTextChanged.connect(lambda text, row=rowPosition: self.changingType(row, text))
+        self.unitsTable.setCellWidget(rowPosition, 1, baseTypeComboBox)
+        descriptionItem = QTableWidgetItem(description)
+        self.unitsTable.setItem(rowPosition, 2, descriptionItem)
 
-        self.rowWidgets = {'SELECTION': [], 'UNIT NAME': [], 'UNIT TYPE': [], 'DESCRIPTION': []}
+    def changingType(self, row, newType):
+        unitName = self.unitsTable.item(row, 0).text()
+        baseType = self.baseTypesValues[self.baseTypeNames.index(newType)]
+        pythonType = TypeInfo.lookupBaseType(baseType).type
+        self.database.units[unitName][0] = dataclasses.replace(self.database.units[unitName][0], type=pythonType, baseTypeName=baseType)
 
-        self.fillTable()
-        self.show()
+    def changingNameOrDescription(self, row, col, text):
+        if col == 0:
+            oldUnitName = list(self.database.units.keys())[row]
+            self.database.units[text] = self.database.units.pop(oldUnitName)
+            for j in range(len(self.database.units[text])):
+                self.database.units[text][j] = dataclasses.replace(self.database.units[text][j], name=text)
+        elif col == 2:
+            unitName = list(self.database.units.keys())[row]
+            for j in range(len(self.database.units[unitName])):
+                self.database.units[unitName][j] = dataclasses.replace(self.database.units[unitName][j], description=text)
 
-    def addUnitRow(self, name='', unitType=TypeInfo.BaseType.INT8.value, description=''):
-        self.rowWidgets['SELECTION'].append(self.generateCheckBox())
-        self.rowWidgets['UNIT NAME'].append(self.generateLabel(name))
-        self.rowWidgets['UNIT TYPE'].append(self.generateComboBox(unitType))
-        self.rowWidgets['DESCRIPTION'].append(self.generateLineEdit(description))
-        rowCount = len(self.rowWidgets['SELECTION'])
-        self.tableWidgetLayout.addWidget(self.rowWidgets['SELECTION'][-1], rowCount, 0, 1, 1)
-        self.tableWidgetLayout.addWidget(self.rowWidgets['UNIT NAME'][-1], rowCount, 1, 1, 1)
-        self.tableWidgetLayout.addWidget(self.rowWidgets['UNIT TYPE'][-1], rowCount, 2, 1, 1)
-        self.tableWidgetLayout.addWidget(self.rowWidgets['DESCRIPTION'][-1], rowCount, 3, 1, 1)
+    def handleSelectionChange(self):
+        selectedItems = self.unitsTable.selectedItems()
+        self.deleteButton.setEnabled(bool(selectedItems))
 
-    def generateComboBox(self, unitType):
-        comboBox = QComboBox(self.tableWidget)
-        comboBox.addItems(self.baseTypesValues)
-        comboBox.setCurrentIndex(self.baseTypesValues.index(unitType))
-        comboBox.currentIndexChanged.connect(self.unitTypeChanged)
-        return comboBox
+    def addUnit(self):
+        dialog = UnitAdditionDialog(list(self.database.units.keys()))
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            unitName, unitType = dialog.nameLineEdit.text(), dialog.unitTypeComboBox.currentText()
+            baseType = self.baseTypesValues[self.baseTypeNames.index(unitType)]
+            unitTypeInfo = TypeInfo(TypeInfo.lookupBaseType(baseType).type, baseType, baseType)
+            self.database.units[unitName] = [Unit.fromTypeInfo(unitName, unitTypeInfo, '')]
+            self.addRow(unitName, baseType, description='')
 
-    def generateLabel(self, textContent):
-        label = QLabel(self.tableWidget)
-        label.setText(textContent)
-        label.setFixedHeight(30)
-        return label
-
-    def generateLineEdit(self, textContent):
-        lineEdit = QLineEdit(self.tableWidget)
-        lineEdit.setText(textContent)
-        lineEdit.textChanged.connect(self.descriptionChanged)
-        return lineEdit
-
-    def generateCheckBox(self):
-        checkbox = QCheckBox(self.tableWidget)
-        return checkbox
-
-    def fillTable(self):
-        ### ADD HEADER ###
-        self.tableWidgetLayout.addWidget(self.generateLabel(''), 0, 0, 1, 1)
-        self.tableWidgetLayout.addWidget(self.generateLabel('NAME'), 0, 1, 1, 1)
-        self.tableWidgetLayout.addWidget(self.generateLabel('TYPE'), 0, 2, 1, 1)
-        self.tableWidgetLayout.addWidget(self.generateLabel('DESCRIPTION'), 0, 3, 1, 1)
-        ### ADD ROWS ###
-        for unitName, unitVariants in self.database.units.items():
-            unit = unitVariants[0]
-            self.addUnitRow(name=unit.name, unitType=unit.baseTypeName, description=unit.description)
-
-    def cleanTable(self):
-        for i in reversed(range(1, self.tableWidgetLayout.count())):
-            self.tableWidgetLayout.itemAt(i).widget().setParent(None)
-        self.rowWidgets = {'SELECTION': [], 'UNIT NAME': [], 'UNIT TYPE': [], 'DESCRIPTION': []}
-
-    def removeSelected(self):
-        # Retrieving selected units for removal
-        states = [checkbox.isChecked() for checkbox in self.rowWidgets['SELECTION']]
-        unitNames = list(self.database.units.keys())
-        removedUnits = [unitNames[i] for i in range(len(unitNames)) if states[i]]
-        if len(removedUnits) != 0:
-            # Removing selected units
-            for unit in removedUnits:
-                self.database.units.pop(unit)
-            # Refreshing Table
-            self.cleanTable()
-            self.fillTable()
-
-    def addNewUnit(self):
-        self.newUnitWindow = NewUnitWindow(self)
-        self.newUnitWindow.buttons.accepted.connect(self.acceptNewUnit)
-        self.newUnitWindow.buttons.rejected.connect(self.newUnitWindow.close)
-        self.newUnitWindow.show()
-
-    def acceptNewUnit(self):
-        name = self.newUnitWindow.nameEdit.text()
-        typeName = self.newUnitWindow.comboBox.currentText()
-        if name in list(self.database.units.keys()):
-            messageBox = QMessageBox()
-            title = "Unit Error"
-            message = "This unit name is already used.\n\nCreate a Variant?"
-            reply = messageBox.question(self, title, message, messageBox.Yes | messageBox.Cancel, messageBox.Cancel)
-            if reply == messageBox.Yes:
-                # self.database.units[name].append()
-                self.newUnitWindow.close()
-                # TODO : Add Variant creation
-        else:
-            unitType = TypeInfo(TypeInfo.lookupBaseType(typeName).type, typeName, typeName)
-            self.database.units[name] = [Unit.fromTypeInfo(name, unitType, '')]
-            self.addUnitRow(name=name, unitType=typeName, description='')
-            self.newUnitWindow.close()
-
-    def descriptionChanged(self):
-        for i in range(len(self.rowWidgets['DESCRIPTION'])):
-            name = self.rowWidgets['UNIT NAME'][i].text()
-            description = self.rowWidgets['DESCRIPTION'][i].text()
-            for j in range(len(self.database.units[name])):
-                self.database.units[name][j] = dataclasses.replace(self.database.units[name][j],
-                                                                   description=description)
-            self.database.replaceType(self.database.units[name][0].type, name)
-
-    def unitTypeChanged(self):
-        for i in range(len(self.rowWidgets['DESCRIPTION'])):
-            name = self.rowWidgets['UNIT NAME'][i].text()
-            unitType = self.rowWidgets['UNIT TYPE'][i].currentText()
-            pythonType = TypeInfo.lookupBaseType(unitType).type
-            self.database.units[name][0] = dataclasses.replace(self.database.units[name][0],
-                                                               type=pythonType, baseTypeName=unitType)
-            self.database.replaceType(self.database.units[name][0].type, name)
+    def deleteUnit(self):
+        selectedRows = [item.row() for item in self.unitsTable.selectedItems()]
+        if len(selectedRows):
+            selectedRows = sorted(list(set(selectedRows)))
+            dialog = UnitDeletionDialog(selectedRows)
+            result = dialog.exec_()
+            if result == QMessageBox.Yes:
+                for row in reversed(selectedRows):
+                    unitName = list(self.database.units.keys())[row]
+                    self.database.units.pop(unitName)
+                    self.unitsTable.removeRow(row)
 
 
-class NewUnitWindow(QDialog):
-    def __init__(self, parent: UnitsWidget):
-        super().__init__(parent)
-        self.setWindowTitle('Add New Unit')
-        # self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
-        unitTypes = [baseType.value for baseType in TypeInfo.BaseType]
-        self.resize(400, 100)
-        self.dlgLayout = QVBoxLayout()
-        self.formLayout = QFormLayout()
-        self.nameEdit = QLineEdit()
-        self.comboBox = QComboBox()
-        self.comboBox.addItems(unitTypes)
-        self.comboBox.setCurrentIndex(0)
-        self.formLayout.addRow('Name:', self.nameEdit)
-        self.formLayout.addRow('Type:', self.comboBox)
-        self.dlgLayout.addLayout(self.formLayout)
-        self.buttons = QDialogButtonBox()
-        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        self.dlgLayout.addWidget(self.buttons)
-        self.setLayout(self.dlgLayout)
+class UnitAdditionDialog(QDialog):
+    def __init__(self, unitList):
+        super().__init__()
+        self.setWindowTitle('Add Unit')
+        # ENTRIES & BUTTONS
+        self.nameLabel = QLabel('Name:')
+        self.nameLineEdit = QLineEdit()
+        self.nameLineEdit.textChanged.connect(self.updateOkButtonState)
+        self.unitList = unitList
+        self.unitTypeLabel = QLabel('Type:')
+        self.unitTypeComboBox = QComboBox()
+        self.unitTypeComboBox.addItems([baseType.name for baseType in TypeInfo.BaseType])
+        self.okButton = QPushButton('OK')
+        self.okButton.setEnabled(False)
+        self.cancelButton = QPushButton('Cancel')
+        self.okButton.clicked.connect(self.accept)
+        self.cancelButton.clicked.connect(self.reject)
+
+        # LAYOUT
+        gridLayout = QGridLayout()
+        gridLayout.addWidget(self.nameLabel, 0, 0)
+        gridLayout.addWidget(self.nameLineEdit, 0, 1)
+        gridLayout.addWidget(self.unitTypeLabel, 1, 0)
+        gridLayout.addWidget(self.unitTypeComboBox, 1, 1)
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(self.okButton)
+        buttonLayout.addWidget(self.cancelButton)
+        layout = QVBoxLayout(self)
+        layout.addLayout(gridLayout)
+        layout.addLayout(buttonLayout)
+
+    def updateOkButtonState(self):
+        unitName = self.nameLineEdit.text()
+        validNewUnitName = bool(unitName) and unitName not in self.unitList
+        self.okButton.setEnabled(validNewUnitName)
+
+
+class UnitDeletionDialog(QMessageBox):
+    def __init__(self, selected_rows):
+        super().__init__()
+        self.setIcon(QMessageBox.Question)
+        self.setWindowTitle('Confirmation')
+        self.setText(f'You are going to delete {len(selected_rows)} unit(s).\n Do you want to proceed?')
+        self.addButton(QMessageBox.Yes)
+        self.addButton(QMessageBox.No)
+        self.setDefaultButton(QMessageBox.No)
 
 
 class DefaultUnitsCatalogue:

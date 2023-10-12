@@ -17,7 +17,7 @@ from serial import Serial
 import time
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import loadSettings
+from sources.common.utilities.FileHandling import loadSettings
 from sources.databases.balloondata import BalloonPackageDatabase
 
 

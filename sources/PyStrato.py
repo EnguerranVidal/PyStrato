@@ -3,12 +3,12 @@ from datetime import datetime
 from functools import partial
 
 # ------------------- PyQt Modules -------------------- #
-from PyQt5.QtCore import QDateTime, QThread, Qt
+from PyQt5.QtCore import QDateTime, QThread
 
 # --------------------- Sources ----------------------- #
 from sources.SerialGS import SerialMonitor
-from sources.common.FileHandling import nameGiving, loadSearchItemsFromJson
-from sources.common.Widgets import *
+from sources.common.utilities.FileHandling import loadSearchItemsFromJson
+from sources.common.widgets.Widgets import *
 
 from sources.databases.general import PacketTabWidget
 from sources.displays.general import DisplayTabWidget

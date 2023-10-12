@@ -2,7 +2,6 @@
 import json
 import os
 import time
-import shutil
 
 import numpy as np
 from ecom.datatypes import TypeInfo
@@ -14,33 +13,11 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.FileHandling import loadSettings, saveSettings, nameGiving, getWithoutExtension, \
-    getModificationDate
+from sources.common.utilities.FileHandling import loadSettings, saveSettings, nameGiving, getModificationDate
 from sources.databases.balloondata import BalloonPackageDatabase
-from sources.databases.units import DefaultUnitsCatalogue
 
 
 ######################## CLASSES ########################
-class BasicDisplay(QWidget):
-    def __init__(self, path, parent=None):
-        super().__init__(parent)
-        self.generalSettings = loadSettings('settings')
-        self.catalogue = DefaultUnitsCatalogue()
-        self.settingsWidget = QWidget()
-        self.currentDir = path
-        self.display = None
-
-    def applyChanges(self, editWidget):
-        pass
-
-    def updateContent(self, content):
-        pass
-
-    @staticmethod
-    def getDescription():
-        return {'TYPE': 'BASIC_DISPLAY'}
-
-
 class ContentStorage:
     def __init__(self, path):
         self.settings = loadSettings('settings')
@@ -1035,9 +1012,10 @@ class SearchBar(QLineEdit):
 
 class FlatButton(QPushButton):
     def __init__(self, icon: str, parent=None):
-        super(QPushButton, self).__init__(parent)
+        super(FlatButton, self).__init__(parent)
         # Set the icon and icon size
-        self.setIcon(QIcon(icon))
+        self.iconPath = icon
+        self.setIcon(QIcon(self.iconPath))
         self.setIconSize(QSize(25, 25))
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
