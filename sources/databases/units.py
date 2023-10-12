@@ -118,6 +118,9 @@ class UnitAdditionDialog(QDialog):
     def __init__(self, unitList):
         super().__init__()
         self.setWindowTitle('Add Unit')
+        self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
+        self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
+        self.unusableNames = self.baseTypesValues + self.baseTypeNames + unitList
         # ENTRIES & BUTTONS
         self.nameLabel = QLabel('Name:')
         self.nameLineEdit = QLineEdit()
@@ -147,7 +150,7 @@ class UnitAdditionDialog(QDialog):
 
     def updateOkButtonState(self):
         unitName = self.nameLineEdit.text()
-        validNewUnitName = bool(unitName) and unitName not in self.unitList
+        validNewUnitName = bool(unitName) and unitName not in self.unusableNames
         self.okButton.setEnabled(validNewUnitName)
 
 
