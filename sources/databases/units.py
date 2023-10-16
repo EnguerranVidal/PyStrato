@@ -115,17 +115,18 @@ class UnitsEditorWidget(QWidget):
 
 
 class UnitAdditionDialog(QDialog):
-    def __init__(self, unitList):
+    def __init__(self, database):
         super().__init__()
+        self.database = database
         self.setWindowTitle('Add Unit')
+        self.unitList = list(self.database.units.keys())
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
-        self.unusableNames = self.baseTypesValues + self.baseTypeNames + unitList
+        self.unusableNames = self.baseTypesValues + self.baseTypeNames + self.unitList
         # ENTRIES & BUTTONS
         self.nameLabel = QLabel('Name:')
         self.nameLineEdit = QLineEdit()
         self.nameLineEdit.textChanged.connect(self.updateOkButtonState)
-        self.unitList = unitList
         self.unitTypeLabel = QLabel('Type:')
         self.unitTypeComboBox = QComboBox()
         self.unitTypeComboBox.addItems([baseType.name for baseType in TypeInfo.BaseType])
@@ -155,11 +156,11 @@ class UnitAdditionDialog(QDialog):
 
 
 class UnitDeletionDialog(QMessageBox):
-    def __init__(self, selected_rows):
+    def __init__(self, selectedRows):
         super().__init__()
         self.setIcon(QMessageBox.Question)
         self.setWindowTitle('Confirmation')
-        self.setText(f'You are going to delete {len(selected_rows)} unit(s).\n Do you want to proceed?')
+        self.setText(f'You are going to delete {len(selectedRows)} unit(s).\n Do you want to proceed?')
         self.addButton(QMessageBox.Yes)
         self.addButton(QMessageBox.No)
         self.setDefaultButton(QMessageBox.No)

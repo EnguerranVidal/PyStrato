@@ -1062,10 +1062,11 @@ class ArrowWidget(QLabel):
 
 
 class ValueWidget(QWidget):
+    valueChanged = pyqtSignal(tuple)
+
     def __init__(self, cType, value=''):
         super(QWidget, self).__init__()
-        self.cType = cType
-        self.value = value
+        self.cType, self.value = cType, value
         self.valueWidget = None
         self.setLayout(QVBoxLayout())
         self.createValueWidget()
@@ -1077,6 +1078,7 @@ class ValueWidget(QWidget):
             if self.value not in ['true', 'false']:
                 self.value = 'false'
             self.valueWidget.setCurrentIndex(['true', 'false'].index(self.value))
+            self.valueWidget.currentIndexChanged.connect(lambda value=self.valueWidget.currentText(): self.changeValue(value))
 
         elif self.cType.startswith('int') or self.cType.startswith('uint'):
             minValue, maxValue = self.getIntRange(self.cType)
@@ -1087,6 +1089,7 @@ class ValueWidget(QWidget):
                     self.value = '0'
                 self.valueWidget.setValidator(QIntValidator(minValue, maxValue))
             self.valueWidget.setText(self.value)
+            self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
 
         elif self.cType == 'double':
             self.valueWidget = QLineEdit()
@@ -1094,6 +1097,7 @@ class ValueWidget(QWidget):
             if not self.value or not self.value.replace('.', '').isdigit():
                 self.value = '0.0'
             self.valueWidget.setText(self.value)
+            self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
 
         elif self.cType == 'float':
             self.valueWidget = QLineEdit()
@@ -1102,6 +1106,7 @@ class ValueWidget(QWidget):
             if not self.value or not self.value.replace('.', '').isdigit():
                 self.value = '0.0'
             self.valueWidget.setText(self.value)
+            self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
 
         elif self.cType == 'char':
             self.valueWidget = QLineEdit()
@@ -1109,6 +1114,7 @@ class ValueWidget(QWidget):
             if not self.value or not len(self.value) == 1:
                 self.value = ''
             self.valueWidget.setText(self.value)
+            self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
 
         elif self.cType == 'bytes':
             self.valueWidget = QLineEdit()
@@ -1116,15 +1122,15 @@ class ValueWidget(QWidget):
             if not self.value or not len(self.value) == 8:
                 self.value = ''
             self.valueWidget.setText(self.value)
+            self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
+        else:
+            self.valueWidget = QWidget()
 
-        elif '[' in self.cType:
-            self.valueWidget = QPushButton('Add Value')
-            self.valueWidget.clicked.connect(self.addValue)
-            self.layout().addWidget(self.valueWidget)
         self.layout().addWidget(self.valueWidget)
+        self.layout().setContentsMargins(0, 0, 0, 0)
 
     def addValue(self):
-        # create a new ValueWidget for array elements
+        # TODO : Create a new ValueWidget for array elements
         elementType = self.cType[:-2]
         elementWidget = ValueWidget(elementType)
         self.layout().insertWidget(self.layout().count() - 1, elementWidget)
@@ -1138,7 +1144,11 @@ class ValueWidget(QWidget):
         self.cType = newCType
         self.createValueWidget()
 
-    def destroy_value(self):
+    def changeValue(self, value):
+        self.value = value
+        self.valueChanged.emit((self.cType, self.value))
+
+    def destroyValue(self):
         if self.valueWidget:
             self.valueWidget.setParent(None)
             self.valueWidget = None
