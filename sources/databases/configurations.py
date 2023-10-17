@@ -154,7 +154,7 @@ class ConfigsEditorWidget(QWidget):
             # TODO : Add configuration addition
 
     def deleteConfig(self):
-        selectedRows = [item.row() for item in self.unitsTable.selectedItems()]
+        selectedRows = [item.row() for item in self.configsTable.selectedItems()]
         if len(selectedRows):
             selectedRows = sorted(list(set(selectedRows)))
             dialog = ConfigDeletionDialog(selectedRows)
