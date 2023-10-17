@@ -7,6 +7,7 @@ pandas~=2.0.3
 plotly~=5.16.1
 pyqt5~=5.15.9
 pyqtgraph~=0.13.3
+PyQtWebEngine~=5.15.6
 pyserial~=3.5
 requests~=2.31.0
 scipy~=1.11.2
