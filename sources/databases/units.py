@@ -9,7 +9,7 @@ from ecom.datatypes import TypeInfo
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
 
-from sources.common.widgets.Widgets import FlatButton
+from sources.common.widgets.Widgets import SquareIconButton
 # --------------------- Sources ----------------------- #
 
 
@@ -24,8 +24,10 @@ class UnitsEditorWidget(QWidget):
         # BUTTONS
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.addButton = FlatButton('sources/icons/light-theme/icons8-add-96.png', self)
-        self.deleteButton = FlatButton('sources/icons/light-theme/icons8-remove-96.png', self)
+        self.addButton = SquareIconButton('sources/icons/light-theme/icons8-add-96.png', self)
+        self.deleteButton = SquareIconButton('sources/icons/light-theme/icons8-remove-96.png', self)
+        self.addButton.setStatusTip('Create a new unit')
+        self.deleteButton.setStatusTip('Delete selected unit(s)')
         self.addButton.clicked.connect(self.addUnit)
         self.deleteButton.clicked.connect(self.deleteUnit)
 
@@ -92,7 +94,7 @@ class UnitsEditorWidget(QWidget):
         self.deleteButton.setEnabled(bool(selectedItems))
 
     def addUnit(self):
-        dialog = UnitAdditionDialog(list(self.database.units.keys()))
+        dialog = UnitAdditionDialog(self.database)
         result = dialog.exec_()
         if result == QDialog.Accepted:
             unitName, unitType = dialog.nameLineEdit.text(), dialog.unitTypeComboBox.currentText()

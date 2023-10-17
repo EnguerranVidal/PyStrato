@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-from sources.common.widgets.Widgets import ValueWidget, TypeSelector, FlatButton
+from sources.common.widgets.Widgets import ValueWidget, TypeSelector, SquareIconButton
 # --------------------- Sources ----------------------- #
 from sources.databases.balloondata import BalloonPackageDatabase, serializeTypedValue
 
@@ -23,8 +23,10 @@ class ConfigsEditorWidget(QWidget):
         # BUTTONS
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.addButton = FlatButton('sources/icons/light-theme/icons8-add-96.png', self)
-        self.deleteButton = FlatButton('sources/icons/light-theme/icons8-remove-96.png', self)
+        self.addButton = SquareIconButton('sources/icons/light-theme/icons8-add-96.png', self, flat=True)
+        self.deleteButton = SquareIconButton('sources/icons/light-theme/icons8-remove-96.png', self, flat=True)
+        self.addButton.setStatusTip('Create a new configuration')
+        self.deleteButton.setStatusTip('Delete selected configuration(s)')
         self.addButton.clicked.connect(self.addConfig)
         self.deleteButton.clicked.connect(self.deleteConfig)
 

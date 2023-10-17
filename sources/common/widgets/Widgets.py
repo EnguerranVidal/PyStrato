@@ -666,10 +666,10 @@ class LayoutManagerDialog(QDialog):
         # TOP BUTTONS
         self.topButtonsWidget = QWidget()
         self.topButtonsLayout = QHBoxLayout()
-        self.renameButton = FlatButton('sources/icons/light-theme/icons8-rename-96.png', self.topButtonsWidget)
-        self.loadButton = FlatButton('sources/icons/light-theme/icons8-download-96.png', self.topButtonsWidget)
-        self.deleteButton = FlatButton('sources/icons/light-theme/icons8-remove-96.png', self.topButtonsWidget)
-        self.newButton = FlatButton('sources/icons/light-theme/icons8-add-new-96.png', self.topButtonsWidget)
+        self.renameButton = SquareIconButton('sources/icons/light-theme/icons8-rename-96.png', self.topButtonsWidget, flat=True)
+        self.loadButton = SquareIconButton('sources/icons/light-theme/icons8-download-96.png', self.topButtonsWidget, flat=True)
+        self.deleteButton = SquareIconButton('sources/icons/light-theme/icons8-remove-96.png', self.topButtonsWidget, flat=True)
+        self.newButton = SquareIconButton('sources/icons/light-theme/icons8-add-new-96.png', self.topButtonsWidget, flat=True)
         self.renameButton.setToolTip('Rename Layout')
         self.loadButton.setToolTip('Load Save')
         self.deleteButton.setToolTip('Delete Layout')
@@ -918,11 +918,11 @@ class ScrollableWidget(QWidget):
         # SCROLLING BUTTONS AND AREA
         # Scroll Left Button
         self.currentDir = path
-        self.scrollLeftButton = FlatButton(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-back-96.png'), self)
+        self.scrollLeftButton = SquareIconButton(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-back-96.png'), self, flat=True)
         self.scrollLeftButton.clicked.connect(self.scrollLeft)
         self.scrollLeftButton.setFixedWidth(30)
         # Scroll Right Button
-        self.scrollRightButton = FlatButton(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-forward-96.png'), self)
+        self.scrollRightButton = SquareIconButton(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-forward-96.png'), self, flat=True)
         self.scrollRightButton.clicked.connect(self.scrollRight)
         self.scrollRightButton.setFixedWidth(30)
         # Scroll Area
@@ -1005,18 +1005,20 @@ class SearchBar(QLineEdit):
         self.setPlaceholderText('Search Location ...')
 
 
-class FlatButton(QPushButton):
-    def __init__(self, icon: str, parent=None):
-        super(FlatButton, self).__init__(parent)
-        # Set the icon and icon size
+class SquareIconButton(QPushButton):
+    def __init__(self, icon: str, parent=None, size=25, flat=False):
+        super(SquareIconButton, self).__init__(parent)
         self.iconPath = icon
         self.setIcon(QIcon(self.iconPath))
-        self.setIconSize(QSize(25, 25))
-
+        self.setIconSize(QSize(size, size))
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.setStyleSheet('border: none;')
+        if flat:
+            styleSheet = 'border: none;text-align: center; margin-left:50%; margin-right:50%;'
+            self.setFlat(True)
+        else:
+            styleSheet = 'text-align: center; margin-left:50%; margin-right:50%;'
+        self.setStyleSheet(styleSheet)
         self.setAutoFillBackground(False)
-        self.setFlat(True)
 
     def setIconSize(self, size):
         super().setIconSize(size)

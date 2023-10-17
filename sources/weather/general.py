@@ -10,7 +10,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 # --------------------- Sources ----------------------- #
 from sources.common.utilities.FileHandling import loadSettings, saveSettings
 from sources.common.utilities.Functions import isInternetAvailable
-from sources.common.widgets.Widgets import FlatButton, SearchBar
+from sources.common.widgets.Widgets import SearchBar, SquareIconButton
 from sources.weather.openweathermap import *
 
 
@@ -91,7 +91,7 @@ class NoInternetDisplay(QWidget):
         self.iconPath = os.path.join(self.currentDir, 'sources/icons')
 
         # RETRY BUTTON
-        self.retryButton = FlatButton(os.path.join(self.iconPath, 'light-theme/icons8-reset-96.png'), self)
+        self.retryButton = SquareIconButton(os.path.join(self.iconPath, 'light-theme/icons8-reset-96.png'), self)
         self.retryButton.clicked.connect(self.emitRetrySignal)
 
         # NO INTERNET MESSAGE
@@ -239,7 +239,7 @@ class MapDialog(QDialog):
         topLayout.addWidget(self.searchBar, 1)
 
         # GPS LOCATION BUTTON
-        self.gpsButton = FlatButton(os.path.join(self.iconPath, 'light-theme/icons8-my-location-96.png'))
+        self.gpsButton = SquareIconButton(os.path.join(self.iconPath, 'light-theme/icons8-my-location-96.png'), flat=True)
         self.gpsButton.setToolTip('Show Your Location')
         self.gpsButton.clicked.connect(self.useGpsLocation)
         topLayout.addWidget(self.gpsButton)
