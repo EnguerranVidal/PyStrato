@@ -119,8 +119,9 @@ class UnitsEditorWidget(QWidget):
 class UnitAdditionDialog(QDialog):
     def __init__(self, database):
         super().__init__()
-        self.database = database
         self.setWindowTitle('Add Unit')
+        self.setModal(True)
+        self.database = database
         self.unitList = list(self.database.units.keys())
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
@@ -160,6 +161,7 @@ class UnitAdditionDialog(QDialog):
 class UnitDeletionDialog(QMessageBox):
     def __init__(self, selectedRows):
         super().__init__()
+        self.setModal(True)
         self.setIcon(QMessageBox.Question)
         self.setWindowTitle('Confirmation')
         self.setText(f'You are going to delete {len(selectedRows)} unit(s).\n Do you want to proceed?')

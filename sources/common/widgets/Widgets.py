@@ -1,6 +1,7 @@
 ######################## IMPORTS ########################
 import json
 import os
+import re
 import time
 
 import numpy as np
@@ -46,19 +47,67 @@ class ContentStorage:
 
 
 class TypeSelector(QDialog):
-    def __init__(self, database, typeName):
+    def __init__(self, database, typeName, haveDataTypes=False, telemetryTypeName=None):
         super().__init__()
         self.setWindowTitle('Select a Type')
         self.setModal(True)
-        self.database = database
+        self.typeName, self.database = typeName, database
+        self.haveDataTypes, self.telemetryTypeName, self.arraySize = haveDataTypes, telemetryTypeName, None
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
+        self.specialTypes = ['TelecommandMessageHeader', 'TelemetryMessageHeader']
+
+        # ARRAY SIZE ---------------------------------------------------
+        # Array Verification
+        matchingArrayFormat = re.search(r'(.*?)\[(.*?)\]', self.typeName)
+        if matchingArrayFormat:
+            typeName, self.arraySize = matchingArrayFormat.group(1), matchingArrayFormat.group(2)
+            self.typeName = typeName.upper() if typeName in self.baseTypesValues else typeName
+
+        # Array Widget & Switch
+        self.arrayCheckBox = QCheckBox("Array Type", self)
+        self.arrayCheckBox.stateChanged.connect(self.toggleArraySizeWidget)
+        self.arraySizeWidget = QFrame()
+        self.arraySizeWidget.setFrameShape(QFrame.Box)
+        self.arraySizeWidget.setLineWidth(2)
+        self.arraySizeSwitch = QComboBox(self)
+        self.arraySizeSwitch.addItem("Integer")
+        if self.telemetryTypeName is not None:
+            self.arraySizeSwitch.addItem("Constant")
+            self.arraySizeSwitch.addItem("Telemetry Argument")
+        self.arraySizeSwitch.currentIndexChanged.connect(self.switchArraySizeSelection)
+        # Integer & Constants
+        self.arrayIntegerLineEdit = QLineEdit(self)
+        self.arrayConstantListWidget = QListWidget(self)
+        self.arrayArgumentsListWidget = QListWidget(self)
+        if self.telemetryTypeName is not None:
+            for constant in list(self.database.constants.keys()):
+                self.arrayConstantListWidget.addItem(constant)
+            self.telemetryArguments = []
+            telemetryTypeIndex = [index for index, telemetry in enumerate(self.database.telemetryTypes) if telemetry.id.name == self.telemetryTypeName]
+            for dataPoint in self.database.telemetryTypes[telemetryTypeIndex[0]].data:
+                argumentTypeName = self.database.getTypeName(dataPoint.type)
+                integer = argumentTypeName.startswith('int') or argumentTypeName.startswith('uint')
+                if integer and not self.isAnArray(argumentTypeName):
+                    self.telemetryArguments.append(dataPoint.name)
+                    self.arrayArgumentsListWidget.addItem(dataPoint.name)
+            if self.arrayArgumentsListWidget.count() == 0:
+                self.arraySizeSwitch.removeItem(2)
+        # Layout
+        self.arraySizeWidget.setLayout(QVBoxLayout())
+        self.arraySizeWidget.layout().addWidget(self.arraySizeSwitch)
+        self.arraySizeWidget.layout().addWidget(self.arrayIntegerLineEdit)
+        self.arraySizeWidget.layout().addWidget(self.arrayConstantListWidget)
+        self.arraySizeWidget.layout().addWidget(self.arrayArgumentsListWidget)
 
         # BASE-TYPES/UNITS SELECTION
         self.selectionSwitch = QComboBox(self)
         self.selectionSwitch.addItem("Base Types")
         self.selectionSwitch.addItem("Units")
-        self.selectionSwitch.currentIndexChanged.connect(self.switchSelection)
+        if self.haveDataTypes:
+            self.sharedDataTypes = self.database.dataTypes
+            self.selectionSwitch.addItem("Shared Types")
+        self.selectionSwitch.currentIndexChanged.connect(self.switchTypeSelection)
 
         # BASE-TYPES
         self.baseTypesWidget = QComboBox(self)
@@ -66,11 +115,21 @@ class TypeSelector(QDialog):
 
         # UNITS LIST
         self.unitsList = QListWidget(self)
+        self.unitInfoLabel = QLabel(self)
         for unitName in self.database.units.keys():
             self.unitsList.addItem(unitName)
         self.unitsList.setSelectionMode(QListWidget.SingleSelection)
         self.unitsList.currentItemChanged.connect(self.displayUnitInfo)
-        self.unitInfoLabel = QLabel(self)
+
+        # SHARED TYPES
+        if self.haveDataTypes:
+            self.sharedTypesList = QListWidget(self)
+            self.sharedTypesInfoLabel = QLabel(self)
+            for sharedType in self.database.getSharedDataTypes():
+                if sharedType not in self.specialTypes:
+                    self.sharedTypesList.addItem(sharedType)
+            self.sharedTypesList.setSelectionMode(QListWidget.SingleSelection)
+            self.sharedTypesList.currentItemChanged.connect(self.displaySharedDataTypeInfo)
 
         # BUTTONS
         self.okButton = QPushButton('OK')
@@ -79,42 +138,108 @@ class TypeSelector(QDialog):
         self.cancelButton.clicked.connect(self.reject)
 
         # MAIN LAYOUT
-        layout = QVBoxLayout(self)
+        layout = QVBoxLayout()
         layout.addWidget(self.selectionSwitch)
         layout.addWidget(self.baseTypesWidget)
         layout.addWidget(self.unitsList)
         layout.addWidget(self.unitInfoLabel)
+        layout.addWidget(self.sharedTypesList)
+        layout.addWidget(self.sharedTypesInfoLabel)
+        layout.addWidget(self.arrayCheckBox)
         layout.setAlignment(Qt.AlignTop)
         buttonLayout = QHBoxLayout()
         buttonLayout.addWidget(self.okButton)
         buttonLayout.addWidget(self.cancelButton)
         layout.addLayout(buttonLayout)
-        if typeName in self.baseTypeNames:
-            self.switchSelection(0)
-            baseTypeIndex = self.baseTypeNames.index(typeName)
+
+        mainLayout = QHBoxLayout()
+        mainLayout.addLayout(layout)
+        mainLayout.addWidget(self.arraySizeWidget)
+        self.setLayout(mainLayout)
+
+        if self.typeName in self.baseTypeNames:
+            self.switchTypeSelection(0)
+            baseTypeIndex = self.baseTypeNames.index(self.typeName)
             self.baseTypesWidget.setCurrentIndex(baseTypeIndex)
-        elif typeName in [unitName for unitName in list(self.database.units.keys())]:
-            self.switchSelection(1)
-            unitIndex = list(self.database.units.keys()).index(typeName)
+        elif self.typeName in self.database.units:
+            self.switchTypeSelection(1)
+            unitIndex = list(self.database.units.keys()).index(self.typeName)
             unitItem = self.unitsList.item(unitIndex)
             self.unitsList.setCurrentItem(unitItem)
+        elif self.haveDataTypes and self.typeName in self.database.getSharedDataTypes():
+            self.switchTypeSelection(2)
+            typeIndex = self.database.getSharedDataTypes().index(self.typeName)
+            typeItem = self.unitsList.item(typeIndex)
+            self.sharedTypesList.setCurrentItem(typeItem)
+        self.initializeArraySizeType()
 
-    def switchSelection(self, index):
+    def initializeArraySizeType(self):
+        if self.arraySize is not None:
+            self.arrayCheckBox.setChecked(True)
+            self.arraySizeWidget.setVisible(True)
+            if self.arraySize.isdigit():  # INTEGER SIZE
+                self.arrayIntegerLineEdit.setText(self.arraySize)
+                self.switchArraySizeSelection(0)
+            elif self.telemetryTypeName is not None and self.arraySize.startswith('.'):
+                argumentIndex = self.telemetryArguments.index(self.arraySize[1:])
+                argumentItem = self.arrayArgumentsListWidget.item(argumentIndex)
+                self.arrayArgumentsListWidget.setCurrentItem(argumentItem)
+                self.switchArraySizeSelection(2)
+            elif self.telemetryTypeName:
+                constantIndex = list(self.database.constants.keys()).index(self.arraySize)
+                constantItem = self.arrayConstantListWidget.item(constantIndex)
+                self.arrayConstantListWidget.setCurrentItem(constantItem)
+                self.switchArraySizeSelection(1)
+        else:
+            self.arraySizeWidget.setVisible(False)
+            self.arrayCheckBox.setChecked(False)
+            self.switchArraySizeSelection(0)
+
+    def toggleArraySizeWidget(self, state):
+        isArray = state == Qt.Checked
+        self.arraySizeWidget.setVisible(isArray)
+
+    def switchArraySizeSelection(self, index):
+        self.arraySizeSwitch.setCurrentIndex(index)
+        self.arrayIntegerLineEdit.setVisible(index == 0)
+        self.arrayConstantListWidget.setVisible(index == 1)
+        self.arrayArgumentsListWidget.setVisible(index == 2)
+        self.adjustSize()
+        self.arraySizeWidget.adjustSize()
+
+    def switchTypeSelection(self, index):
         self.selectionSwitch.setCurrentIndex(index)
         self.baseTypesWidget.setVisible(index == 0)
         self.unitsList.setVisible(index == 1)
         self.unitInfoLabel.setVisible(index == 1)
+        if self.haveDataTypes:
+            self.sharedTypesList.setVisible(index == 2)
+            self.sharedTypesInfoLabel.setVisible(index == 2)
         self.adjustSize()
 
     def displayUnitInfo(self, current, previous):
         if current:
-            unit_name = current.text()
-            unit_info = self.database.units[unit_name][0]
-            unit_type = unit_info.baseTypeName
-            description = unit_info.description
-            self.unitInfoLabel.setText(f"Unit Type: {unit_type}\nDescription: {description}")
+            unitName = current.text()
+            unitInfo = self.database.units[unitName][0]
+            unitType = unitInfo.baseTypeName
+            description = unitInfo.description
+            self.unitInfoLabel.setText(f"Unit Type: {unitType}\nDescription: {description}")
         else:
             self.unitInfoLabel.clear()
+
+    def displaySharedDataTypeInfo(self, current, previous):
+        if current:
+            sharedTypeName = current.text()
+            description = ''
+            if self.sharedDataTypes[sharedTypeName].description:
+                description = self.sharedDataTypes[sharedTypeName].description
+            self.sharedTypesInfoLabel.setText(f"{sharedTypeName}\nDescription: {description}")
+        else:
+            self.sharedTypesInfoLabel.clear()
+
+    @staticmethod
+    def isAnArray(typeName):
+        return re.search(r'(.*?)\[(.*?)\]', typeName)
 
 
 class ArgumentSelectorWidget(QWidget):

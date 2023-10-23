@@ -12,7 +12,7 @@ from sources.databases.balloondata import BalloonPackageDatabase
 from sources.databases.units import UnitsEditorWidget
 from sources.databases.constants import ConstantsWidget
 from sources.databases.configurations import ConfigsEditorWidget
-from sources.databases.telemetries import TelemetriesWidget
+from sources.databases.telemetries import TelemetryEditorWidget
 from sources.databases.telecommands import TelecommandsWidget
 
 
@@ -21,14 +21,12 @@ class DatabaseEditor(QTabWidget):
     def __init__(self, database: BalloonPackageDatabase):
         super(QTabWidget, self).__init__()
         self.database = database
-        self.setTabPosition(QTabWidget.East)
-        # self.setTabShape(QTabWidget.Triangular)
 
         self.unitsTab = UnitsEditorWidget(database=self.database)
         self.constantsTab = ConstantsWidget(database=self.database)
         self.configsTab = ConfigsEditorWidget(database=self.database)
         self.dataTypesTab = QWidget()
-        self.telemetriesTab = TelemetriesWidget(database=self.database)
+        self.telemetriesTab = TelemetryEditorWidget(database=self.database)
         self.telecommandsTab = TelecommandsWidget(database=self.database)
 
         self.addTab(self.unitsTab, 'UNITS')
@@ -37,6 +35,14 @@ class DatabaseEditor(QTabWidget):
         self.addTab(self.dataTypesTab, 'DATATYPES')
         self.addTab(self.telemetriesTab, 'TELEMETRIES')
         self.addTab(self.telecommandsTab, 'TELECOMMANDS')
+
+        self.currentChanged.connect(self.tabChanged)
+        self.setTabPosition(QTabWidget.East)
+        # self.setTabShape(QTabWidget.Triangular)
+
+    def tabChanged(self, index):
+        if index == 2:
+            self.configurationsTab.validateConfigurations()
 
 
 class PacketTabWidget(QMainWindow):
