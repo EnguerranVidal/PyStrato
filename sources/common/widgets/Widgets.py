@@ -49,6 +49,7 @@ class ContentStorage:
 class TypeSelector(QDialog):
     def __init__(self, database, typeName, haveDataTypes=False, telemetryTypeName=None):
         super().__init__()
+        self.selectedType = None
         self.setWindowTitle('Select a Type')
         self.setModal(True)
         self.typeName, self.database = typeName, database
@@ -58,18 +59,19 @@ class TypeSelector(QDialog):
         self.specialTypes = ['TelecommandMessageHeader', 'TelemetryMessageHeader']
 
         # ARRAY SIZE ---------------------------------------------------
+        self.arraySizeWidget = QWidget()
+        self.arraySizeLabel = QLabel('ARRAY SIZE')
         # Array Verification
         matchingArrayFormat = re.search(r'(.*?)\[(.*?)\]', self.typeName)
         if matchingArrayFormat:
-            typeName, self.arraySize = matchingArrayFormat.group(1), matchingArrayFormat.group(2)
-            self.typeName = typeName.upper() if typeName in self.baseTypesValues else typeName
+            newTypeName, self.arraySize = matchingArrayFormat.group(1), matchingArrayFormat.group(2)
+            self.typeName = newTypeName.upper() if newTypeName in self.baseTypesValues else newTypeName
 
         # Array Widget & Switch
         self.arrayCheckBox = QCheckBox("Array Type", self)
-        self.arrayCheckBox.stateChanged.connect(self.toggleArraySizeWidget)
-        self.arraySizeWidget = QFrame()
-        self.arraySizeWidget.setFrameShape(QFrame.Box)
-        self.arraySizeWidget.setLineWidth(2)
+        self.arraySizeFrame = QFrame()
+        self.arraySizeFrame.setFrameShape(QFrame.Box)
+        self.arraySizeFrame.setLineWidth(2)
         self.arraySizeSwitch = QComboBox(self)
         self.arraySizeSwitch.addItem("Integer")
         if self.telemetryTypeName is not None:
@@ -78,13 +80,15 @@ class TypeSelector(QDialog):
         self.arraySizeSwitch.currentIndexChanged.connect(self.switchArraySizeSelection)
         # Integer & Constants
         self.arrayIntegerLineEdit = QLineEdit(self)
+        self.arrayIntegerLineEdit.setValidator(QIntValidator())
         self.arrayConstantListWidget = QListWidget(self)
         self.arrayArgumentsListWidget = QListWidget(self)
         if self.telemetryTypeName is not None:
             for constant in list(self.database.constants.keys()):
                 self.arrayConstantListWidget.addItem(constant)
             self.telemetryArguments = []
-            telemetryTypeIndex = [index for index, telemetry in enumerate(self.database.telemetryTypes) if telemetry.id.name == self.telemetryTypeName]
+            telemetryTypeIndex = [index for index, telemetry in enumerate(self.database.telemetryTypes) if
+                                  telemetry.id.name == self.telemetryTypeName]
             for dataPoint in self.database.telemetryTypes[telemetryTypeIndex[0]].data:
                 argumentTypeName = self.database.getTypeName(dataPoint.type)
                 integer = argumentTypeName.startswith('int') or argumentTypeName.startswith('uint')
@@ -93,12 +97,11 @@ class TypeSelector(QDialog):
                     self.arrayArgumentsListWidget.addItem(dataPoint.name)
             if self.arrayArgumentsListWidget.count() == 0:
                 self.arraySizeSwitch.removeItem(2)
-        # Layout
-        self.arraySizeWidget.setLayout(QVBoxLayout())
-        self.arraySizeWidget.layout().addWidget(self.arraySizeSwitch)
-        self.arraySizeWidget.layout().addWidget(self.arrayIntegerLineEdit)
-        self.arraySizeWidget.layout().addWidget(self.arrayConstantListWidget)
-        self.arraySizeWidget.layout().addWidget(self.arrayArgumentsListWidget)
+        self.initializeArraySizeType()
+        self.arrayCheckBox.stateChanged.connect(self.toggleArraySizeWidget)
+        self.arrayIntegerLineEdit.textChanged.connect(self.arraySizeIntegerChanged)
+        self.arrayConstantListWidget.itemSelectionChanged.connect(self.arraySizeSelectionChanged)
+        self.arrayArgumentsListWidget.itemSelectionChanged.connect(self.arraySizeSelectionChanged)
 
         # BASE-TYPES/UNITS SELECTION
         self.selectionSwitch = QComboBox(self)
@@ -112,6 +115,7 @@ class TypeSelector(QDialog):
         # BASE-TYPES
         self.baseTypesWidget = QComboBox(self)
         self.baseTypesWidget.addItems(self.baseTypeNames)
+        self.baseTypesWidget.currentIndexChanged.connect(self.baseTypeChanged)
 
         # UNITS LIST
         self.unitsList = QListWidget(self)
@@ -122,14 +126,14 @@ class TypeSelector(QDialog):
         self.unitsList.currentItemChanged.connect(self.displayUnitInfo)
 
         # SHARED TYPES
+        self.sharedTypesList = QListWidget(self)
+        self.sharedTypesInfoLabel = QLabel(self)
         if self.haveDataTypes:
-            self.sharedTypesList = QListWidget(self)
-            self.sharedTypesInfoLabel = QLabel(self)
             for sharedType in self.database.getSharedDataTypes():
                 if sharedType not in self.specialTypes:
                     self.sharedTypesList.addItem(sharedType)
-            self.sharedTypesList.setSelectionMode(QListWidget.SingleSelection)
-            self.sharedTypesList.currentItemChanged.connect(self.displaySharedDataTypeInfo)
+        self.sharedTypesList.setSelectionMode(QListWidget.SingleSelection)
+        self.sharedTypesList.currentItemChanged.connect(self.displaySharedDataTypeInfo)
 
         # BUTTONS
         self.okButton = QPushButton('OK')
@@ -137,8 +141,14 @@ class TypeSelector(QDialog):
         self.okButton.clicked.connect(self.accept)
         self.cancelButton.clicked.connect(self.reject)
 
+        # TYPE LABELS
+        self.previousTypeLabel = QLabel(f'Previous Type : {typeName}')
+        self.selectedTypeLabel = QLabel(f'Selected Type : {typeName}')
+
         # MAIN LAYOUT
         layout = QVBoxLayout()
+        layout.addWidget(self.previousTypeLabel)
+        layout.addWidget(self.selectedTypeLabel)
         layout.addWidget(self.selectionSwitch)
         layout.addWidget(self.baseTypesWidget)
         layout.addWidget(self.unitsList)
@@ -151,6 +161,16 @@ class TypeSelector(QDialog):
         buttonLayout.addWidget(self.okButton)
         buttonLayout.addWidget(self.cancelButton)
         layout.addLayout(buttonLayout)
+
+        self.arraySizeFrame.setLayout(QVBoxLayout())
+        self.arraySizeFrame.layout().addWidget(self.arraySizeSwitch)
+        self.arraySizeFrame.layout().addWidget(self.arrayIntegerLineEdit)
+        self.arraySizeFrame.layout().addWidget(self.arrayConstantListWidget)
+        self.arraySizeFrame.layout().addWidget(self.arrayArgumentsListWidget)
+        arraySizeLayout = QVBoxLayout()
+        arraySizeLayout.addWidget(self.arraySizeLabel)
+        arraySizeLayout.addWidget(self.arraySizeFrame)
+        self.arraySizeWidget.setLayout(arraySizeLayout)
 
         mainLayout = QHBoxLayout()
         mainLayout.addLayout(layout)
@@ -169,52 +189,64 @@ class TypeSelector(QDialog):
         elif self.haveDataTypes and self.typeName in self.database.getSharedDataTypes():
             self.switchTypeSelection(2)
             typeIndex = self.database.getSharedDataTypes().index(self.typeName)
-            typeItem = self.unitsList.item(typeIndex)
+            typeItem = self.sharedTypesList.item(typeIndex)
             self.sharedTypesList.setCurrentItem(typeItem)
-        self.initializeArraySizeType()
 
-    def initializeArraySizeType(self):
+    def initializeArraySizeType(self, typeName=None):
+        typeName = typeName if typeName is not None else self.typeName
         if self.arraySize is not None:
             self.arrayCheckBox.setChecked(True)
             self.arraySizeWidget.setVisible(True)
             if self.arraySize.isdigit():  # INTEGER SIZE
                 self.arrayIntegerLineEdit.setText(self.arraySize)
                 self.switchArraySizeSelection(0)
+                self.selectedType = (typeName, True, self.arraySize, False)
             elif self.telemetryTypeName is not None and self.arraySize.startswith('.'):
                 argumentIndex = self.telemetryArguments.index(self.arraySize[1:])
                 argumentItem = self.arrayArgumentsListWidget.item(argumentIndex)
                 self.arrayArgumentsListWidget.setCurrentItem(argumentItem)
                 self.switchArraySizeSelection(2)
-            elif self.telemetryTypeName:
+                self.selectedType = (typeName, True, self.arraySize[1:], True)
+            else:
                 constantIndex = list(self.database.constants.keys()).index(self.arraySize)
                 constantItem = self.arrayConstantListWidget.item(constantIndex)
                 self.arrayConstantListWidget.setCurrentItem(constantItem)
                 self.switchArraySizeSelection(1)
+                self.selectedType = (typeName, True, self.arraySize, False)
         else:
             self.arraySizeWidget.setVisible(False)
             self.arrayCheckBox.setChecked(False)
             self.switchArraySizeSelection(0)
+            self.selectedType = (typeName, False, None, False)
 
     def toggleArraySizeWidget(self, state):
         isArray = state == Qt.Checked
+        if self.arraySize is None:
+            self.arraySize = '1'
+            self.arrayIntegerLineEdit.setText(self.arraySize)
+            self.changeSelectedTypeLabel(self.selectedType[0], isArray, self.arraySize, self.selectedType[3])
+        else:
+            self.changeSelectedTypeLabel(self.selectedType[0], isArray, self.selectedType[2], self.selectedType[3])
         self.arraySizeWidget.setVisible(isArray)
+        self.adjustSize()
 
     def switchArraySizeSelection(self, index):
         self.arraySizeSwitch.setCurrentIndex(index)
         self.arrayIntegerLineEdit.setVisible(index == 0)
         self.arrayConstantListWidget.setVisible(index == 1)
         self.arrayArgumentsListWidget.setVisible(index == 2)
+        self.arrayConstantListWidget.clearSelection()
+        self.arrayArgumentsListWidget.clearSelection()
         self.adjustSize()
-        self.arraySizeWidget.adjustSize()
+        self.arraySizeFrame.adjustSize()
 
     def switchTypeSelection(self, index):
         self.selectionSwitch.setCurrentIndex(index)
         self.baseTypesWidget.setVisible(index == 0)
         self.unitsList.setVisible(index == 1)
         self.unitInfoLabel.setVisible(index == 1)
-        if self.haveDataTypes:
-            self.sharedTypesList.setVisible(index == 2)
-            self.sharedTypesInfoLabel.setVisible(index == 2)
+        self.sharedTypesList.setVisible(index == 2)
+        self.sharedTypesInfoLabel.setVisible(index == 2)
         self.adjustSize()
 
     def displayUnitInfo(self, current, previous):
@@ -224,6 +256,7 @@ class TypeSelector(QDialog):
             unitType = unitInfo.baseTypeName
             description = unitInfo.description
             self.unitInfoLabel.setText(f"Unit Type: {unitType}\nDescription: {description}")
+            self.changeSelectedTypeLabel(unitName, self.selectedType[1], self.selectedType[2], self.selectedType[3])
         else:
             self.unitInfoLabel.clear()
 
@@ -234,8 +267,35 @@ class TypeSelector(QDialog):
             if self.sharedDataTypes[sharedTypeName].description:
                 description = self.sharedDataTypes[sharedTypeName].description
             self.sharedTypesInfoLabel.setText(f"{sharedTypeName}\nDescription: {description}")
+            self.changeSelectedTypeLabel(sharedTypeName, self.selectedType[1], self.selectedType[2], self.selectedType[3])
         else:
             self.sharedTypesInfoLabel.clear()
+
+    def arraySizeSelectionChanged(self):
+        senderWidget: QListWidget = self.sender()
+        currentItem = senderWidget.currentItem()
+        if currentItem:
+            arraySize = currentItem.text()
+            isTelemetry = arraySize in self.telemetryArguments
+            self.changeSelectedTypeLabel(self.selectedType[0], self.selectedType[1], arraySize, isTelemetry)
+
+    def arraySizeIntegerChanged(self):
+        senderWidget: QLineEdit = self.sender()
+        self.changeSelectedTypeLabel(self.selectedType[0], self.selectedType[1], senderWidget.text(), False)
+
+    def baseTypeChanged(self, index):
+        self.changeSelectedTypeLabel(self.baseTypeNames[index], self.selectedType[1], self.selectedType[2],
+                                     self.selectedType[3])
+
+    def changeSelectedTypeLabel(self, typeName, isArray, arraySize, isTelemetry):
+        typeName = typeName.lower() if typeName in self.baseTypeNames else typeName
+        self.selectedType = (typeName, isArray, arraySize, isTelemetry)
+        if not isArray:
+            self.selectedTypeLabel.setText(f'Selected Type : {typeName}')
+        elif isTelemetry:
+            self.selectedTypeLabel.setText(f'Selected Type : {typeName}[.{arraySize}]')
+        else:
+            self.selectedTypeLabel.setText(f'Selected Type : {typeName}[{arraySize}]')
 
     @staticmethod
     def isAnArray(typeName):
@@ -791,10 +851,14 @@ class LayoutManagerDialog(QDialog):
         # TOP BUTTONS
         self.topButtonsWidget = QWidget()
         self.topButtonsLayout = QHBoxLayout()
-        self.renameButton = SquareIconButton('sources/icons/light-theme/icons8-rename-96.png', self.topButtonsWidget, flat=True)
-        self.loadButton = SquareIconButton('sources/icons/light-theme/icons8-download-96.png', self.topButtonsWidget, flat=True)
-        self.deleteButton = SquareIconButton('sources/icons/light-theme/icons8-remove-96.png', self.topButtonsWidget, flat=True)
-        self.newButton = SquareIconButton('sources/icons/light-theme/icons8-add-new-96.png', self.topButtonsWidget, flat=True)
+        self.renameButton = SquareIconButton('sources/icons/light-theme/icons8-rename-96.png', self.topButtonsWidget,
+                                             flat=True)
+        self.loadButton = SquareIconButton('sources/icons/light-theme/icons8-download-96.png', self.topButtonsWidget,
+                                           flat=True)
+        self.deleteButton = SquareIconButton('sources/icons/light-theme/icons8-remove-96.png', self.topButtonsWidget,
+                                             flat=True)
+        self.newButton = SquareIconButton('sources/icons/light-theme/icons8-add-new-96.png', self.topButtonsWidget,
+                                          flat=True)
         self.renameButton.setToolTip('Rename Layout')
         self.loadButton.setToolTip('Load Save')
         self.deleteButton.setToolTip('Delete Layout')
@@ -862,9 +926,11 @@ class LayoutManagerDialog(QDialog):
     def fillTabs(self):
         # SAVES RECON -----------------------------------------------------
         userItems = os.listdir(self.presetPath)
-        userSaves = [os.path.join(self.presetPath, item) for item in userItems if os.path.isfile(os.path.join(self.presetPath, item))]
+        userSaves = [os.path.join(self.presetPath, item) for item in userItems if
+                     os.path.isfile(os.path.join(self.presetPath, item))]
         autoItems = os.listdir(self.autosavePath)
-        autoSaves = [os.path.join(self.autosavePath, item) for item in autoItems if os.path.isfile(os.path.join(self.autosavePath, item))]
+        autoSaves = [os.path.join(self.autosavePath, item) for item in autoItems if
+                     os.path.isfile(os.path.join(self.autosavePath, item))]
         filePaths = userSaves + autoSaves
         sortedFilePaths = sorted(filePaths, key=getModificationDate)
         sortedFilePaths.reverse()
@@ -952,7 +1018,7 @@ class LayoutManagerDialog(QDialog):
         else:
             path = os.path.join(self.autosavePath, f"{selectedLayout}.json")
         reply = QMessageBox.question(self, 'Message', "Do you really want to load this layout?\n "
-                                     "Some changes to the current layout may not have been saved.",
+                                                      "Some changes to the current layout may not have been saved.",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.loadSignal.emit(path)
@@ -1011,7 +1077,8 @@ class LayoutManagerDialog(QDialog):
                                      QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             userItems = os.listdir(self.presetPath)
-            userSaves = [os.path.splitext(os.path.basename(item))[0] for item in userItems if os.path.isfile(os.path.join(self.presetPath, item))]
+            userSaves = [os.path.splitext(os.path.basename(item))[0] for item in userItems if
+                         os.path.isfile(os.path.join(self.presetPath, item))]
             try:
                 if selectedLayout in userSaves:
                     os.remove(os.path.join(self.presetPath, f"{selectedLayout}.json"))
@@ -1043,11 +1110,13 @@ class ScrollableWidget(QWidget):
         # SCROLLING BUTTONS AND AREA
         # Scroll Left Button
         self.currentDir = path
-        self.scrollLeftButton = SquareIconButton(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-back-96.png'), self, flat=True)
+        self.scrollLeftButton = SquareIconButton(
+            os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-back-96.png'), self, flat=True)
         self.scrollLeftButton.clicked.connect(self.scrollLeft)
         self.scrollLeftButton.setFixedWidth(30)
         # Scroll Right Button
-        self.scrollRightButton = SquareIconButton(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-forward-96.png'), self, flat=True)
+        self.scrollRightButton = SquareIconButton(
+            os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-forward-96.png'), self, flat=True)
         self.scrollRightButton.clicked.connect(self.scrollRight)
         self.scrollRightButton.setFixedWidth(30)
         # Scroll Area
@@ -1109,7 +1178,8 @@ class SearchBar(QLineEdit):
 
         # SEARCH ACTION BUTTON
         searchButtonAction = QAction(self)
-        searchButtonAction.setIcon(QIcon(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-search-96.png')))
+        searchButtonAction.setIcon(
+            QIcon(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-search-96.png')))
         searchButtonAction.triggered.connect(self.performSearch)
         self.addAction(searchButtonAction, QLineEdit.TrailingPosition)
 
@@ -1194,57 +1264,62 @@ class ValueWidget(QWidget):
         self.createValueWidget()
 
     def createValueWidget(self):
-        if self.cType == 'bool':
-            self.valueWidget = QComboBox()
-            self.valueWidget.addItems(['false', 'true'])
-            if self.value not in ['true', 'false']:
-                self.value = 'false'
-            self.valueWidget.setCurrentIndex(['true', 'false'].index(self.value))
-            self.valueWidget.currentIndexChanged.connect(lambda value=self.valueWidget.currentText(): self.changeValue(value))
+        matchingArrayFormat = re.search(r'(.*?)\[(.*?)\]', self.cType)
+        if not matchingArrayFormat:
+            if self.cType == 'bool':
+                self.valueWidget = QComboBox()
+                self.valueWidget.addItems(['false', 'true'])
+                if self.value not in ['true', 'false']:
+                    self.value = 'false'
+                self.valueWidget.setCurrentIndex(['true', 'false'].index(self.value))
+                self.valueWidget.currentIndexChanged.connect(
+                    lambda value=self.valueWidget.currentText(): self.changeValue(value))
 
-        elif self.cType.startswith('int') or self.cType.startswith('uint'):
-            minValue, maxValue = self.getIntRange(self.cType)
-            self.valueWidget = QLineEdit()
-            if np.iinfo(np.int64).min <= minValue <= np.iinfo(np.int64).max and np.iinfo(
-                    np.int64).min <= maxValue <= np.iinfo(np.int64).max:
-                if not self.value.isdigit() or not minValue <= int(self.value) <= maxValue:
-                    self.value = '0'
-                self.valueWidget.setValidator(QIntValidator(minValue, maxValue))
-            self.valueWidget.setText(self.value)
-            self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
+            elif self.cType.startswith('int') or self.cType.startswith('uint'):
+                minValue, maxValue = self.getIntRange(self.cType)
+                self.valueWidget = QLineEdit()
+                if np.iinfo(np.int64).min <= minValue <= np.iinfo(np.int64).max and np.iinfo(
+                        np.int64).min <= maxValue <= np.iinfo(np.int64).max:
+                    if not self.value.isdigit() or not minValue <= int(self.value) <= maxValue:
+                        self.value = '0'
+                    self.valueWidget.setValidator(QIntValidator(minValue, maxValue))
+                self.valueWidget.setText(self.value)
+                self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
 
-        elif self.cType == 'double':
-            self.valueWidget = QLineEdit()
-            self.valueWidget.setValidator(QDoubleValidator())
-            if not self.value or not self.value.replace('.', '').isdigit():
-                self.value = '0.0'
-            self.valueWidget.setText(self.value)
-            self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
+            elif self.cType == 'double':
+                self.valueWidget = QLineEdit()
+                self.valueWidget.setValidator(QDoubleValidator())
+                if not self.value or not self.value.replace('.', '').isdigit():
+                    self.value = '0.0'
+                self.valueWidget.setText(self.value)
+                self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
 
-        elif self.cType == 'float':
-            self.valueWidget = QLineEdit()
-            self.valueWidget.setValidator(
-                QDoubleValidator(-3.4e+38, 3.4e+38, 4, notation=QDoubleValidator.StandardNotation))
-            if not self.value or not self.value.replace('.', '').isdigit():
-                self.value = '0.0'
-            self.valueWidget.setText(self.value)
-            self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
+            elif self.cType == 'float':
+                self.valueWidget = QLineEdit()
+                self.valueWidget.setValidator(
+                    QDoubleValidator(-3.4e+38, 3.4e+38, 4, notation=QDoubleValidator.StandardNotation))
+                if not self.value or not self.value.replace('.', '').isdigit():
+                    self.value = '0.0'
+                self.valueWidget.setText(self.value)
+                self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
 
-        elif self.cType == 'char':
-            self.valueWidget = QLineEdit()
-            self.valueWidget.setMaxLength(1)
-            if not self.value or not len(self.value) == 1:
-                self.value = ''
-            self.valueWidget.setText(self.value)
-            self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
+            elif self.cType == 'char':
+                self.valueWidget = QLineEdit()
+                self.valueWidget.setMaxLength(1)
+                if not self.value or not len(self.value) == 1:
+                    self.value = ''
+                self.valueWidget.setText(self.value)
+                self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
 
-        elif self.cType == 'bytes':
-            self.valueWidget = QLineEdit()
-            self.valueWidget.setInputMask('HHHHHHHH')
-            if not self.value or not len(self.value) == 8:
-                self.value = ''
-            self.valueWidget.setText(self.value)
-            self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
+            elif self.cType == 'bytes':
+                self.valueWidget = QLineEdit()
+                self.valueWidget.setInputMask('HHHHHHHH')
+                if not self.value or not len(self.value) == 8:
+                    self.value = ''
+                self.valueWidget.setText(self.value)
+                self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
+            else:
+                self.valueWidget = QWidget()
         else:
             self.valueWidget = QWidget()
 

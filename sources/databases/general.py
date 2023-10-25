@@ -42,7 +42,7 @@ class DatabaseEditor(QTabWidget):
 
     def tabChanged(self, index):
         if index == 2:
-            self.configurationsTab.validateConfigurations()
+            self.configsTab.validateConfigurations()
 
 
 class PacketTabWidget(QMainWindow):

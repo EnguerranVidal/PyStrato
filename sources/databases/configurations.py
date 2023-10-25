@@ -102,6 +102,9 @@ class ConfigsEditorWidget(QWidget):
         dialog = TypeSelector(self.database, baseType)
         result = dialog.exec_()
         if result == QDialog.Accepted:
+            selectedType = dialog.selectedType
+            print(selectedType)
+            # TODO : HERE HERE ADD NEW TYPE + ARRAY THINGY
             if dialog.selectionSwitch.currentIndex() == 0:
                 newType = dialog.baseTypesWidget.currentText()
             else:
