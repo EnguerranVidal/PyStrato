@@ -1,5 +1,7 @@
 ######################## IMPORTS ########################
 import dataclasses
+import re
+
 from ecom.datatypes import TypeInfo
 
 # ------------------- PyQt Modules -------------------- #
@@ -77,18 +79,22 @@ class ConfigsEditorWidget(QWidget):
         baseTypeButton.clicked.connect(self.changingType)
         self.configsTable.setCellWidget(rowPosition, 1, baseTypeButton)
         # DEFAULT VALUE ENTRY
+        matchingArrayFormat = re.search(r'(.*?)\[(.*?)\]', baseTypeName)
+        if matchingArrayFormat:
+            baseTypeName, arraySize = matchingArrayFormat.group(1), int(matchingArrayFormat.group(2))
+        else:
+            arraySize = 1
         if baseTypeName not in self.baseTypeNames:
             if baseTypeName in unitNames:
                 baseTypeUnitValue = self.database.units[baseTypeName][0].baseTypeName
-                defaultValueWidget = ValueWidget(cType=baseTypeUnitValue, value=defaultValue)
+                defaultValueWidget = ValueWidget(cType=baseTypeUnitValue, value=defaultValue, arraySize=arraySize)
                 defaultValueWidget.valueChanged.connect(self.changingDefaultValue)
             else:
-                defaultValueWidget = ValueWidget(cType=baseTypeName, value=defaultValue)
+                defaultValueWidget = ValueWidget(cType=baseTypeName, value=defaultValue, arraySize=arraySize)
                 defaultValueWidget.valueChanged.connect(self.changingDefaultValue)
-
         else:
             baseTypeValue = self.baseTypesValues[self.baseTypeNames.index(baseTypeName)]
-            defaultValueWidget = ValueWidget(cType=baseTypeValue, value=defaultValue)
+            defaultValueWidget = ValueWidget(cType=baseTypeValue, value=defaultValue, arraySize=arraySize)
             defaultValueWidget.valueChanged.connect(self.changingDefaultValue)
         self.configsTable.setCellWidget(rowPosition, 2, defaultValueWidget)
         # CONFIGURATION DESCRIPTION
@@ -103,27 +109,22 @@ class ConfigsEditorWidget(QWidget):
         result = dialog.exec_()
         if result == QDialog.Accepted:
             selectedType = dialog.selectedType
-            print(selectedType)
-            # TODO : HERE HERE ADD NEW TYPE + ARRAY THINGY
-            if dialog.selectionSwitch.currentIndex() == 0:
-                newType = dialog.baseTypesWidget.currentText()
-            else:
-                newType = dialog.unitsList.currentItem().text()
+            configType = f'{selectedType[0]}[{selectedType[2]}]' if selectedType[1] else f'{selectedType[0]}'
             # CHANGING TYPE BUTTON SHOWN TEXT
-            if not self.isTypeValid(newType):
+            if not self.isTypeValid(configType):
                 senderWidget.setStyleSheet('QPushButton {color: red;}')
-            senderWidget.setText(newType)
-            # CHANGING TYPE IN DATABASE
-            if newType in self.baseTypeNames:
-                newType = self.baseTypesValues[self.baseTypeNames.index(newType)]
-            typeInfo = self.database.getTypeInfo(newType)
-            self.database.configurations[row] = dataclasses.replace(self.database.configurations[row], type=typeInfo)
+            senderWidget.setText(configType)
             # CHANGING DEFAULT VALUE WIDGET
             valueWidget: ValueWidget = self.configsTable.cellWidget(row, 2)
-            if newType in [unitName for unitName, unitVariants in self.database.units.items()]:
-                newType = self.database.units[newType][0].baseTypeName
-            valueWidget.changeCType(newType)
-        # TODO : Change code for configuration type change
+            newPythonType = selectedType[0]
+            if newPythonType in [unitName for unitName, unitVariants in self.database.units.items()]:
+                newPythonType = self.database.units[newPythonType][0].baseTypeName
+            valueWidget.changeCType(newPythonType, arraySize=1 if selectedType[2] is None else selectedType[2])
+
+            # TODO : Change code for configuration type change
+            # CHANGING TYPE IN DATABASE
+            typeInfo = self.database.getTypeInfo(selectedType[0])
+            self.database.configurations[row] = dataclasses.replace(self.database.configurations[row], type=typeInfo)
 
     def changingConfig(self, row, col, text):
         if col == 0:
@@ -141,6 +142,7 @@ class ConfigsEditorWidget(QWidget):
             defaultValue = senderWidget.valueWidget.currentText() == 'true'
         elif cType in self.baseTypesValues:
             defaultValue = configuration.type.type(senderWidget.valueWidget.text())
+            # TODO : ADD ARRAY VALUE CHANGE HANDLING
         else:
             raise ValueError("Value not in regular C-Types")
         self.database.configurations[row] = dataclasses.replace(configuration, defaultValue=defaultValue)
@@ -176,7 +178,12 @@ class ConfigsEditorWidget(QWidget):
     def isTypeValid(self, baseTypeName):
         unitNames = [unitName for unitName, unitVariants in self.database.units.items()]
         acceptedTypes = self.baseTypeNames + self.baseTypesValues + unitNames + self.database.getSharedDataTypes()
-        return baseTypeName in acceptedTypes
+        matchingArrayFormat = re.search(r'(.*?)\[(.*?)\]', baseTypeName)
+        if matchingArrayFormat:
+            typeName, arraySize = matchingArrayFormat.group(1), matchingArrayFormat.group(2)
+            return typeName in acceptedTypes and arraySize.isdigit()
+        else:
+            return baseTypeName in acceptedTypes
 
     def validateConfigurations(self):
         for row, configuration in enumerate(self.database.configurations):

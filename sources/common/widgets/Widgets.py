@@ -1256,19 +1256,18 @@ class ArrowWidget(QLabel):
 class ValueWidget(QWidget):
     valueChanged = pyqtSignal(tuple)
 
-    def __init__(self, cType, value=''):
+    def __init__(self, cType, value='', arraySize=1):
         super(QWidget, self).__init__()
-        self.cType, self.value = cType, value
+        self.cType, self.arraySize, self.value = cType, arraySize, value
         self.valueWidget = None
         self.setLayout(QVBoxLayout())
         self.createValueWidget()
 
     def createValueWidget(self):
-        matchingArrayFormat = re.search(r'(.*?)\[(.*?)\]', self.cType)
-        if not matchingArrayFormat:
+        if self.arraySize == 1 or self.cType == 'char':
             if self.cType == 'bool':
                 self.valueWidget = QComboBox()
-                self.valueWidget.addItems(['false', 'true'])
+                self.valueWidget.addItems(['true', 'false'])
                 if self.value not in ['true', 'false']:
                     self.value = 'false'
                 self.valueWidget.setCurrentIndex(['true', 'false'].index(self.value))
@@ -1305,9 +1304,11 @@ class ValueWidget(QWidget):
 
             elif self.cType == 'char':
                 self.valueWidget = QLineEdit()
-                self.valueWidget.setMaxLength(1)
-                if not self.value or not len(self.value) == 1:
+                self.valueWidget.setMaxLength(self.arraySize)
+                if not self.value:
                     self.value = ''
+                if len(self.value) > self.arraySize:
+                    self.value = self.value[:self.arraySize]
                 self.valueWidget.setText(self.value)
                 self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
 
@@ -1332,13 +1333,14 @@ class ValueWidget(QWidget):
         elementWidget = ValueWidget(elementType)
         self.layout().insertWidget(self.layout().count() - 1, elementWidget)
 
-    def changeCType(self, newCType):
-        if newCType == self.cType:
+    def changeCType(self, newCType, arraySize=1):
+        if newCType == self.cType and self.arraySize == int(arraySize):
             return
         if self.valueWidget:
             self.valueWidget.setParent(None)
             self.valueWidget = None
         self.cType = newCType
+        self.arraySize = int(arraySize)
         self.createValueWidget()
 
     def changeValue(self, value):
