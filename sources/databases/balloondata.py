@@ -5,15 +5,16 @@ import csv
 import shutil
 from enum import Enum
 from tempfile import TemporaryDirectory
-from typing import Optional, Type, Any
+from typing import Type, Any, TypeVar, List
 
 from ecom.database import CommunicationDatabase, CommunicationDatabaseError, Unit, ConfigurationValueResponseType, \
-    ConfigurationValueDatapoint, Configuration, TelecommandType
+    ConfigurationValueDatapoint, Configuration
 from ecom.datatypes import TypeInfo, StructType, EnumType, ArrayType, DynamicSizeError
-from ecom.message import TelemetryType
+from ecom.message import TelecommandType, TelemetryType
+
+T = TypeVar('T')
 
 
-######################## FUNCTIONS ########################
 def createNewDatabase(path):
     # SHARED DATA TYPES
     sharedDataTypes = {
@@ -31,7 +32,8 @@ def createNewDatabase(path):
             },
             "checksum": {
                 "__type__": "uint16",
-                "__doc__": "The checksum of the message.\nThe two sync bytes and the checksum itself are not included in the checksum."
+                "__doc__": "The checksum of the message.\n"
+                           "The two sync bytes and the checksum itself are not included in the checksum."
             },
             "counter": {
                 "__type__": "uint8",
@@ -56,7 +58,8 @@ def createNewDatabase(path):
             },
             "checksum": {
                 "__type__": "uint16",
-                "__doc__": "The checksum of the message.\nThe two sync bytes and the checksum are not included in the checksum, but the telemetry data is included."
+                "__doc__": "The checksum of the message.\nThe two sync bytes and the checksum "
+                           "are not included in the checksum, but the telemetry data is included."
             },
             "type": {
                 "__type__": "TelemetryType",
@@ -86,6 +89,17 @@ def createNewDatabase(path):
     with open(telecommandsPath, "w", newline='', encoding='utf-8') as file:
         csvWriter = csv.writer(file)
         csvWriter.writerow(['Name', 'Debug', 'Description', 'Response name', 'Response type', 'Response description'])
+
+
+class EComValueJsonEncoder(json.JSONEncoder):
+    """ A json encoder that allows writing ECom values. """
+
+    def default(self, x):
+        if isinstance(x, bytes):
+            return x.decode('utf-8')
+        if isinstance(x, Enum):
+            return x.name
+        return super().default(x)
 
 
 def serializeTypedValue(value: Any, typ: Type) -> str:
@@ -130,22 +144,39 @@ def serializeTypedValue(value: Any, typ: Type) -> str:
     return json.dumps(value, cls=EComValueJsonEncoder)
 
 
-######################## CLASSES ########################
-class EComValueJsonEncoder(json.JSONEncoder):
-    """ A json encoder that allows writing ECom values. """
+class UpdatableCommunicationDatabase(CommunicationDatabase):
+    def addConfiguration(self, name: str, **kwargs):
+        self._appendElementTo(self._configurations, Configuration, name, **kwargs)
 
-    def default(self, x):
-        if isinstance(x, bytes):
-            return x.decode('utf-8')
-        if isinstance(x, Enum):
-            return x.name
-        return super().default(x)
+    def addTelecommand(self, name: str, **kwargs):
+        self._appendElementTo(self._telecommandTypes, TelecommandType, name, **kwargs)
+
+    def addTelemetry(self, name: str, **kwargs):
+        self._appendElementTo(self._telemetryTypes, TelemetryType, name, **kwargs)
+
+    def _appendElementTo(self, elements: List[T], elementClass: Type[T], name: str, **kwargs):
+        for element in elements:
+            elementEnum = element.id.__class__  # type: Type[Enum]
+            break
+        else:
+            return
+        existingEnumNames = [config.name for config in elementEnum]
+        existingEnumNames.append(name)
+        elementEnum = EnumType(elementEnum.__name__, existingEnumNames, start=0)
+        self.replaceType(elementEnum.__class__)
+        newElements = [
+            dataclasses.replace(element, id=elementId)
+            for element, elementId in zip(elements, elementEnum)
+        ]
+        newElement = elementClass(
+            id=elementEnum[name],
+            name=name,
+            **kwargs,
+        )
+        newElements.append(newElement)
 
 
-class BalloonPackageDatabase(CommunicationDatabase):
-    """
-    The shared communication database for balloon packages. Contains all information about the telecommunication.
-    """
+class SavableCommunicationDatabase(UpdatableCommunicationDatabase):
 
     def __init__(self, dataDirectory: str):
         super().__init__(dataDirectory)
@@ -157,15 +188,15 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
     def save(self, dataDirectory: str):
         with TemporaryDirectory() as tempDirPath:
-            self._saveUnits(os.path.join(tempDirPath, 'units.csv'))
-            self._saveConstants(os.path.join(tempDirPath, 'sharedConstants.csv'))
-            self._saveConfigurations(os.path.join(tempDirPath, 'configuration.csv'))
-            self._saveTelemetry(os.path.join(tempDirPath, 'telemetry.csv'))
-            self._saveTelemetryArguments(os.path.join(tempDirPath, 'telemetryArguments'))
-            self._saveTypes(os.path.join(tempDirPath, 'sharedDataTypes.json'))
+            self._saveUnits(os.path.join(tempDirPath, self.UNIT_DEFINITIONS_FILE_NAME))
+            self._saveConstants(os.path.join(tempDirPath, self.CONSTANT_DEFINITIONS_FILE_NAME))
+            self._saveConfigurations(os.path.join(tempDirPath, self.CONFIGURATION_DEFINITIONS_FILE_NAME))
+            self._saveTelemetry(os.path.join(tempDirPath, self.TELEMETRY_DEFINITIONS_FILE_NAME))
+            self._saveTelemetryArguments(os.path.join(tempDirPath, self.TELEMETRY_ARGUMENTS_DIRECTORY_NAME))
+            self._saveTypes(os.path.join(tempDirPath, self.DATA_TYPE_DEFINITIONS_FILE_NAME))
 
-            self._saveTelecommands(os.path.join(tempDirPath, 'commands.csv'))
-            self._saveTelecommandArguments(os.path.join(tempDirPath, 'commandArguments'))
+            self._saveTelecommands(os.path.join(tempDirPath, self.COMMAND_DEFINITIONS_FILE_NAME))
+            self._saveTelecommandArguments(os.path.join(tempDirPath, self.COMMAND_ARGUMENTS_DIRECTORY_NAME))
             tempDataDir = dataDirectory + '.backup'
             while os.path.exists(tempDataDir):
                 tempDataDir = tempDataDir + '.backup'
@@ -196,74 +227,10 @@ class BalloonPackageDatabase(CommunicationDatabase):
         with open(typesFilePath, 'w', encoding='utf-8') as outputFile:
             json.dump(types, outputFile, indent=2, ensure_ascii=True, cls=EComValueJsonEncoder)
 
-    def getSharedDataTypes(self):
-        types = []
-        autogeneratedTypes = [
-            'ConfigurationId',
-            'Configuration',
-            'TelecommandType',
-            'TelemetryType',
-        ]
-        for name, typInfo in self.dataTypes.items():
-            if name not in autogeneratedTypes:
-                types.append(name)
-        return types
-
-    def nestedPythonTypes(self, telemetryName: str, searchedType=int):
-        telemetryType = self.getTelemetryByName(telemetryName)
-        dataPoints = {dataPoint.name: dataPoint.type for dataPoint in telemetryType.data}
-        dataTypeNames = [name for name, typInfo in self.dataTypes.items()]
-        dataUnits = [unitName for unitName, unit in self.units.items()]
-
-        def retrieveDataTypes(dataTypeInfo):
-            types = {}
-            units = {}
-            if issubclass(dataTypeInfo.type, Enum):  # Enumerations
-                types = issubclass(dataTypeInfo.type, searchedType)
-            elif issubclass(dataTypeInfo.type, StructType):  # Structs
-                for name, child in dataTypeInfo.type:
-                    if child.baseTypeName not in self.dataTypes:
-                        types[name], units[name] = retrieveDataTypes(child)
-                    else:
-                        types[name] = issubclass(child.type, searchedType)
-
-                        if child.baseTypeName in dataUnits:
-                            units[name] = child.baseTypeName
-                        else:
-                            units[name] = None
-            else:
-                types = issubclass(dataTypeInfo.type, searchedType)
-                if dataTypeInfo.baseTypeName in dataUnits:
-                    units = dataTypeInfo.baseTypeName
-                else:
-                    units = None
-            return types, units
-
-        selectedTypes = {}
-        selectedUnits = {}
-        for dataName, dataType in dataPoints.items():
-            if dataType.name in dataTypeNames:
-                typeInfo = self.dataTypes[dataType.name]
-                selectedTypes[dataName], selectedUnits[dataName] = retrieveDataTypes(typeInfo)
-
-            elif dataType.name in dataUnits:
-                selectedTypes[dataName] = issubclass(self.units[dataType.name][0].type, searchedType)
-                selectedUnits[dataName] = dataType.name
-            else:
-                selectedTypes[dataName] = issubclass(dataType.type, searchedType)
-                selectedUnits[dataName] = None
-        return selectedTypes, selectedUnits
-
     def _serializeDataTypes(self):
         types = {}
-        autogeneratedTypes = [
-            'ConfigurationId',
-            'Configuration',
-            'TelecommandType',
-            'TelemetryType',
-        ]
         for name, typInfo in self.dataTypes.items():
-            if name not in autogeneratedTypes:
+            if name not in self.AUTOGENERATED_TYPE_NAMES:
                 types[name] = self._serializeType(typInfo)
         return types
 
@@ -312,13 +279,6 @@ class BalloonPackageDatabase(CommunicationDatabase):
 
         :param sharedConstantsFilePath: The path to the shared constants file.
         """
-        autogeneratedConstantNames = [
-            'NUM_CONFIGURATIONS',
-            'DEFAULT_CONFIGURATION',
-            'MAX_TELECOMMAND_DATA_SIZE',
-            'MAX_TELECOMMAND_RESPONSE_SIZE',
-            'MAX_CONFIG_VALUE_SIZE',
-        ]
         if not self.constants:
             return
         try:
@@ -326,7 +286,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
                 csvWriter = csv.writer(file)
                 csvWriter.writerow(['Name', 'Value', 'Type', 'Description'])
                 for constantName, constant in self.constants.items():
-                    if constantName not in autogeneratedConstantNames:
+                    if constantName not in self.AUTOGENERATED_CONSTANT_NAMES:
                         csvWriter.writerow([constantName, constant.value,
                                             constant.type.baseTypeName, constant.description])
         except IOError as error:
@@ -378,7 +338,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
         if not self.telecommandTypes:
             return
         try:
-            with open(telecommandsFilePath, "w", newline='', encoding='utf-8') as file:
+            with open(telecommandsFilePath, 'w', newline='', encoding='utf-8') as file:
                 csvWriter = csv.writer(file)
                 csvWriter.writerow(['Name', 'Debug', 'Description', 'Response name',
                                     'Response type', 'Response description'])
@@ -429,7 +389,7 @@ class BalloonPackageDatabase(CommunicationDatabase):
         if not self.telemetryTypes:
             return
         try:
-            with open(telemetriesFilePath, "w", newline='', encoding='utf-8') as file:
+            with open(telemetriesFilePath, 'w', newline='', encoding='utf-8') as file:
                 csvWriter = csv.writer(file)
                 csvWriter.writerow(['Name', 'Description'])
                 for telemetryResponseType in self.telemetryTypes:
@@ -449,59 +409,80 @@ class BalloonPackageDatabase(CommunicationDatabase):
             if not telemetryResponseType.data:
                 continue
             filePath = os.path.join(telemetryArgumentsFolder, telemetryResponseType.id.name + '.csv')
-            with open(filePath, "w", newline='', encoding='utf-8') as file:
+            with open(filePath, 'w', newline='', encoding='utf-8') as file:
                 csvWriter = csv.writer(file)
                 csvWriter.writerow(['Name', 'Type', 'Description'])
                 for dataPoint in telemetryResponseType.data:
                     dataPointType = self._getTypeName(dataPoint.type)
                     csvWriter.writerow([dataPoint.name, dataPointType, dataPoint.description])
 
-    def _getTypeName(self, typeInfo):
+    def _getTypeName(self, typeInfo: TypeInfo) -> str:
         typeName = typeInfo.name
         try:
             if isinstance(typeInfo, Unit) and self.units[typeName][0].baseTypeName != typeInfo.baseTypeName:
                 typeName = f'{typeInfo.baseTypeName} ({typeName})'
         except KeyError:
-            # Unit does not exist anymore : not searching for variants
+            # Unit does not exist anymore: Not searching for variants
             pass
         return typeName
 
-    def getTypeName(self, typeInfo):
+
+class BalloonPackageDatabase(SavableCommunicationDatabase):
+    """
+    The shared communication database for balloon packages. Contains all information about the telecommunication.
+    """
+
+    def getTypeName(self, typeInfo: TypeInfo) -> str:
         return self._getTypeName(typeInfo)
 
-    def addConfiguration(self, name: str, replaceIndex: Optional[int] = None, **kwargs):
-        self._configurations = self._editElement(
-            name, self._configurations, Configuration, replaceIndex=replaceIndex, **kwargs)
+    def nestedPythonTypes(self, telemetryName: str, searchedType=int):
+        telemetryType = self.getTelemetryByName(telemetryName)
+        dataPoints = {dataPoint.name: dataPoint.type for dataPoint in telemetryType.data}
+        dataTypeNames = [name for name, typInfo in self.dataTypes.items()]
+        dataUnits = [unitName for unitName, unit in self.units.items()]
 
-    def addTelecommand(self, name: str, replaceIndex: Optional[int] = None, **kwargs):
-        self._telecommandTypes = self._editElement(
-            name, self._telecommandTypes, TelecommandType, replaceIndex=replaceIndex, **kwargs)
+        def retrieveDataTypes(dataTypeInfo):
+            types = {}
+            units = {}
+            if issubclass(dataTypeInfo.type, Enum):  # Enumerations
+                types = issubclass(dataTypeInfo.type, searchedType)
+            elif issubclass(dataTypeInfo.type, StructType):  # Structs
+                for name, child in dataTypeInfo.type:
+                    if child.baseTypeName not in self.dataTypes:
+                        types[name], units[name] = retrieveDataTypes(child)
+                    else:
+                        types[name] = issubclass(child.type, searchedType)
 
-    def addTelemetry(self, name: str, replaceIndex: Optional[int] = None, **kwargs):
-        self._telemetryTypes = self._editElement(
-            name, self._telemetryTypes, TelemetryType, replaceIndex=replaceIndex, **kwargs)
+                        if child.baseTypeName in dataUnits:
+                            units[name] = child.baseTypeName
+                        else:
+                            units[name] = None
+            else:
+                types = issubclass(dataTypeInfo.type, searchedType)
+                if dataTypeInfo.baseTypeName in dataUnits:
+                    units = dataTypeInfo.baseTypeName
+                else:
+                    units = None
+            return types, units
 
-    @staticmethod
-    def _editElement(name: str, elements, typeClass, replaceIndex: Optional[int] = None, **kwargs):
-        for element in elements:
-            elementEnum = element.id.__class__  # type: Type[Enum]
-            break
-        else:
-            return
-        existingEnumNames = [config.name for config in elementEnum]
-        existingEnumNames.append(name)
-        elementEnum = EnumType(elementEnum.__name__, existingEnumNames, start=0)
-        newElements = [
-            dataclasses.replace(element, id=elementId)
-            for element, elementId in zip(elements, elementEnum)
-        ]
-        newElement = typeClass(
-            id=elementEnum[name],
-            name=name,
-            **kwargs,
-        )
-        if replaceIndex is None:
-            newElements.append(newElement)
-        else:
-            newElements[replaceIndex] = newElement
-        return newElements
+        selectedTypes = {}
+        selectedUnits = {}
+        for dataName, dataType in dataPoints.items():
+            if dataType.name in dataTypeNames:
+                typeInfo = self.dataTypes[dataType.name]
+                selectedTypes[dataName], selectedUnits[dataName] = retrieveDataTypes(typeInfo)
+
+            elif dataType.name in dataUnits:
+                selectedTypes[dataName] = issubclass(self.units[dataType.name][0].type, searchedType)
+                selectedUnits[dataName] = dataType.name
+            else:
+                selectedTypes[dataName] = issubclass(dataType.type, searchedType)
+                selectedUnits[dataName] = None
+        return selectedTypes, selectedUnits
+
+    def getSharedDataTypes(self):
+        types = []
+        for name, typInfo in self.dataTypes.items():
+            if name not in self.AUTOGENERATED_TYPE_NAMES:
+                types.append(name)
+        return types

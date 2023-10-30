@@ -1,4 +1,4 @@
-git+https://gitlab.com/team-aster/software/ecom@1.1.1
+git+https://gitlab.com/team-aster/software/ecom@feature/cleanup
 folium~=0.14.0
 geocoder~=1.38.1
 matplotlib~=3.7.2
