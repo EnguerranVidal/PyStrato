@@ -466,15 +466,13 @@ class PyStratoGui(QMainWindow):
             self.loadLayout(path, warning=False)
 
     def newFormatTab(self):
-        self.newFormatWindow = NewDatabaseWindow()
-        self.newFormatWindow.buttons.accepted.connect(self.acceptNewFormatTab)
-        self.newFormatWindow.buttons.rejected.connect(self.newFormatWindow.close)
-        self.newFormatWindow.show()
-
-    def acceptNewFormatTab(self):
-        name = self.newFormatWindow.nameEdit.text()
-        self.packetTabWidget.newFormat(name)
-        self.newFormatWindow.close()
+        fullPaths = [os.path.join(self.formatPath, entry) for entry in os.listdir(self.formatPath)]
+        databases = [os.path.basename(directory) for directory in fullPaths if os.path.isdir(directory)]
+        dialog = NewDatabaseWindow(databases=databases)
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            name = self.newFormatWindow.nameLineEdit.text()
+            self.packetTabWidget.newFormat(name)
 
     def openFormatTab(self):
         if os.path.exists(self.formatPath):

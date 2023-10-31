@@ -527,7 +527,7 @@ class SerialWindow(QWidget):
         super(SerialWindow, self).__init__()
         self.resize(450, 350)
         self.setWindowTitle('Serial Monitor')
-        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         # General Layout
         self.layout = QGridLayout(self)
         self.setLayout(self.layout)
@@ -577,24 +577,37 @@ class MessageBox(QMessageBox):
 
 
 class NewDatabaseWindow(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, databases=[]):
         super().__init__(parent)
+        self.databases = databases
         self.setWindowTitle('Create New Package')
-        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
+        self.setModal(True)
         self.dataChanged = False
         self.saveChanged = False
         self.resize(400, 100)
-        self.dlgLayout = QVBoxLayout()
-        self.formLayout = QFormLayout()
-        self.nameEdit = QLineEdit()
-        self.dataEdit = QLineEdit()
-        self.formatEdit = QLineEdit()
-        self.formLayout.addRow('Name:', self.nameEdit)
-        self.dlgLayout.addLayout(self.formLayout)
-        self.buttons = QDialogButtonBox()
-        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        self.dlgLayout.addWidget(self.buttons)
-        self.setLayout(self.dlgLayout)
+        # NAME ENTRY & BUTTONS
+        self.nameLabel = QLabel('Database Name :')
+        self.nameLineEdit = QLineEdit()
+        self.nameLineEdit.textChanged.connect(self.updateOkButtonState)
+        self.okButton = QPushButton('OK')
+        self.okButton.setEnabled(False)
+        self.cancelButton = QPushButton('Cancel')
+        self.okButton.clicked.connect(self.accept)
+        self.cancelButton.clicked.connect(self.reject)
+        # LAYOUT
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(self.okButton)
+        buttonLayout.addWidget(self.cancelButton)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.nameLabel)
+        layout.addWidget(self.nameLineEdit)
+        layout.addLayout(buttonLayout)
+
+    def updateOkButtonState(self):
+        name = self.nameLineEdit.text()
+        validNewDatabaseName = bool(name) and name not in self.databases
+        self.okButton.setEnabled(validNewDatabaseName)
 
 
 class TrackedBalloonsWindow(QWidget):
@@ -603,7 +616,7 @@ class TrackedBalloonsWindow(QWidget):
         self.current_dir = path
         self.format_path = os.path.join(self.current_dir, "formats")
         self.setWindowTitle('Tracked Balloons')
-        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         self.settings = loadSettings("settings")
         # Selected Balloon List
         self.selectedList = BalloonsListWidget()
@@ -783,7 +796,7 @@ class AboutDialog(QDialog):
             <a href='https://github.com/Abestanis'>Abestanis</a>
         </p>
 
-        <p align="justify">To get started with our Stratospheric Balloon Ground Station software, please visit our GitHub repository <a href='https://github.com/EnguerranVidal/PyStrato'>PyStratoGui</a> for the latest version, installation instructions, and detailed documentation. We welcome contributions from the community and encourage you to provide feedback and suggestions to help us improve the software.</p>
+        <p align="justify">To get started with our Stratospheric Balloon Ground Station software, please visit our GitHub repository <a href='https://github.com/EnguerranVidal/PyStrato'>PyStrato</a> for the latest version, installation instructions, and detailed documentation. We welcome contributions from the community and encourage you to provide feedback and suggestions to help us improve the software.</p>
 
         <p align="justify">Thank you for choosing our software for your stratospheric balloon project. We hope it facilitates your mission and contributes to the success of your endeavors.</p>
         </body>
@@ -828,7 +841,7 @@ class LayoutManagerDialog(QDialog):
         self.setModal(True)
         self.setFixedSize(600, 600)
         self.setWindowTitle('Layout Preset Selection')
-        self.setWindowIcon(QIcon('sources/icons/PyStratoGui.jpg'))
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         self.currentDir = currentDir
         self.dataPath = os.path.join(self.currentDir, "data")
         self.presetPath = os.path.join(self.dataPath, 'presets')

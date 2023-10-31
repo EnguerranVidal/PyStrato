@@ -88,7 +88,6 @@ def createNewDatabase(path):
         csvWriter.writerow(['Name', 'Debug', 'Description', 'Response name', 'Response type', 'Response description'])
 
 
-
 def serializeTypedValue(value: Any, typ: Type) -> str:
     """
     Serialize a value with the given type.

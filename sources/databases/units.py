@@ -3,6 +3,7 @@ import dataclasses
 import os
 import csv
 
+from PyQt5.QtGui import QIcon
 from ecom.database import Unit
 from ecom.datatypes import TypeInfo
 
@@ -122,6 +123,7 @@ class UnitAdditionDialog(QDialog):
     def __init__(self, database):
         super().__init__()
         self.setWindowTitle('Add Unit')
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         self.setModal(True)
         self.database = database
         self.unitList = list(self.database.units.keys())
@@ -140,7 +142,6 @@ class UnitAdditionDialog(QDialog):
         self.cancelButton = QPushButton('Cancel')
         self.okButton.clicked.connect(self.accept)
         self.cancelButton.clicked.connect(self.reject)
-
         # LAYOUT
         gridLayout = QGridLayout()
         gridLayout.addWidget(self.nameLabel, 0, 0)
@@ -153,6 +154,7 @@ class UnitAdditionDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addLayout(gridLayout)
         layout.addLayout(buttonLayout)
+        self.setLayout(layout)
 
     def updateOkButtonState(self):
         unitName = self.nameLineEdit.text()
@@ -164,6 +166,7 @@ class UnitDeletionDialog(QMessageBox):
     def __init__(self, selectedRows):
         super().__init__()
         self.setModal(True)
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         self.setIcon(QMessageBox.Question)
         self.setWindowTitle('Confirmation')
         self.setText(f'You are going to delete {len(selectedRows)} unit(s).\n Do you want to proceed?')

@@ -199,6 +199,8 @@ class ConfigAdditionDialog(QDialog):
     def __init__(self, database):
         super().__init__()
         self.setWindowTitle('Add Configuration')
+        self.setModal(True)
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
         self.database = database
@@ -248,6 +250,8 @@ class ConfigAdditionDialog(QDialog):
 class ConfigDeletionDialog(QMessageBox):
     def __init__(self, selectedRows):
         super().__init__()
+        self.setModal(True)
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         self.setIcon(QMessageBox.Question)
         self.setWindowTitle('Confirmation')
         self.setText(f'You are going to delete {len(selectedRows)} configuration(s).\n Do you want to proceed?')
