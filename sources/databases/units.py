@@ -76,12 +76,14 @@ class UnitsEditorWidget(QWidget):
         unitName = self.unitsTable.item(row, 0).text()
         baseType = self.baseTypesValues[self.baseTypeNames.index(newType)]
         pythonType = TypeInfo.lookupBaseType(baseType).type
+        # TODO : Check for unit usage in configs and telecommands
         self.database.units[unitName][0] = dataclasses.replace(self.database.units[unitName][0], type=pythonType, baseTypeName=baseType)
 
     def changingNameOrDescription(self, row, col, text):
         if col == 0:
             oldUnitName = list(self.database.units.keys())[row]
             self.database.units[text] = self.database.units.pop(oldUnitName)
+            # TODO : Check for Unit Name usage
             for j in range(len(self.database.units[text])):
                 self.database.units[text][j] = dataclasses.replace(self.database.units[text][j], name=text)
         elif col == 2:

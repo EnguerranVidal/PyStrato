@@ -1,4 +1,5 @@
 ######################## IMPORTS ########################
+import shutil
 from datetime import datetime
 from functools import partial
 
@@ -10,7 +11,7 @@ from sources.SerialGS import SerialMonitor
 from sources.common.utilities.FileHandling import loadSearchItemsFromJson
 from sources.common.widgets.Widgets import *
 
-from sources.databases.general import PacketTabWidget
+from sources.databases.general import DatabaseTabWidget
 from sources.displays.general import DisplayTabWidget
 from sources.weather.general import WeatherWindow
 
@@ -100,7 +101,7 @@ class PyStratoGui(QMainWindow):
         self.generalTabWidget.setTabPosition(self.generalTabWidget.West)
 
         # Packet Tab Widget -----------------------------------------
-        self.packetTabWidget = PacketTabWidget(self.currentDir)
+        self.packetTabWidget = DatabaseTabWidget(self.currentDir)
         self.displayTabWidget = DisplayTabWidget(self.currentDir)
         self.weatherTabWidget = WeatherWindow(self.loadingData, self.currentDir)
         self.graphWidgetsList = []
@@ -465,7 +466,7 @@ class PyStratoGui(QMainWindow):
             self.loadLayout(path, warning=False)
 
     def newFormatTab(self):
-        self.newFormatWindow = NewPackageWindow()
+        self.newFormatWindow = NewDatabaseWindow()
         self.newFormatWindow.buttons.accepted.connect(self.acceptNewFormatTab)
         self.newFormatWindow.buttons.rejected.connect(self.newFormatWindow.close)
         self.newFormatWindow.show()

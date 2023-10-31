@@ -122,7 +122,6 @@ class ConfigsEditorWidget(QWidget):
             valueWidget.changeCType(newPythonType, arraySize=1 if selectedType[2] is None else selectedType[2])
 
             # TODO : Change code for configuration type change
-            # CHANGING TYPE IN DATABASE
             typeInfo = self.database.getTypeInfo(selectedType[0])
             self.database.configurations[row] = dataclasses.replace(self.database.configurations[row], type=typeInfo)
 

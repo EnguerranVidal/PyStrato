@@ -94,7 +94,7 @@ class TelemetryEditorWidget(QWidget):
             pass
         # TODO : Change code for configuration type change
 
-    def addRow(self, name, description=''):
+    def addTelemetryRow(self, name, description=''):
         rowPosition = self.telemetryTable.rowCount()
         self.telemetryTable.insertRow(rowPosition)
         nameItem = QTableWidgetItem(name)

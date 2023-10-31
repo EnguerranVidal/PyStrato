@@ -10,18 +10,83 @@ from typing import Optional, Type, Any
 from ecom.database import CommunicationDatabase, CommunicationDatabaseError, Unit, ConfigurationValueResponseType, \
     ConfigurationValueDatapoint, Configuration, TelecommandType
 from ecom.datatypes import TypeInfo, StructType, EnumType, ArrayType, DynamicSizeError
-
 from ecom.message import TelemetryType
 
 
-class EComValueJsonEncoder(json.JSONEncoder):
-    """ A json encoder that allows writing ECom values. """
-    def default(self, x):
-        if isinstance(x, bytes):
-            return x.decode('utf-8')
-        if isinstance(x, Enum):
-            return x.name
-        return super().default(x)
+######################## FUNCTIONS ########################
+def createNewDatabase(path):
+    # SHARED DATA TYPES
+    sharedDataTypes = {
+        "TelecommandMessageHeader": {
+            "__doc__": "The header of a telecommand send from the base.",
+            "sync byte 1": {
+                "__type__": "uint8",
+                "__value__": "SYNC_BYTE_1",
+                "__doc__": "The first synchronisation byte."
+            },
+            "sync byte 2": {
+                "__type__": "uint8",
+                "__value__": "SYNC_BYTE_2",
+                "__doc__": "The second synchronisation byte."
+            },
+            "checksum": {
+                "__type__": "uint16",
+                "__doc__": "The checksum of the message.\nThe two sync bytes and the checksum itself are not included in the checksum."
+            },
+            "counter": {
+                "__type__": "uint8",
+                "__doc__": "A number identifying this command."
+            },
+            "type": {
+                "__type__": "TelecommandType",
+                "__doc__": "The type of telecommand."
+            }
+        },
+        "TelemetryMessageHeader": {
+            "__doc__": "The header of a message for the base.",
+            "sync byte 1": {
+                "__type__": "uint8",
+                "__value__": "SYNC_BYTE_1",
+                "__doc__": "The first synchronisation byte."
+            },
+            "sync byte 2": {
+                "__type__": "uint8",
+                "__value__": "SYNC_BYTE_2",
+                "__doc__": "The second synchronisation byte."
+            },
+            "checksum": {
+                "__type__": "uint16",
+                "__doc__": "The checksum of the message.\nThe two sync bytes and the checksum are not included in the checksum, but the telemetry data is included."
+            },
+            "type": {
+                "__type__": "TelemetryType",
+                "__doc__": "The type of telemetry that is send in this message."
+            }
+        }
+    }
+    sharedDataTypesPath = os.path.join(path, 'sharedDataTypes.json')
+    with open(sharedDataTypesPath, 'w', encoding='utf-8') as outputFile:
+        json.dump(sharedDataTypes, outputFile, indent=2, ensure_ascii=True, cls=EComValueJsonEncoder)
+    # SHARED CONSTANTS
+    sharedConstants = [
+        ['SYNC_BYTE_1', '170', 'uint8', 'The first byte of every message between the secondary device and the base.'],
+        ['SYNC_BYTE_2', '85', 'uint8', 'The second byte of every message between the secondary device and the base.']]
+    sharedConstantsPath = os.path.join(path, 'sharedConstants.csv')
+    with open(sharedConstantsPath, "w", newline='', encoding='utf-8') as file:
+        csvWriter = csv.writer(file)
+        csvWriter.writerow(['Name', 'Value', 'Type', 'Description'])
+        for constant in sharedConstants:
+            csvWriter.writerow(constant)
+    # TELEMETRY AND TELECOMMAND TYPES
+    telemetriesPath = os.path.join(path, 'telemetry.csv')
+    telecommandsPath = os.path.join(path, 'commands.csv')
+    with open(telemetriesPath, "w", newline='', encoding='utf-8') as file:
+        csvWriter = csv.writer(file)
+        csvWriter.writerow(['Name', 'Description'])
+    with open(telecommandsPath, "w", newline='', encoding='utf-8') as file:
+        csvWriter = csv.writer(file)
+        csvWriter.writerow(['Name', 'Debug', 'Description', 'Response name', 'Response type', 'Response description'])
+
 
 
 def serializeTypedValue(value: Any, typ: Type) -> str:
@@ -66,8 +131,21 @@ def serializeTypedValue(value: Any, typ: Type) -> str:
     return json.dumps(value, cls=EComValueJsonEncoder)
 
 
+######################## CLASSES ########################
+class EComValueJsonEncoder(json.JSONEncoder):
+    """ A json encoder that allows writing ECom values. """
+
+    def default(self, x):
+        if isinstance(x, bytes):
+            return x.decode('utf-8')
+        if isinstance(x, Enum):
+            return x.name
+        return super().default(x)
+
+
 class BalloonPackageDatabase(CommunicationDatabase):
-    """ The shared communication database for balloon packages. Contains all information about the telecommunication.
+    """
+    The shared communication database for balloon packages. Contains all information about the telecommunication.
     """
 
     def __init__(self, dataDirectory: str):
@@ -396,11 +474,11 @@ class BalloonPackageDatabase(CommunicationDatabase):
         self._configurations = self._editElement(
             name, self._configurations, Configuration, replaceIndex=replaceIndex, **kwargs)
 
-    def addTelecommand(self, name: str, replaceIndex: Optional[int] = None,  **kwargs):
+    def addTelecommand(self, name: str, replaceIndex: Optional[int] = None, **kwargs):
         self._telecommandTypes = self._editElement(
             name, self._telecommandTypes, TelecommandType, replaceIndex=replaceIndex, **kwargs)
 
-    def addTelemetry(self, name: str, replaceIndex: Optional[int] = None,  **kwargs):
+    def addTelemetry(self, name: str, replaceIndex: Optional[int] = None, **kwargs):
         self._telemetryTypes = self._editElement(
             name, self._telemetryTypes, TelemetryType, replaceIndex=replaceIndex, **kwargs)
 

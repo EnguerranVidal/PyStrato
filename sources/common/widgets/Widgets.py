@@ -74,8 +74,8 @@ class TypeSelector(QDialog):
         self.arraySizeFrame.setLineWidth(2)
         self.arraySizeSwitch = QComboBox(self)
         self.arraySizeSwitch.addItem("Integer")
+        self.arraySizeSwitch.addItem("Constant")
         if self.telemetryTypeName is not None:
-            self.arraySizeSwitch.addItem("Constant")
             self.arraySizeSwitch.addItem("Telemetry Argument")
         self.arraySizeSwitch.currentIndexChanged.connect(self.switchArraySizeSelection)
         # Integer & Constants
@@ -83,9 +83,9 @@ class TypeSelector(QDialog):
         self.arrayIntegerLineEdit.setValidator(QIntValidator())
         self.arrayConstantListWidget = QListWidget(self)
         self.arrayArgumentsListWidget = QListWidget(self)
+        for constant in list(self.database.constants.keys()):
+            self.arrayConstantListWidget.addItem(constant)
         if self.telemetryTypeName is not None:
-            for constant in list(self.database.constants.keys()):
-                self.arrayConstantListWidget.addItem(constant)
             self.telemetryArguments = []
             telemetryTypeIndex = [index for index, telemetry in enumerate(self.database.telemetryTypes) if
                                   telemetry.id.name == self.telemetryTypeName]
@@ -576,7 +576,7 @@ class MessageBox(QMessageBox):
         gridLayout.addWidget(buttonBox, 1, 0, alignment=Qt.AlignCenter)
 
 
-class NewPackageWindow(QDialog):
+class NewDatabaseWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Create New Package')
@@ -1313,10 +1313,13 @@ class ValueWidget(QWidget):
                 self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
 
             elif self.cType == 'bytes':
+                minValue, maxValue = self.getIntRange('uint8')
                 self.valueWidget = QLineEdit()
-                self.valueWidget.setInputMask('HHHHHHHH')
-                if not self.value or not len(self.value) == 8:
-                    self.value = ''
+                if np.iinfo(np.int64).min <= minValue <= np.iinfo(np.int64).max and np.iinfo(
+                        np.int64).min <= maxValue <= np.iinfo(np.int64).max:
+                    if not self.value.isdigit() or not minValue <= int(self.value) <= maxValue:
+                        self.value = '0'
+                    self.valueWidget.setValidator(QIntValidator(minValue, maxValue))
                 self.valueWidget.setText(self.value)
                 self.valueWidget.textChanged.connect(lambda value=self.valueWidget.text(): self.changeValue(value))
             else:

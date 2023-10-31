@@ -1,5 +1,7 @@
 ######################## IMPORTS ########################
+import json
 import os
+import csv
 from typing import Optional
 
 # ------------------- PyQt Modules -------------------- #
@@ -8,7 +10,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.databases.balloondata import BalloonPackageDatabase
+from sources.databases.balloondata import BalloonPackageDatabase, createNewDatabase
 from sources.databases.units import UnitsEditorWidget
 from sources.databases.constants import ConstantsWidget
 from sources.databases.configurations import ConfigsEditorWidget
@@ -45,7 +47,7 @@ class DatabaseEditor(QTabWidget):
             self.configsTab.validateConfigurations()
 
 
-class PacketTabWidget(QMainWindow):
+class DatabaseTabWidget(QMainWindow):
     def __init__(self, path):
         super(QWidget, self).__init__()
         self.hide()
@@ -56,7 +58,13 @@ class PacketTabWidget(QMainWindow):
         self.setCentralWidget(self.databasesTabWidget)
 
     def newFormat(self, name):
-        pass
+        newDatabasePath = os.path.join(self.formatPath, name)
+        os.makedirs(newDatabasePath)
+        createNewDatabase(newDatabasePath)
+        database = BalloonPackageDatabase(newDatabasePath)
+        self.databases[name] = database
+        editor = DatabaseEditor(self.databases[name])
+        self.databasesTabWidget.addTab(editor, name)
 
     def openFormat(self, path):
         database = BalloonPackageDatabase(path)
@@ -84,5 +92,6 @@ class PacketTabWidget(QMainWindow):
 
     def closeAllFormat(self):
         pass
+
 
 
