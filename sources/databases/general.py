@@ -20,6 +20,8 @@ from sources.databases.telecommands import TelecommandsWidget
 
 ######################## CLASSES ########################
 class DatabaseEditor(QTabWidget):
+    tabChanged = pyqtSignal()
+
     def __init__(self, database: BalloonPackageDatabase):
         super(QTabWidget, self).__init__()
         self.database = database
@@ -38,24 +40,25 @@ class DatabaseEditor(QTabWidget):
         self.addTab(self.telemetriesTab, 'TELEMETRIES')
         self.addTab(self.telecommandsTab, 'TELECOMMANDS')
 
-        self.currentChanged.connect(self.tabChanged)
+        self.currentChanged.connect(self.editorTabChanged)
         self.setTabPosition(QTabWidget.East)
         # self.setTabShape(QTabWidget.Triangular)
 
-    def tabChanged(self, index):
+    def editorTabChanged(self, index):
+        self.tabChanged.emit()
         if index == 2:
             self.configsTab.validateConfigurations()
 
 
-class DatabaseTabWidget(QMainWindow):
+class DatabaseTabWidget(QTabWidget):
+    tabChanged = pyqtSignal()
+
     def __init__(self, path):
         super(QWidget, self).__init__()
         self.hide()
         self.currentDirectory = path
         self.formatPath = os.path.join(self.currentDirectory, "formats")
         self.databases = {}
-        self.databasesTabWidget = QTabWidget()
-        self.setCentralWidget(self.databasesTabWidget)
 
     def newFormat(self, name):
         newDatabasePath = os.path.join(self.formatPath, name)
@@ -64,7 +67,9 @@ class DatabaseTabWidget(QMainWindow):
         database = BalloonPackageDatabase(newDatabasePath)
         self.databases[name] = database
         editor = DatabaseEditor(self.databases[name])
-        self.databasesTabWidget.addTab(editor, name)
+        editor.tabChanged.connect(self.tabChanged.emit)
+        self.addTab(editor, name)
+        self.tabChanged.emit()
 
     def openFormat(self, path):
         database = BalloonPackageDatabase(path)
@@ -72,7 +77,9 @@ class DatabaseTabWidget(QMainWindow):
         # Creating Tab in Editing Tabs
         self.databases[name] = database
         editor = DatabaseEditor(self.databases[name])
-        self.databasesTabWidget.addTab(editor, name)
+        editor.tabChanged.connect(self.tabChanged.emit)
+        self.addTab(editor, name)
+        self.tabChanged.emit()
 
     def saveFormat(self, path=None):
         pass

@@ -14,6 +14,8 @@ from sources.databases.balloondata import BalloonPackageDatabase
 
 ######################## CLASSES ########################
 class TelemetryEditorWidget(QWidget):
+    selectionChanged = pyqtSignal()
+
     def __init__(self, database):
         super().__init__()
         self.selectedTelemetry = None
@@ -58,15 +60,15 @@ class TelemetryEditorWidget(QWidget):
             self.telemetryTable.insertRow(rowPosition)
             nameItem = QTableWidgetItem(telemetry.id.name)
             descriptionItem = QTableWidgetItem(getattr(telemetry.id, '__doc__', ''))
-
             self.telemetryTable.setItem(rowPosition, 0, nameItem)
             self.telemetryTable.setItem(rowPosition, 2, descriptionItem)
 
-            # Add a button to switch to telemetry arguments for this telemetry type
+            # Add Argument Switch Buttons
             switchButton = QPushButton('Arguments')
             switchButton.clicked.connect(self.switchToArguments)
             self.telemetryTable.setCellWidget(rowPosition, 1, switchButton)
         self.telemetryTable.resizeColumnsToContents()
+        self.selectionChanged.emit()
 
     def populateTelemetryArgumentsTable(self, telemetry):
         self.telemetryArgumentsTable.setRowCount(0)
@@ -82,24 +84,24 @@ class TelemetryEditorWidget(QWidget):
             self.telemetryArgumentsTable.setItem(rowPosition, 0, nameItem)
             self.telemetryArgumentsTable.setCellWidget(rowPosition, 1, typeButton)
             self.telemetryArgumentsTable.setItem(rowPosition, 2, descriptionItem)
+        self.telemetryArgumentsTable.resizeColumnsToContents()
+        self.selectionChanged.emit()
 
     def changingArgumentType(self):
         senderWidget: QPushButton = self.sender()
         baseType = senderWidget.text()
         row = self.telemetryArgumentsTable.indexAt(senderWidget.pos()).row()
-        dialog = TypeSelector(self.database, baseType, haveDataTypes=True,
-                              telemetryTypeName=self.selectedTelemetry.id.name)
+        dialog = TypeSelector(self.database, baseType, haveDataTypes=True, telemetryTypeName=self.selectedTelemetry.id.name)
         result = dialog.exec_()
         if result == QDialog.Accepted:
+            # TODO : Add code for configuration type change
             pass
-        # TODO : Change code for configuration type change
 
     def addTelemetryRow(self, name, description=''):
         rowPosition = self.telemetryTable.rowCount()
         self.telemetryTable.insertRow(rowPosition)
         nameItem = QTableWidgetItem(name)
         descriptionItem = QTableWidgetItem(description)
-
         self.telemetryTable.setItem(rowPosition, 0, nameItem)
         self.telemetryTable.setItem(rowPosition, 1, descriptionItem)
 
@@ -119,3 +121,100 @@ class TelemetryEditorWidget(QWidget):
         self.selectedTelemetry = self.database.telemetryTypes[row]
         print(self.selectedTelemetry.id.name)
         self.switchMode()
+
+
+class TelemetryAdditionDialog(QDialog):
+    def __init__(self, database):
+        super().__init__()
+        self.setWindowTitle('Add Telemetry Type')
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
+        self.setModal(True)
+        self.database = database
+        self.telemetryTypeNames = [telemetry.id.name for telemetry in self.database.telemetryTypes]
+        # ENTRIES & BUTTONS
+        self.nameLabel = QLabel('Name:')
+        self.nameLineEdit = QLineEdit()
+        self.okButton = QPushButton('OK')
+        self.cancelButton = QPushButton('Cancel')
+        self.okButton.clicked.connect(self.verifyTelemetryName)
+        self.cancelButton.clicked.connect(self.reject)
+        # LAYOUT
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(self.okButton)
+        buttonLayout.addWidget(self.cancelButton)
+        layout = QVBoxLayout(self)
+        layout.addLayout(self.nameLabel)
+        layout.addLayout(self.nameLineEdit)
+        layout.addLayout(buttonLayout)
+        self.setLayout(layout)
+
+    def verifyTelemetryName(self):
+        name = self.nameLineEdit.text()
+        if name in self.telemetryTypeNames:
+            QMessageBox.warning(self, 'Used Name', 'This telemetry name is already in use.')
+        elif len(name) == 0:
+            QMessageBox.warning(self, 'No Name Entered', 'No name was entered.')
+        else:
+            self.accept()
+
+
+class TelemetryDeletionMessageBox(QMessageBox):
+    def __init__(self, selectedRows):
+        super().__init__()
+        self.setModal(True)
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
+        self.setIcon(QMessageBox.Question)
+        self.setWindowTitle('Confirmation')
+        self.setText(f'You are going to delete {len(selectedRows)} telemetry(s).\n Do you want to proceed?')
+        self.addButton(QMessageBox.Yes)
+        self.addButton(QMessageBox.No)
+        self.setDefaultButton(QMessageBox.No)
+
+
+class TelemetryArgumentAdditionDialog(QDialog):
+    def __init__(self, database, telemetryType):
+        super().__init__()
+        self.setWindowTitle('Add Telemetry Argument')
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
+        self.setModal(True)
+        self.database, self.telemetryType = database, telemetryType
+        telemetryTypeIndex = [index for index, telemetry in enumerate(self.database.telemetryTypes) if telemetry.id.name == self.telemetryType]
+        self.argumentTypeNames = [dataPoint.name for dataPoint in self.database.telemetryTypes[telemetryTypeIndex[0]].data]
+        # ENTRIES & BUTTONS
+        self.nameLabel = QLabel('Name:')
+        self.nameLineEdit = QLineEdit()
+        self.okButton = QPushButton('OK')
+        self.cancelButton = QPushButton('Cancel')
+        self.okButton.clicked.connect(self.verifyTelemetryName)
+        self.cancelButton.clicked.connect(self.reject)
+        # LAYOUT
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(self.okButton)
+        buttonLayout.addWidget(self.cancelButton)
+        layout = QVBoxLayout(self)
+        layout.addLayout(self.nameLabel)
+        layout.addLayout(self.nameLineEdit)
+        layout.addLayout(buttonLayout)
+        self.setLayout(layout)
+
+    def verifyTelemetryName(self):
+        name = self.nameLineEdit.text()
+        if name in self.argumentTypeNames:
+            QMessageBox.warning(self, 'Used Name', 'This argument name is already in use.')
+        elif len(name) == 0:
+            QMessageBox.warning(self, 'No Name Entered', 'No name was entered.')
+        else:
+            self.accept()
+
+
+class TelemetryArgumentDeletionMessageBox(QMessageBox):
+    def __init__(self, selectedRows):
+        super().__init__()
+        self.setModal(True)
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
+        self.setIcon(QMessageBox.Question)
+        self.setWindowTitle('Confirmation')
+        self.setText(f'You are going to delete {len(selectedRows)} argument(s).\n Do you want to proceed?')
+        self.addButton(QMessageBox.Yes)
+        self.addButton(QMessageBox.No)
+        self.setDefaultButton(QMessageBox.No)

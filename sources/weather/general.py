@@ -152,11 +152,13 @@ class ForecastTabWidget(QTabWidget):
         inLocations = True in [cityData.equals(location) for location in self.locations]
         if not inLocations or firstLoading:
             # OPENWEATHERMAP DATA QUERY
-            name, state, country, formattedName = cityData['name'], cityData['state'], cityData['country'], cityData['format']
+            name, state, country, formattedName = cityData['name'], cityData['state'], cityData['country'], cityData[
+                'format']
             observationData = getObservationWeatherData(name, state, country, self.apiKey)
             forecastDataHours = get5Day3HoursForecastWeatherData(name, state, country, self.apiKey)
             pollutionData = getAirPollutionData(name, state, country, self.apiKey)
-            observationDisplay = WeatherDisplay(self.currentDir, observationData, pollutionData, forecastDataHours, metric=True)
+            observationDisplay = WeatherDisplay(self.currentDir, observationData, pollutionData, forecastDataHours,
+                                                metric=True)
             self.addTab(observationDisplay, formattedName)
             self.locations.append(cityData)
             self.dataTimers.append(time.time())
@@ -199,8 +201,7 @@ class ForecastTabWidget(QTabWidget):
             self.updateTabData(index)
 
     def updateTabData(self, index):
-        if isInternetAvailable():
-            print(index)
+        if isInternetAvailable() and index != -1:
             name, state, country = self.locations[index]['name'], self.locations[index]['state'], self.locations[index]['country']
             observationData = getObservationWeatherData(name, state, country, self.apiKey)
             forecastDataHours = get5Day3HoursForecastWeatherData(name, state, country, self.apiKey)
@@ -208,7 +209,7 @@ class ForecastTabWidget(QTabWidget):
             widget = self.widget(index)
             widget.updateWeatherData(observationData, pollutionData, forecastDataHours)
             self.dataTimers[index] = time.time()
-        else:
+        elif not isInternetAvailable():
             self.noInternet.emit()
 
     def closeTab(self, index):
@@ -239,7 +240,8 @@ class MapDialog(QDialog):
         topLayout.addWidget(self.searchBar, 1)
 
         # GPS LOCATION BUTTON
-        self.gpsButton = SquareIconButton(os.path.join(self.iconPath, 'light-theme/icons8-my-location-96.png'), flat=True)
+        self.gpsButton = SquareIconButton(os.path.join(self.iconPath, 'light-theme/icons8-my-location-96.png'),
+                                          flat=True)
         self.gpsButton.setToolTip('Show Your Location')
         self.gpsButton.clicked.connect(self.useGpsLocation)
         topLayout.addWidget(self.gpsButton)

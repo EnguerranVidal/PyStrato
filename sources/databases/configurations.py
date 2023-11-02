@@ -1,7 +1,6 @@
 ######################## IMPORTS ########################
 import dataclasses
 import re
-
 from ecom.datatypes import TypeInfo
 
 # ------------------- PyQt Modules -------------------- #
@@ -9,28 +8,20 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-from sources.common.widgets.Widgets import ValueWidget, TypeSelector, SquareIconButton
 # --------------------- Sources ----------------------- #
+from sources.common.widgets.Widgets import ValueWidget, TypeSelector
 from sources.databases.balloondata import BalloonPackageDatabase, serializeTypedValue
 
 
 ######################## CLASSES ########################
 class ConfigsEditorWidget(QWidget):
+    selectionChanged = pyqtSignal()
+
     def __init__(self, database: BalloonPackageDatabase):
         super().__init__()
         self.database = database
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
-
-        # BUTTONS
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.addButton = SquareIconButton('sources/icons/light-theme/icons8-add-96.png', self, flat=True)
-        self.deleteButton = SquareIconButton('sources/icons/light-theme/icons8-remove-96.png', self, flat=True)
-        self.addButton.setStatusTip('Create a new configuration')
-        self.deleteButton.setStatusTip('Delete selected configuration(s)')
-        self.addButton.clicked.connect(self.addConfig)
-        self.deleteButton.clicked.connect(self.deleteConfig)
 
         # CONFIG TABLE
         self.configsTable = QTableWidget(self)
@@ -44,13 +35,9 @@ class ConfigsEditorWidget(QWidget):
         self.populateConfigsTable()
 
         # LAYOUT
-        topLayout = QHBoxLayout()
-        topLayout.addWidget(self.addButton)
-        topLayout.addWidget(self.deleteButton)
-        topLayout.addWidget(spacer)
-        self.layout = QVBoxLayout(self)
-        self.layout.addLayout(topLayout)
-        self.layout.addWidget(self.configsTable)
+        mainLayout = QVBoxLayout(self)
+        mainLayout.addWidget(self.configsTable)
+        self.setLayout(mainLayout)
 
     def populateConfigsTable(self):
         self.configsTable.setRowCount(0)
@@ -62,8 +49,8 @@ class ConfigsEditorWidget(QWidget):
                         defaultValue=serializeTypedValue(configuration.defaultValue, configuration.type.type),
                         description=configuration.description)
         self.configsTable.itemChanged.connect(lambda item: self.changingConfig(item.row(), item.column(), item.text()))
-        self.configsTable.itemSelectionChanged.connect(self.handleSelectionChange)
-        self.handleSelectionChange()
+        self.configsTable.itemSelectionChanged.connect(self.selectionChanged.emit)
+        self.selectionChanged.emit()
 
     def addRow(self, name, baseTypeName, defaultValue, description=''):
         # CONFIGURATION NAME
@@ -147,10 +134,6 @@ class ConfigsEditorWidget(QWidget):
         self.database.configurations[row] = dataclasses.replace(configuration, defaultValue=defaultValue)
         # TODO : Change code for configuration default value change
 
-    def handleSelectionChange(self):
-        selectedItems = self.configsTable.selectedItems()
-        self.deleteButton.setEnabled(bool(selectedItems))
-
     def addConfig(self):
         dialog = ConfigAdditionDialog(self.database)
         result = dialog.exec_()
@@ -163,7 +146,7 @@ class ConfigsEditorWidget(QWidget):
         selectedRows = [item.row() for item in self.configsTable.selectedItems()]
         if len(selectedRows):
             selectedRows = sorted(list(set(selectedRows)))
-            dialog = ConfigDeletionDialog(selectedRows)
+            dialog = ConfigDeletionMessageBox(selectedRows)
             result = dialog.exec_()
             if result == QMessageBox.Yes:
                 for row in reversed(selectedRows):
@@ -204,7 +187,7 @@ class ConfigAdditionDialog(QDialog):
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
         self.database = database
-        self.unusableNames = []
+        self.configurationNames = [configuration.name for configuration in self.database.configurations]
         # ENTRIES & BUTTONS
         self.nameLabel = QLabel('Name:')
         self.nameLineEdit = QLineEdit()
@@ -241,13 +224,17 @@ class ConfigAdditionDialog(QDialog):
                 newType = dialog.unitsList.currentItem().text()
             self.baseTypeButton.setText(newType)
 
-    def updateOkButtonState(self):
-        configName = self.nameLineEdit.text()
-        validNewUnitName = bool(configName) and configName not in self.unusableNames
-        self.okButton.setEnabled(validNewUnitName)
+    def verifyConfigName(self):
+        name = self.nameLineEdit.text()
+        if name in self.configurationNames:
+            QMessageBox.warning(self, 'Invalid Name', 'This configuration name \n is already in use.')
+        elif len(name) == 0:
+            QMessageBox.warning(self, 'No Name Entered', 'No name was entered.')
+        else:
+            self.accept()
 
 
-class ConfigDeletionDialog(QMessageBox):
+class ConfigDeletionMessageBox(QMessageBox):
     def __init__(self, selectedRows):
         super().__init__()
         self.setModal(True)

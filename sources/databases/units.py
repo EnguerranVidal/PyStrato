@@ -9,28 +9,19 @@ from ecom.datatypes import TypeInfo
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
-
-from sources.common.widgets.Widgets import SquareIconButton
-# --------------------- Sources ----------------------- #
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 
 
 ######################## CLASSES ########################
 class UnitsEditorWidget(QWidget):
+    selectionChanged = pyqtSignal()
+
     def __init__(self, database):
         super().__init__()
         self.database = database
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
-
-        # BUTTONS
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.addButton = SquareIconButton('sources/icons/light-theme/icons8-add-96.png', self)
-        self.deleteButton = SquareIconButton('sources/icons/light-theme/icons8-remove-96.png', self)
-        self.addButton.setStatusTip('Create a new unit')
-        self.deleteButton.setStatusTip('Delete selected unit(s)')
-        self.addButton.clicked.connect(self.addUnit)
-        self.deleteButton.clicked.connect(self.deleteUnit)
 
         # UNIT TABLE
         self.unitsTable = QTableWidget(self)
@@ -43,13 +34,9 @@ class UnitsEditorWidget(QWidget):
         self.populateUnitsTable()
 
         # LAYOUT
-        topLayout = QHBoxLayout()
-        topLayout.addWidget(self.addButton)
-        topLayout.addWidget(self.deleteButton)
-        topLayout.addWidget(spacer)
-        self.layout = QVBoxLayout(self)
-        self.layout.addLayout(topLayout)
-        self.layout.addWidget(self.unitsTable)
+        mainLayout = QVBoxLayout(self)
+        mainLayout.addWidget(self.unitsTable)
+        self.setLayout(mainLayout)
 
     def populateUnitsTable(self):
         self.unitsTable.setRowCount(0)
@@ -57,8 +44,8 @@ class UnitsEditorWidget(QWidget):
         for unit in units:
             self.addRow(name=unit[0].name, baseType=unit[0].baseTypeName, description=unit[0].description)
         self.unitsTable.itemChanged.connect(lambda item: self.changingNameOrDescription(item.row(), item.column(), item.text()))
-        self.unitsTable.itemSelectionChanged.connect(self.handleSelectionChange)
-        self.handleSelectionChange()
+        self.unitsTable.itemSelectionChanged.connect(self.selectionChanged.emit)
+        self.selectionChanged.emit()
 
     def addRow(self, name, baseType, description=''):
         rowPosition = self.unitsTable.rowCount()
@@ -92,10 +79,6 @@ class UnitsEditorWidget(QWidget):
             for j in range(len(self.database.units[unitName])):
                 self.database.units[unitName][j] = dataclasses.replace(self.database.units[unitName][j], description=text)
 
-    def handleSelectionChange(self):
-        selectedItems = self.unitsTable.selectedItems()
-        self.deleteButton.setEnabled(bool(selectedItems))
-
     def addUnit(self):
         dialog = UnitAdditionDialog(self.database)
         result = dialog.exec_()
@@ -110,7 +93,7 @@ class UnitsEditorWidget(QWidget):
         selectedRows = [item.row() for item in self.unitsTable.selectedItems()]
         if len(selectedRows):
             selectedRows = sorted(list(set(selectedRows)))
-            dialog = UnitDeletionDialog(selectedRows)
+            dialog = UnitDeletionMessageBox(selectedRows)
             result = dialog.exec_()
             if result == QMessageBox.Yes:
                 for row in reversed(selectedRows):
@@ -129,18 +112,16 @@ class UnitAdditionDialog(QDialog):
         self.unitList = list(self.database.units.keys())
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
-        self.unusableNames = self.baseTypesValues + self.baseTypeNames + self.unitList
+        self.unusableNames = self.baseTypesValues + self.baseTypeNames
         # ENTRIES & BUTTONS
         self.nameLabel = QLabel('Name:')
         self.nameLineEdit = QLineEdit()
-        self.nameLineEdit.textChanged.connect(self.updateOkButtonState)
         self.unitTypeLabel = QLabel('Type:')
         self.unitTypeComboBox = QComboBox()
         self.unitTypeComboBox.addItems([baseType.name for baseType in TypeInfo.BaseType])
         self.okButton = QPushButton('OK')
-        self.okButton.setEnabled(False)
         self.cancelButton = QPushButton('Cancel')
-        self.okButton.clicked.connect(self.accept)
+        self.okButton.clicked.connect(self.verifyUnitName)
         self.cancelButton.clicked.connect(self.reject)
         # LAYOUT
         gridLayout = QGridLayout()
@@ -156,13 +137,19 @@ class UnitAdditionDialog(QDialog):
         layout.addLayout(buttonLayout)
         self.setLayout(layout)
 
-    def updateOkButtonState(self):
-        unitName = self.nameLineEdit.text()
-        validNewUnitName = bool(unitName) and unitName not in self.unusableNames
-        self.okButton.setEnabled(validNewUnitName)
+    def verifyUnitName(self):
+        name = self.nameLineEdit.text()
+        if name in self.unusableNames:
+            QMessageBox.warning(self, 'Invalid Name', 'This unit name is not valid.')
+        elif name in self.unitList:
+            QMessageBox.warning(self, 'Used Name', 'This unit name is already in use.')
+        elif len(name) == 0:
+            QMessageBox.warning(self, 'No Name Entered', 'No name was entered.')
+        else:
+            self.accept()
 
 
-class UnitDeletionDialog(QMessageBox):
+class UnitDeletionMessageBox(QMessageBox):
     def __init__(self, selectedRows):
         super().__init__()
         self.setModal(True)

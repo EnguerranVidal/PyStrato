@@ -11,7 +11,11 @@ from sources.SerialGS import SerialMonitor
 from sources.common.utilities.FileHandling import loadSearchItemsFromJson
 from sources.common.widgets.Widgets import *
 
-from sources.databases.general import DatabaseTabWidget
+from sources.databases.general import DatabaseTabWidget, DatabaseEditor
+from sources.databases.units import UnitsEditorWidget
+from sources.databases.configurations import ConfigsEditorWidget
+from sources.databases.telemetries import TelemetryEditorWidget
+
 from sources.displays.general import DisplayTabWidget
 from sources.weather.general import WeatherWindow
 
@@ -115,11 +119,12 @@ class PyStratoGui(QMainWindow):
         self.generalTabWidget.addTab(self.weatherTabWidget, 'WEATHER')
 
         self.generalTabWidget.currentChanged.connect(self.manageToolBars)
+        self.packetTabWidget.tabChanged.connect(self.manageDatabaseToolBars)
         self.setCentralWidget(self.generalTabWidget)
 
     def _createToolBars(self):
         ########### DATABASES ###########
-        self.databasesToolBar = QToolBar("Package", self)
+        self.databasesToolBar = QToolBar('Database', self)
         self.databasesToolBar.addAction(self.newFormatAction)
         self.databasesToolBar.addAction(self.openFormatAction)
         self.databasesToolBar.addAction(self.saveFormatAction)
@@ -151,7 +156,7 @@ class PyStratoGui(QMainWindow):
         self.displaysToolBar.addAction(self.stopSerialAct)
 
         ########### WEATHER ###########
-        self.weatherToolBar = QToolBar("Weather", self)
+        self.weatherToolBar = QToolBar('Weather', self)
         # SPACER
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -167,10 +172,42 @@ class PyStratoGui(QMainWindow):
         self.locationSearchBar.searchDone.connect(self.onLocationSearchedClicked)
         self.weatherToolBar.addWidget(self.locationSearchBar)
 
+        ########### DATABASE PANELS ###########
+        # UNIT BAR
+        self.unitsToolBar = QToolBar('Units')
+        self.unitsToolBar.addAction(self.addUnitAct)
+        self.unitsToolBar.addAction(self.removeUnitAct)
+        # CONSTANT BAR
+        self.constantsToolBar = QToolBar('Constants')
+        self.constantsToolBar.addAction(self.addConstantAct)
+        self.constantsToolBar.addAction(self.removeConstantAct)
+        # CONFIGS BAR
+        self.configsToolBar = QToolBar('Configurations')
+        self.configsToolBar.addAction(self.addConfigurationAct)
+        self.configsToolBar.addAction(self.removeConfigurationAct)
+        # SHARED DATA TYPE BAR
+        self.sharedDataTypesToolBar = QToolBar('SharedDataTypes')
+        # TELEMETRY BAR
+        self.telemetriesToolBar = QToolBar('Telemetries')
+        self.telemetriesToolBar.addAction(self.addTelemetryAct)
+        self.telemetriesToolBar.addAction(self.removeTelemetryAct)
+        self.telemetriesToolBar.addAction(self.addTelemetryArgumentAct)
+        self.telemetriesToolBar.addAction(self.removeTelemetryArgumentAct)
+        # TELECOMMAND BAR
+        self.telecommandsToolBar = QToolBar('Telecommands')
+
+
         ########### APPEARANCE ###########
         self.addToolBar(self.databasesToolBar)
         self.addToolBar(self.displaysToolBar)
         self.addToolBar(self.weatherToolBar)
+        # EDITOR PANELS TOOLBARS
+        self.addToolBar(self.unitsToolBar)
+        self.addToolBar(self.constantsToolBar)
+        self.addToolBar(self.configsToolBar)
+        self.addToolBar(self.sharedDataTypesToolBar)
+        self.addToolBar(self.telemetriesToolBar)
+        self.addToolBar(self.telecommandsToolBar)
         self.generalTabWidget.currentChanged.connect(self.manageToolBars)
         self.manageToolBars(0)
 
@@ -180,14 +217,73 @@ class PyStratoGui(QMainWindow):
             self.databasesToolBar.hide()
             self.displaysToolBar.show()
             self.weatherToolBar.hide()
+            self.manageDatabaseToolBars()
+
         elif index == 1:  # PACKAGES
             self.databasesToolBar.show()
             self.displaysToolBar.hide()
             self.weatherToolBar.hide()
+            self.manageDatabaseToolBars()
+
         elif index == 2:  # WEATHER
             self.databasesToolBar.hide()
             self.displaysToolBar.hide()
             self.weatherToolBar.show()
+            self.manageDatabaseToolBars()
+
+    def manageDatabaseToolBars(self):
+        editor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        if self.generalTabWidget.currentIndex() == 1 and editor is not None:
+            editorPanelIndex = editor.currentIndex()
+            if editorPanelIndex == 0:
+                self.unitsToolBar.show()
+                self.constantsToolBar.hide()
+                self.configsToolBar.hide()
+                self.sharedDataTypesToolBar.hide()
+                self.telemetriesToolBar.hide()
+                self.telecommandsToolBar.hide()
+            elif editorPanelIndex == 1:
+                self.unitsToolBar.hide()
+                self.constantsToolBar.show()
+                self.configsToolBar.hide()
+                self.sharedDataTypesToolBar.hide()
+                self.telemetriesToolBar.hide()
+                self.telecommandsToolBar.hide()
+            elif editorPanelIndex == 2:
+                self.unitsToolBar.hide()
+                self.constantsToolBar.hide()
+                self.configsToolBar.show()
+                self.sharedDataTypesToolBar.hide()
+                self.telemetriesToolBar.hide()
+                self.telecommandsToolBar.hide()
+            elif editorPanelIndex == 3:
+                self.unitsToolBar.hide()
+                self.constantsToolBar.hide()
+                self.configsToolBar.hide()
+                self.sharedDataTypesToolBar.show()
+                self.telemetriesToolBar.hide()
+                self.telecommandsToolBar.hide()
+            elif editorPanelIndex == 4:
+                self.unitsToolBar.hide()
+                self.constantsToolBar.hide()
+                self.configsToolBar.hide()
+                self.sharedDataTypesToolBar.hide()
+                self.telemetriesToolBar.show()
+                self.telecommandsToolBar.hide()
+            elif editorPanelIndex == 5:
+                self.unitsToolBar.hide()
+                self.constantsToolBar.hide()
+                self.configsToolBar.hide()
+                self.sharedDataTypesToolBar.hide()
+                self.telemetriesToolBar.hide()
+                self.telecommandsToolBar.show()
+        else:
+            self.unitsToolBar.hide()
+            self.constantsToolBar.hide()
+            self.configsToolBar.hide()
+            self.sharedDataTypesToolBar.hide()
+            self.telemetriesToolBar.hide()
+            self.telecommandsToolBar.hide()
 
     def _createActions(self):
         ########### FORMATS ###########
@@ -239,6 +335,58 @@ class PyStratoGui(QMainWindow):
         self.exitAct.triggered.connect(self.close)
 
         ########### WINDOW ###########
+        # EDITOR PANEL -----------------------------------------------
+        # Add Unit
+        self.addUnitAct = QAction('&Add Unit', self)
+        self.addUnitAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addUnitAct.setStatusTip('Add Database Unit')
+        self.addUnitAct.triggered.connect(self.addDatabaseUnit)
+        # Remove Unit
+        self.removeUnitAct = QAction('&Remove Unit', self)
+        self.removeUnitAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeUnitAct.setStatusTip('Remove Database Unit')
+        self.removeUnitAct.triggered.connect(self.removeDatabaseUnit)
+        # Add Constant
+        self.addConstantAct = QAction('&Add Constant', self)
+        self.addConstantAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addConstantAct.setStatusTip('Add Database Constant')
+        self.addConstantAct.triggered.connect(self.addDatabaseConstant)
+        # Remove Constant
+        self.removeConstantAct = QAction('&Remove Constant', self)
+        self.removeConstantAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeConstantAct.setStatusTip('Remove Database Constant')
+        self.removeConstantAct.triggered.connect(self.removeDatabaseConstant)
+        # Add Configuration
+        self.addConfigurationAct = QAction('&Add Configuration', self)
+        self.addConfigurationAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addConfigurationAct.setStatusTip('Add Database Configuration')
+        self.addConfigurationAct.triggered.connect(self.addDatabaseConfig)
+        # Remove Configuration
+        self.removeConfigurationAct = QAction('&Remove Configuration', self)
+        self.removeConfigurationAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeConfigurationAct.setStatusTip('Remove Database Configuration')
+        self.removeConfigurationAct.triggered.connect(self.removeDatabaseConfig)
+
+        # Add Telemetry
+        self.addTelemetryAct = QAction('&Add Telemetry', self)
+        self.addTelemetryAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addTelemetryAct.setStatusTip('Add Database Telemetry')
+        self.addTelemetryAct.triggered.connect(self.addDatabaseTelemetry)
+        # Remove Telemetry
+        self.removeTelemetryAct = QAction('&Remove Telemetry', self)
+        self.removeTelemetryAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeTelemetryAct.setStatusTip('Remove Database Telemetry')
+        self.removeTelemetryAct.triggered.connect(self.removeDatabaseTelemetry)
+        # Add Telemetry Argument
+        self.addTelemetryArgumentAct = QAction('&Add Telemetry Argument', self)
+        self.addTelemetryArgumentAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-subnode-96.png'))
+        self.addTelemetryArgumentAct.setStatusTip('Add Database Telemetry Argument')
+        self.addTelemetryArgumentAct.triggered.connect(self.addDatabaseTelemetryArgument)
+        # Remove Telemetry Argument
+        self.removeTelemetryArgumentAct = QAction('&Remove Telemetry Argument', self)
+        self.removeTelemetryArgumentAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-subnode-96.png'))
+        self.removeTelemetryArgumentAct.setStatusTip('Remove Database Telemetry Argument')
+        self.removeTelemetryArgumentAct.triggered.connect(self.removeDatabaseTelemetryArgument)
         # LAYOUT -----------------------------------------------------
         # Save Layout
         self.saveLayoutAct = QAction('&Save', self)
@@ -265,8 +413,7 @@ class PyStratoGui(QMainWindow):
         self.manageLayoutAct.setStatusTip('Open Layout Manager')
         self.manageLayoutAct.triggered.connect(self.openLayoutManager)
         # Set Layout Autosave
-        self.layoutAutoSaveAct = QAction('&AutoSave', self, checkable=True,
-                                         checked=self.settings["LAYOUT_AUTOSAVE"])
+        self.layoutAutoSaveAct = QAction('&AutoSave', self, checkable=True, checked=self.settings["LAYOUT_AUTOSAVE"])
         self.layoutAutoSaveAct.setStatusTip('Toggle Layout Autosave')
         self.layoutAutoSaveAct.triggered.connect(self.setLayoutAutoSave)
 
@@ -392,6 +539,7 @@ class PyStratoGui(QMainWindow):
 
         ###  WINDOW MENU  ###
         self.windowMenu = self.menubar.addMenu('&Window')
+        # Layout Menu
         self.layoutMenu = QMenu('&Layout')
         self.layoutMenu.addAction(self.saveLayoutAct)
         self.layoutMenu.addAction(self.saveAsLayoutAct)
@@ -405,10 +553,36 @@ class PyStratoGui(QMainWindow):
         self.layoutMenu.aboutToShow.connect(self.populateLayoutMenu)
         self.windowMenu.addMenu(self.layoutMenu)
         self.windowMenu.addSeparator()
+        # Display Tab Menu
         self.displayMenu = QMenu('&Display Tabs')
         self.displayMenu.addAction(self.newDisplayTabAct)
         self.displayMenu.addAction(self.closeDisplayTabAct)
-        self.windowMenu.addSeparator()
+        self.windowMenu.addMenu(self.displayMenu)
+        # Editor Panel Menu
+        self.editorTabMenu = QMenu('&Editor Tabs')
+        self.unitEditorMenu = QMenu('&Units')
+        self.unitEditorMenu.addAction(self.addUnitAct)
+        self.unitEditorMenu.addAction(self.removeUnitAct)
+        self.constantEditorMenu = QMenu('Constants')
+        self.constantEditorMenu.addAction(self.addConstantAct)
+        self.constantEditorMenu.addAction(self.removeConstantAct)
+        self.configEditorMenu = QMenu('Configurations')
+        self.configEditorMenu.addAction(self.addConfigurationAct)
+        self.configEditorMenu.addAction(self.removeConfigurationAct)
+        self.sharedTypesEditorMenu = QMenu('Shared Data Types')
+        self.telemetriesEditorMenu = QMenu('&Telemetries')
+        self.telemetriesEditorMenu.addAction(self.addTelemetryAct)
+        self.telemetriesEditorMenu.addAction(self.removeTelemetryAct)
+        self.telemetriesEditorMenu.addAction(self.addTelemetryArgumentAct)
+        self.telemetriesEditorMenu.addAction(self.removeTelemetryArgumentAct)
+        self.telecommandsEditorMenu = QMenu('&Telecommands')
+        self.editorTabMenu.addMenu(self.unitEditorMenu)
+        self.editorTabMenu.addMenu(self.constantEditorMenu)
+        self.editorTabMenu.addMenu(self.configEditorMenu)
+        self.editorTabMenu.addMenu(self.sharedTypesEditorMenu)
+        self.editorTabMenu.addMenu(self.telemetriesEditorMenu)
+        self.editorTabMenu.addMenu(self.telecommandsEditorMenu)
+        self.windowMenu.addMenu(self.editorTabMenu)
 
         ###  TOOLS MENU  ###
         self.toolsMenu = self.menubar.addMenu('&Tools')
@@ -797,7 +971,7 @@ class PyStratoGui(QMainWindow):
             self.recentMenu.setDisabled(True)
         else:
             self.recentMenu.setDisabled(False)
-        index = self.packetTabWidget.databasesTabWidget.currentIndex()
+        index = self.packetTabWidget.currentIndex()
         anyDatabaseChanges = False
         currentDatabaseChanges = False
         for i, database in enumerate(self.packetTabWidget.databases.values()):
@@ -912,6 +1086,70 @@ class PyStratoGui(QMainWindow):
         formattedCityName = self.locationSearchBar.selection
         dataSlice = self.weatherTabWidget.forecastTabDisplay.citiesDataFrame[self.weatherTabWidget.forecastTabDisplay.citiesDataFrame['format'] == formattedCityName]
         self.weatherTabWidget.forecastTabDisplay.addLocationTab(dataSlice.iloc[0])
+
+    def addDatabaseUnit(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, UnitsEditorWidget):
+            currentEditor.addUnit()
+        else:
+            databaseTabEditor.setCurrentIndex(0)
+            currentEditor: UnitsEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.addUnit()
+
+    def removeDatabaseUnit(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: UnitsEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, UnitsEditorWidget):
+            currentEditor.deleteUnit()
+        else:
+            databaseTabEditor.setCurrentIndex(0)
+            currentEditor: UnitsEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.deleteUnit()
+
+    def addDatabaseConstant(self):
+        pass
+
+    def removeDatabaseConstant(self):
+        pass
+
+    def addDatabaseConfig(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, ConfigsEditorWidget):
+            currentEditor.addConfig()
+        else:
+            databaseTabEditor.setCurrentIndex(2)
+            currentEditor: ConfigsEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.addConfig()
+
+    def removeDatabaseConfig(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: ConfigsEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, ConfigsEditorWidget):
+            currentEditor.addConfig()
+        else:
+            databaseTabEditor.setCurrentIndex(2)
+            currentEditor: ConfigsEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.addConfig()
+
+    def addDatabaseSharedType(self):
+        pass
+
+    def removeDatabaseSharedType(self):
+        pass
+
+    def addDatabaseTelemetry(self):
+        pass
+
+    def removeDatabaseTelemetry(self):
+        pass
+
+    def addDatabaseTelemetryArgument(self):
+        pass
+
+    def removeDatabaseTelemetryArgument(self):
+        pass
 
     def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()
