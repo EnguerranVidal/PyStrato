@@ -120,6 +120,7 @@ class PyStratoGui(QMainWindow):
 
         self.generalTabWidget.currentChanged.connect(self.manageToolBars)
         self.packetTabWidget.tabChanged.connect(self.manageDatabaseToolBars)
+        self.packetTabWidget.databaseChanged.connect(self.manageDatabaseChange)
         self.setCentralWidget(self.generalTabWidget)
 
     def _createToolBars(self):
@@ -195,7 +196,6 @@ class PyStratoGui(QMainWindow):
         self.telemetriesToolBar.addAction(self.removeTelemetryArgumentAct)
         # TELECOMMAND BAR
         self.telecommandsToolBar = QToolBar('Telecommands')
-
 
         ########### APPEARANCE ###########
         self.addToolBar(self.databasesToolBar)
@@ -991,12 +991,9 @@ class PyStratoGui(QMainWindow):
             self.closeFormatAction.setDisabled(True)
 
         else:
-            # Enabled if any changes done on currently edited database
             self.saveFormatAction.setDisabled(not currentDatabaseChanges)
             self.saveAsFormatAction.setDisabled(not currentDatabaseChanges)
-            # Enabled if any changes done to any database
             self.saveAllFormatAction.setDisabled(not anyDatabaseChanges)
-            # Others
             self.closeFormatAction.setDisabled(False)
 
     def populateRecentMenu(self):
@@ -1045,6 +1042,9 @@ class PyStratoGui(QMainWindow):
         else:
             self.stopSerialAct.setDisabled(False)
             self.runSerialAct.setDisabled(True)
+
+    def manageDatabaseChange(self):
+        pass
 
     def selectBaud(self, action):
         self.baudMenu.setTitle('&Baud    ' + action.text())

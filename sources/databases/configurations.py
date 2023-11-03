@@ -15,7 +15,7 @@ from sources.databases.balloondata import BalloonPackageDatabase, serializeTyped
 
 ######################## CLASSES ########################
 class ConfigsEditorWidget(QWidget):
-    selectionChanged = pyqtSignal()
+    change = pyqtSignal()
 
     def __init__(self, database: BalloonPackageDatabase):
         super().__init__()
@@ -49,8 +49,7 @@ class ConfigsEditorWidget(QWidget):
                         defaultValue=serializeTypedValue(configuration.defaultValue, configuration.type.type),
                         description=configuration.description)
         self.configsTable.itemChanged.connect(lambda item: self.changingConfig(item.row(), item.column(), item.text()))
-        self.configsTable.itemSelectionChanged.connect(self.selectionChanged.emit)
-        self.selectionChanged.emit()
+        self.configsTable.itemSelectionChanged.connect(self.change.emit)
 
     def addRow(self, name, baseTypeName, defaultValue, description=''):
         # CONFIGURATION NAME
@@ -111,12 +110,14 @@ class ConfigsEditorWidget(QWidget):
             # TODO : Change code for configuration type change
             typeInfo = self.database.getTypeInfo(selectedType[0])
             self.database.configurations[row] = dataclasses.replace(self.database.configurations[row], type=typeInfo)
+            self.change.emit()
 
     def changingConfig(self, row, col, text):
         if col == 0:
             self.database.configurations[row] = dataclasses.replace(self.database.configurations[row], name=text)
         elif col == 3:
             self.database.configurations[row] = dataclasses.replace(self.database.configurations[row], description=text)
+        self.change.emit()
         # TODO : Change code for configuration name and description change
 
     def changingDefaultValue(self, valueData):
@@ -132,6 +133,7 @@ class ConfigsEditorWidget(QWidget):
         else:
             raise ValueError("Value not in regular C-Types")
         self.database.configurations[row] = dataclasses.replace(configuration, defaultValue=defaultValue)
+        self.change.emit()
         # TODO : Change code for configuration default value change
 
     def addConfig(self):
@@ -140,6 +142,7 @@ class ConfigsEditorWidget(QWidget):
         if result == QDialog.Accepted:
             configName, configType = dialog.nameLineEdit.text(), dialog.baseTypeButton.text()
             print(configName, configType)
+            self.change.emit()
             # TODO : Add configuration addition
 
     def deleteConfig(self):
@@ -152,10 +155,11 @@ class ConfigsEditorWidget(QWidget):
                 for row in reversed(selectedRows):
                     configName = list(self.database.units.keys())[row]
                     print(configName)
-                    return
                     # TODO : Add configuration deletion
-                    #self.database.configurations.pop(configName)
-                    #self.unitsTable.removeRow(row)
+                    # self.database.configurations.pop(configName)
+                    # self.unitsTable.removeRow(row)
+                self.change.emit()
+
 
     def isTypeValid(self, baseTypeName):
         unitNames = [unitName for unitName, unitVariants in self.database.units.items()]

@@ -21,6 +21,7 @@ from sources.databases.telecommands import TelecommandsWidget
 ######################## CLASSES ########################
 class DatabaseEditor(QTabWidget):
     tabChanged = pyqtSignal()
+    editorChanged = pyqtSignal()
 
     def __init__(self, database: BalloonPackageDatabase):
         super(QTabWidget, self).__init__()
@@ -33,6 +34,10 @@ class DatabaseEditor(QTabWidget):
         self.telemetriesTab = TelemetryEditorWidget(database=self.database)
         self.telecommandsTab = TelecommandsWidget(database=self.database)
 
+        self.unitsTab.change.connect(self.editorChanged.emit())
+        self.configsTab.change.connect(self.editorChanged.emit())
+        self.telemetriesTab.change.connect(self.editorChanged.emit())
+
         self.addTab(self.unitsTab, 'UNITS')
         self.addTab(self.constantsTab, 'CONSTANTS')
         self.addTab(self.configsTab, 'CONFIG')
@@ -40,7 +45,7 @@ class DatabaseEditor(QTabWidget):
         self.addTab(self.telemetriesTab, 'TELEMETRIES')
         self.addTab(self.telecommandsTab, 'TELECOMMANDS')
 
-        self.currentChanged.connect(self.editorTabChanged)
+        self.currentChanged.connect(self.editorChanged)
         self.setTabPosition(QTabWidget.East)
         # self.setTabShape(QTabWidget.Triangular)
 
@@ -52,6 +57,7 @@ class DatabaseEditor(QTabWidget):
 
 class DatabaseTabWidget(QTabWidget):
     tabChanged = pyqtSignal()
+    databaseChanged = pyqtSignal()
 
     def __init__(self, path):
         super(QWidget, self).__init__()
@@ -68,6 +74,7 @@ class DatabaseTabWidget(QTabWidget):
         self.databases[name] = database
         editor = DatabaseEditor(self.databases[name])
         editor.tabChanged.connect(self.tabChanged.emit)
+        editor.editorChanged.connect(self.databaseChanged.emit)
         self.addTab(editor, name)
         self.tabChanged.emit()
 
@@ -78,6 +85,7 @@ class DatabaseTabWidget(QTabWidget):
         self.databases[name] = database
         editor = DatabaseEditor(self.databases[name])
         editor.tabChanged.connect(self.tabChanged.emit)
+        editor.editorChanged.connect(self.databaseChanged.emit)
         self.addTab(editor, name)
         self.tabChanged.emit()
 

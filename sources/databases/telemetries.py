@@ -14,7 +14,7 @@ from sources.databases.balloondata import BalloonPackageDatabase
 
 ######################## CLASSES ########################
 class TelemetryEditorWidget(QWidget):
-    selectionChanged = pyqtSignal()
+    change = pyqtSignal()
 
     def __init__(self, database):
         super().__init__()
@@ -68,7 +68,6 @@ class TelemetryEditorWidget(QWidget):
             switchButton.clicked.connect(self.switchToArguments)
             self.telemetryTable.setCellWidget(rowPosition, 1, switchButton)
         self.telemetryTable.resizeColumnsToContents()
-        self.selectionChanged.emit()
 
     def populateTelemetryArgumentsTable(self, telemetry):
         self.telemetryArgumentsTable.setRowCount(0)
@@ -85,7 +84,7 @@ class TelemetryEditorWidget(QWidget):
             self.telemetryArgumentsTable.setCellWidget(rowPosition, 1, typeButton)
             self.telemetryArgumentsTable.setItem(rowPosition, 2, descriptionItem)
         self.telemetryArgumentsTable.resizeColumnsToContents()
-        self.selectionChanged.emit()
+        self.change.emit()
 
     def changingArgumentType(self):
         senderWidget: QPushButton = self.sender()
@@ -95,7 +94,7 @@ class TelemetryEditorWidget(QWidget):
         result = dialog.exec_()
         if result == QDialog.Accepted:
             # TODO : Add code for configuration type change
-            pass
+            self.change.emit()
 
     def addTelemetryRow(self, name, description=''):
         rowPosition = self.telemetryTable.rowCount()
@@ -114,6 +113,7 @@ class TelemetryEditorWidget(QWidget):
         else:
             self.stackedWidget.setCurrentWidget(self.telemetryTable)
             self.goBackButton.hide()
+        self.change.emit()
 
     def switchToArguments(self):
         senderWidget: QPushButton = self.sender()

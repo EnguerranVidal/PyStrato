@@ -15,7 +15,7 @@ from PyQt5.QtGui import *
 
 ######################## CLASSES ########################
 class UnitsEditorWidget(QWidget):
-    selectionChanged = pyqtSignal()
+    change = pyqtSignal()
 
     def __init__(self, database):
         super().__init__()
@@ -44,8 +44,7 @@ class UnitsEditorWidget(QWidget):
         for unit in units:
             self.addRow(name=unit[0].name, baseType=unit[0].baseTypeName, description=unit[0].description)
         self.unitsTable.itemChanged.connect(lambda item: self.changingNameOrDescription(item.row(), item.column(), item.text()))
-        self.unitsTable.itemSelectionChanged.connect(self.selectionChanged.emit)
-        self.selectionChanged.emit()
+        self.unitsTable.itemSelectionChanged.connect(self.change.emit)
 
     def addRow(self, name, baseType, description=''):
         rowPosition = self.unitsTable.rowCount()
@@ -66,6 +65,7 @@ class UnitsEditorWidget(QWidget):
         pythonType = TypeInfo.lookupBaseType(baseType).type
         # TODO : Check for unit usage in configs and telecommands
         self.database.units[unitName][0] = dataclasses.replace(self.database.units[unitName][0], type=pythonType, baseTypeName=baseType)
+        self.change.emit()
 
     def changingNameOrDescription(self, row, col, text):
         if col == 0:
@@ -78,6 +78,7 @@ class UnitsEditorWidget(QWidget):
             unitName = list(self.database.units.keys())[row]
             for j in range(len(self.database.units[unitName])):
                 self.database.units[unitName][j] = dataclasses.replace(self.database.units[unitName][j], description=text)
+        self.change.emit()
 
     def addUnit(self):
         dialog = UnitAdditionDialog(self.database)
@@ -88,6 +89,7 @@ class UnitsEditorWidget(QWidget):
             unitTypeInfo = TypeInfo(TypeInfo.lookupBaseType(baseType).type, baseType, baseType)
             self.database.units[unitName] = [Unit.fromTypeInfo(unitName, unitTypeInfo, '')]
             self.addRow(unitName, baseType, description='')
+            self.change.emit()
 
     def deleteUnit(self):
         selectedRows = [item.row() for item in self.unitsTable.selectedItems()]
@@ -100,6 +102,7 @@ class UnitsEditorWidget(QWidget):
                     unitName = list(self.database.units.keys())[row]
                     self.database.units.pop(unitName)
                     self.unitsTable.removeRow(row)
+                self.change.emit()
 
 
 class UnitAdditionDialog(QDialog):
