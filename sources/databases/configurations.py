@@ -108,8 +108,8 @@ class ConfigsEditorWidget(QWidget):
             valueWidget.changeCType(newPythonType, arraySize=1 if selectedType[2] is None else selectedType[2])
 
             # TODO : Change code for configuration type change
-            typeInfo = self.database.getTypeInfo(selectedType[0])
-            self.database.configurations[row] = dataclasses.replace(self.database.configurations[row], type=typeInfo)
+            # typeInfo = self.database.getTypeInfo(selectedType[0])
+            # self.database.configurations[row] = dataclasses.replace(self.database.configurations[row], type=typeInfo)
             self.change.emit()
 
     def changingConfig(self, row, col, text):
@@ -117,8 +117,8 @@ class ConfigsEditorWidget(QWidget):
             self.database.configurations[row] = dataclasses.replace(self.database.configurations[row], name=text)
         elif col == 3:
             self.database.configurations[row] = dataclasses.replace(self.database.configurations[row], description=text)
-        self.change.emit()
         # TODO : Change code for configuration name and description change
+        self.change.emit()
 
     def changingDefaultValue(self, valueData):
         senderWidget: ValueWidget = self.sender()
@@ -132,18 +132,18 @@ class ConfigsEditorWidget(QWidget):
             # TODO : ADD ARRAY VALUE CHANGE HANDLING
         else:
             raise ValueError("Value not in regular C-Types")
-        self.database.configurations[row] = dataclasses.replace(configuration, defaultValue=defaultValue)
-        self.change.emit()
         # TODO : Change code for configuration default value change
+        # self.database.configurations[row] = dataclasses.replace(configuration, defaultValue=defaultValue)
+        self.change.emit()
 
     def addConfig(self):
         dialog = ConfigAdditionDialog(self.database)
         result = dialog.exec_()
         if result == QDialog.Accepted:
             configName, configType = dialog.nameLineEdit.text(), dialog.baseTypeButton.text()
-            print(configName, configType)
-            self.change.emit()
+            self.addRow(configName, configType, '', '')
             # TODO : Add configuration addition
+            self.change.emit()
 
     def deleteConfig(self):
         selectedRows = [item.row() for item in self.configsTable.selectedItems()]
@@ -153,13 +153,9 @@ class ConfigsEditorWidget(QWidget):
             result = dialog.exec_()
             if result == QMessageBox.Yes:
                 for row in reversed(selectedRows):
-                    configName = list(self.database.units.keys())[row]
-                    print(configName)
+                    self.configsTable.removeRow(row)
                     # TODO : Add configuration deletion
-                    # self.database.configurations.pop(configName)
-                    # self.unitsTable.removeRow(row)
                 self.change.emit()
-
 
     def isTypeValid(self, baseTypeName):
         unitNames = [unitName for unitName, unitVariants in self.database.units.items()]
@@ -176,10 +172,10 @@ class ConfigsEditorWidget(QWidget):
             baseTypeName = self.database.getTypeName(configuration.type)
             if baseTypeName in self.baseTypesValues:
                 baseTypeName = self.baseTypeNames[self.baseTypesValues.index(baseTypeName)]
-            if not self.isTypeValid(baseTypeName):
-                self.configsTable.cellWidget(row, 1).setStyleSheet('QPushButton {color: red;}')
-            else:
+            if self.isTypeValid(baseTypeName):
                 self.configsTable.cellWidget(row, 1).setStyleSheet('QPushButton {color: black;}')
+            else:
+                self.configsTable.cellWidget(row, 1).setStyleSheet('QPushButton {color: red;}')
 
 
 class ConfigAdditionDialog(QDialog):
@@ -195,7 +191,7 @@ class ConfigAdditionDialog(QDialog):
         # ENTRIES & BUTTONS
         self.nameLabel = QLabel('Name:')
         self.nameLineEdit = QLineEdit()
-        self.nameLineEdit.textChanged.connect(self.updateOkButtonState)
+        self.baseTypeLabel = QLabel('Config:')
         self.baseTypeButton = QPushButton(self.baseTypeNames[0])
         self.baseTypeButton.clicked.connect(self.changingType)
         self.okButton = QPushButton('OK')
@@ -208,7 +204,7 @@ class ConfigAdditionDialog(QDialog):
         gridLayout = QGridLayout()
         gridLayout.addWidget(self.nameLabel, 0, 0)
         gridLayout.addWidget(self.nameLineEdit, 0, 1)
-        gridLayout.addWidget(self.unitTypeLabel, 1, 0)
+        gridLayout.addWidget(self.baseTypeLabel, 1, 0)
         gridLayout.addWidget(self.baseTypeButton, 1, 1)
         buttonLayout = QHBoxLayout()
         buttonLayout.addWidget(self.okButton)

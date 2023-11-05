@@ -1,5 +1,6 @@
 ######################## IMPORTS ########################
 import dataclasses
+import re
 from ecom.datatypes import TypeInfo
 
 # ------------------- PyQt Modules -------------------- #
@@ -20,6 +21,8 @@ class TelemetryEditorWidget(QWidget):
         super().__init__()
         self.selectedTelemetry = None
         self.database = database
+        self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
+        self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
 
         # Telemetry Table
         self.telemetryTable = QTableWidget(self)
@@ -68,6 +71,7 @@ class TelemetryEditorWidget(QWidget):
             switchButton.clicked.connect(self.switchToArguments)
             self.telemetryTable.setCellWidget(rowPosition, 1, switchButton)
         self.telemetryTable.resizeColumnsToContents()
+        self.telemetryTable.itemSelectionChanged.connect(self.change.emit)
 
     def populateTelemetryArgumentsTable(self, telemetry):
         self.telemetryArgumentsTable.setRowCount(0)
@@ -84,17 +88,61 @@ class TelemetryEditorWidget(QWidget):
             self.telemetryArgumentsTable.setCellWidget(rowPosition, 1, typeButton)
             self.telemetryArgumentsTable.setItem(rowPosition, 2, descriptionItem)
         self.telemetryArgumentsTable.resizeColumnsToContents()
+        self.telemetryArgumentsTable.itemSelectionChanged.connect(self.change.emit)
         self.change.emit()
 
     def changingArgumentType(self):
         senderWidget: QPushButton = self.sender()
         baseType = senderWidget.text()
         row = self.telemetryArgumentsTable.indexAt(senderWidget.pos()).row()
-        dialog = TypeSelector(self.database, baseType, haveDataTypes=True, telemetryTypeName=self.selectedTelemetry.id.name)
+        dialog = TypeSelector(self.database, baseType, haveDataTypes=True, telemetryType=self.selectedTelemetry)
         result = dialog.exec_()
         if result == QDialog.Accepted:
-            # TODO : Add code for configuration type change
+            # TODO : Add code for telemetry type change
             self.change.emit()
+
+    def addTelemetryType(self):
+        dialog = TelemetryAdditionDialog(self.database)
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            name = dialog.nameLineEdit.text()
+            self.addTelemetryRow(name, description='')
+            # TODO : Add code to add telemetry to database
+            self.change.emit()
+
+    def deleteTelemetryType(self):
+        selectedRows = [item.row() for item in self.telemetryTable.selectedItems()]
+        if len(selectedRows):
+            selectedRows = sorted(list(set(selectedRows)))
+            dialog = TelemetryDeletionMessageBox(selectedRows)
+            result = dialog.exec_()
+            if result == QMessageBox.Yes:
+                for row in reversed(selectedRows):
+                    self.telemetryTable.removeRow(row)
+                    # TODO : Add telemetry deletion
+                self.change.emit()
+
+    def addArgumentType(self):
+        dialog = TelemetryArgumentAdditionDialog(self.database, self.selectedTelemetry)
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            name = dialog.nameLineEdit.text()
+            baseTypeName = dialog.baseTypeButton.text()
+            self.addArgumentRow(name, baseTypeName, '')
+            # TODO : Add code to add argument to current telemetry database
+            self.change.emit()
+
+    def deleteArgumentType(self):
+        selectedRows = [item.row() for item in self.telemetryArgumentsTable.selectedItems()]
+        if len(selectedRows):
+            selectedRows = sorted(list(set(selectedRows)))
+            dialog = TelemetryArgumentDeletionMessageBox(selectedRows)
+            result = dialog.exec_()
+            if result == QMessageBox.Yes:
+                for row in reversed(selectedRows):
+                    self.telemetryArgumentsTable.removeRow(row)
+                    # TODO : Add telemetry deletion
+                self.change.emit()
 
     def addTelemetryRow(self, name, description=''):
         rowPosition = self.telemetryTable.rowCount()
@@ -103,6 +151,19 @@ class TelemetryEditorWidget(QWidget):
         descriptionItem = QTableWidgetItem(description)
         self.telemetryTable.setItem(rowPosition, 0, nameItem)
         self.telemetryTable.setItem(rowPosition, 1, descriptionItem)
+
+    def addArgumentRow(self, name, baseTypeName, description):
+        rowPosition = self.telemetryArgumentsTable.rowCount()
+        self.telemetryArgumentsTable.insertRow(rowPosition)
+        nameItem = QTableWidgetItem(name)
+        baseTypeButton = QPushButton(baseTypeName)
+        if not self.isTypeValid(baseTypeName):
+            baseTypeButton.setStyleSheet('QPushButton {color: red;}')
+        baseTypeButton.clicked.connect(self.changingArgumentType)
+        descriptionItem = QTableWidgetItem(description)
+        self.telemetryArgumentsTable.setItem(rowPosition, 0, nameItem)
+        self.telemetryArgumentsTable.setCellWidget(rowPosition, 1, baseTypeButton)
+        self.telemetryArgumentsTable.setItem(rowPosition, 2, descriptionItem)
 
     def switchMode(self):
         currentWidget = self.stackedWidget.currentWidget()
@@ -119,8 +180,17 @@ class TelemetryEditorWidget(QWidget):
         senderWidget: QPushButton = self.sender()
         row = self.telemetryTable.indexAt(senderWidget.pos()).row()
         self.selectedTelemetry = self.database.telemetryTypes[row]
-        print(self.selectedTelemetry.id.name)
         self.switchMode()
+
+    def isTypeValid(self, baseTypeName):
+        unitNames = [unitName for unitName, unitVariants in self.database.units.items()]
+        acceptedTypes = self.baseTypeNames + self.baseTypesValues + unitNames + self.database.getSharedDataTypes()
+        matchingArrayFormat = re.search(r'(.*?)\[(.*?)\]', baseTypeName)
+        if matchingArrayFormat:
+            typeName, arraySize = matchingArrayFormat.group(1), matchingArrayFormat.group(2)
+            return typeName in acceptedTypes and arraySize.isdigit()
+        else:
+            return baseTypeName in acceptedTypes
 
 
 class TelemetryAdditionDialog(QDialog):
@@ -143,8 +213,8 @@ class TelemetryAdditionDialog(QDialog):
         buttonLayout.addWidget(self.okButton)
         buttonLayout.addWidget(self.cancelButton)
         layout = QVBoxLayout(self)
-        layout.addLayout(self.nameLabel)
-        layout.addLayout(self.nameLineEdit)
+        layout.addWidget(self.nameLabel)
+        layout.addWidget(self.nameLineEdit)
         layout.addLayout(buttonLayout)
         self.setLayout(layout)
 
@@ -178,24 +248,43 @@ class TelemetryArgumentAdditionDialog(QDialog):
         self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         self.setModal(True)
         self.database, self.telemetryType = database, telemetryType
-        telemetryTypeIndex = [index for index, telemetry in enumerate(self.database.telemetryTypes) if telemetry.id.name == self.telemetryType]
-        self.argumentTypeNames = [dataPoint.name for dataPoint in self.database.telemetryTypes[telemetryTypeIndex[0]].data]
+        self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
+        self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
+        self.argumentTypeNames = [dataPoint.name for dataPoint in telemetryType.data]
         # ENTRIES & BUTTONS
         self.nameLabel = QLabel('Name:')
         self.nameLineEdit = QLineEdit()
+        self.baseTypeLabel = QLabel('Config:')
+        self.baseTypeButton = QPushButton(self.baseTypeNames[0])
+        self.baseTypeButton.clicked.connect(self.changingType)
         self.okButton = QPushButton('OK')
         self.cancelButton = QPushButton('Cancel')
         self.okButton.clicked.connect(self.verifyTelemetryName)
         self.cancelButton.clicked.connect(self.reject)
         # LAYOUT
+        gridLayout = QGridLayout()
+        gridLayout.addWidget(self.nameLabel, 0, 0)
+        gridLayout.addWidget(self.nameLineEdit, 0, 1)
+        gridLayout.addWidget(self.baseTypeLabel, 1, 0)
+        gridLayout.addWidget(self.baseTypeButton, 1, 1)
         buttonLayout = QHBoxLayout()
         buttonLayout.addWidget(self.okButton)
         buttonLayout.addWidget(self.cancelButton)
         layout = QVBoxLayout(self)
-        layout.addLayout(self.nameLabel)
-        layout.addLayout(self.nameLineEdit)
+        layout.addLayout(gridLayout)
         layout.addLayout(buttonLayout)
         self.setLayout(layout)
+
+    def changingType(self):
+        baseType = self.baseTypeButton.text()
+        dialog = TypeSelector(self.database, baseType, haveDataTypes=True, telemetryType=self.telemetryType)
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            if dialog.selectionSwitch.currentIndex() == 0:
+                newType = dialog.baseTypesWidget.currentText()
+            else:
+                newType = dialog.unitsList.currentItem().text()
+            self.baseTypeButton.setText(newType)
 
     def verifyTelemetryName(self):
         name = self.nameLineEdit.text()

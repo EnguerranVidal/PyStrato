@@ -87,8 +87,8 @@ class UnitsEditorWidget(QWidget):
             unitName, unitType = dialog.nameLineEdit.text(), dialog.unitTypeComboBox.currentText()
             baseType = self.baseTypesValues[self.baseTypeNames.index(unitType)]
             unitTypeInfo = TypeInfo(TypeInfo.lookupBaseType(baseType).type, baseType, baseType)
-            self.database.units[unitName] = [Unit.fromTypeInfo(unitName, unitTypeInfo, '')]
             self.addRow(unitName, baseType, description='')
+            # TODO : Add unit addition
             self.change.emit()
 
     def deleteUnit(self):
@@ -99,9 +99,8 @@ class UnitsEditorWidget(QWidget):
             result = dialog.exec_()
             if result == QMessageBox.Yes:
                 for row in reversed(selectedRows):
-                    unitName = list(self.database.units.keys())[row]
-                    self.database.units.pop(unitName)
                     self.unitsTable.removeRow(row)
+                    # TODO : Add unit deletion
                 self.change.emit()
 
 

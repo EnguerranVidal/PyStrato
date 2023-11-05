@@ -34,9 +34,9 @@ class DatabaseEditor(QTabWidget):
         self.telemetriesTab = TelemetryEditorWidget(database=self.database)
         self.telecommandsTab = TelecommandsWidget(database=self.database)
 
-        self.unitsTab.change.connect(self.editorChanged.emit())
-        self.configsTab.change.connect(self.editorChanged.emit())
-        self.telemetriesTab.change.connect(self.editorChanged.emit())
+        self.unitsTab.change.connect(self.editorChanged.emit)
+        self.configsTab.change.connect(self.editorChanged.emit)
+        self.telemetriesTab.change.connect(self.editorChanged.emit)
 
         self.addTab(self.unitsTab, 'UNITS')
         self.addTab(self.constantsTab, 'CONSTANTS')
@@ -45,9 +45,8 @@ class DatabaseEditor(QTabWidget):
         self.addTab(self.telemetriesTab, 'TELEMETRIES')
         self.addTab(self.telecommandsTab, 'TELECOMMANDS')
 
-        self.currentChanged.connect(self.editorChanged)
+        self.currentChanged.connect(self.tabChanged)
         self.setTabPosition(QTabWidget.East)
-        # self.setTabShape(QTabWidget.Triangular)
 
     def editorTabChanged(self, index):
         self.tabChanged.emit()

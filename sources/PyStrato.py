@@ -38,11 +38,10 @@ class PyStratoGui(QMainWindow):
         self.examplesPath = os.path.join(self.presetPath, 'examples')
 
         # Main Window Settings
-        self.setGeometry(500, 500, 1000, 600)
         self.setWindowTitle('PyStrato')
         self.setWindowIcon(self.mainIcon)
         self.settings = loadSettings("settings")
-        self._center()
+        # self._center()
         # FPS in StatusBar
         self.lastUpdate = time.perf_counter()
         self.avgFps = 0.0
@@ -120,7 +119,7 @@ class PyStratoGui(QMainWindow):
 
         self.generalTabWidget.currentChanged.connect(self.manageToolBars)
         self.packetTabWidget.tabChanged.connect(self.manageDatabaseToolBars)
-        self.packetTabWidget.databaseChanged.connect(self.manageDatabaseChange)
+        self.packetTabWidget.databaseChanged.connect(self.manageDatabaseEditorChange)
         self.setCentralWidget(self.generalTabWidget)
 
     def _createToolBars(self):
@@ -277,6 +276,7 @@ class PyStratoGui(QMainWindow):
                 self.sharedDataTypesToolBar.hide()
                 self.telemetriesToolBar.hide()
                 self.telecommandsToolBar.show()
+            self.manageDatabaseEditorChange()
         else:
             self.unitsToolBar.hide()
             self.constantsToolBar.hide()
@@ -1043,8 +1043,28 @@ class PyStratoGui(QMainWindow):
             self.stopSerialAct.setDisabled(False)
             self.runSerialAct.setDisabled(True)
 
-    def manageDatabaseChange(self):
-        pass
+    def manageDatabaseEditorChange(self):
+        editor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        if self.generalTabWidget.currentIndex() == 1 and editor is not None:
+            isEditorTelemetryArgumentOpen = editor.telemetriesTab.telemetryArgumentsTable.isVisible()
+            editorPanelIndex = editor.currentIndex()
+            selectedUnits = editor.unitsTab.unitsTable.selectedItems()
+            self.removeUnitAct.setDisabled(not len(selectedUnits) > 0 or editorPanelIndex != 0)
+            selectedConfigs = editor.configsTab.configsTable.selectedItems()
+            self.removeConfigurationAct.setDisabled(not len(selectedConfigs) > 0 or editorPanelIndex != 2)
+            if not isEditorTelemetryArgumentOpen:
+                selectedTelemetries = editor.telemetriesTab.telemetryTable.selectedItems()
+                self.removeTelemetryAct.setDisabled(not len(selectedTelemetries) > 0 or editorPanelIndex != 4)
+                self.addTelemetryArgumentAct.setDisabled(True)
+                self.removeTelemetryArgumentAct.setDisabled(True)
+            else:
+                selectedArguments = editor.telemetriesTab.telemetryArgumentsTable.selectedItems()
+                print(selectedArguments)
+                self.removeTelemetryArgumentAct.setDisabled(not len(selectedArguments) > 0 or editorPanelIndex != 4)
+                self.addTelemetryArgumentAct.setDisabled(False)
+                self.addTelemetryAct.setDisabled(False)
+                self.removeTelemetryAct.setDisabled(True)
+        self.populateFileMenu()
 
     def selectBaud(self, action):
         self.baudMenu.setTitle('&Baud    ' + action.text())
@@ -1127,11 +1147,7 @@ class PyStratoGui(QMainWindow):
         databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
         currentEditor: ConfigsEditorWidget = databaseTabEditor.currentWidget()
         if isinstance(currentEditor, ConfigsEditorWidget):
-            currentEditor.addConfig()
-        else:
-            databaseTabEditor.setCurrentIndex(2)
-            currentEditor: ConfigsEditorWidget = databaseTabEditor.currentWidget()
-            currentEditor.addConfig()
+            currentEditor.deleteConfig()
 
     def addDatabaseSharedType(self):
         pass
@@ -1140,16 +1156,36 @@ class PyStratoGui(QMainWindow):
         pass
 
     def addDatabaseTelemetry(self):
-        pass
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: TelemetryEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, TelemetryEditorWidget):
+            currentEditor.addTelemetryType()
+        else:
+            databaseTabEditor.setCurrentIndex(4)
+            currentEditor: TelemetryEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.addTelemetryType()
 
     def removeDatabaseTelemetry(self):
-        pass
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: TelemetryEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, TelemetryEditorWidget):
+            currentEditor.deleteTelemetryType()
 
     def addDatabaseTelemetryArgument(self):
-        pass
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: TelemetryEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, TelemetryEditorWidget):
+            currentEditor.addArgumentType()
+        else:
+            databaseTabEditor.setCurrentIndex(4)
+            currentEditor: TelemetryEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.addArgumentType()
 
     def removeDatabaseTelemetryArgument(self):
-        pass
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: TelemetryEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, TelemetryEditorWidget):
+            currentEditor.deleteArgumentType()
 
     def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()
@@ -1178,6 +1214,8 @@ class PyStratoGui(QMainWindow):
             self.stopSerial()
             time.sleep(0.5)
             self.serialMonitorTimer.stop()
+            self.settings['MAXIMIZED'] = 1 if self.isMaximized() else 0
+            saveSettings(self.settings, 'settings')
             for window in QApplication.topLevelWidgets():
                 window.close()
             event.accept()

@@ -47,13 +47,13 @@ class ContentStorage:
 
 
 class TypeSelector(QDialog):
-    def __init__(self, database, typeName, haveDataTypes=False, telemetryTypeName=None):
+    def __init__(self, database, typeName, haveDataTypes=False, telemetryType=None):
         super().__init__()
         self.selectedType = None
         self.setWindowTitle('Select a Type')
         self.setModal(True)
         self.typeName, self.database = typeName, database
-        self.haveDataTypes, self.telemetryTypeName, self.arraySize = haveDataTypes, telemetryTypeName, None
+        self.haveDataTypes, self.telemetryType, self.arraySize = haveDataTypes, telemetryType, None
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
         self.specialTypes = ['TelecommandMessageHeader', 'TelemetryMessageHeader']
@@ -75,7 +75,7 @@ class TypeSelector(QDialog):
         self.arraySizeSwitch = QComboBox(self)
         self.arraySizeSwitch.addItem("Integer")
         self.arraySizeSwitch.addItem("Constant")
-        if self.telemetryTypeName is not None:
+        if self.telemetryType is not None:
             self.arraySizeSwitch.addItem("Telemetry Argument")
         self.arraySizeSwitch.currentIndexChanged.connect(self.switchArraySizeSelection)
         # Integer & Constants
@@ -85,11 +85,9 @@ class TypeSelector(QDialog):
         self.arrayArgumentsListWidget = QListWidget(self)
         for constant in list(self.database.constants.keys()):
             self.arrayConstantListWidget.addItem(constant)
-        if self.telemetryTypeName is not None:
+        if self.telemetryType is not None:
             self.telemetryArguments = []
-            telemetryTypeIndex = [index for index, telemetry in enumerate(self.database.telemetryTypes) if
-                                  telemetry.id.name == self.telemetryTypeName]
-            for dataPoint in self.database.telemetryTypes[telemetryTypeIndex[0]].data:
+            for dataPoint in self.telemetryType.data:
                 argumentTypeName = self.database.getTypeName(dataPoint.type)
                 integer = argumentTypeName.startswith('int') or argumentTypeName.startswith('uint')
                 if integer and not self.isAnArray(argumentTypeName):
@@ -201,7 +199,7 @@ class TypeSelector(QDialog):
                 self.arrayIntegerLineEdit.setText(self.arraySize)
                 self.switchArraySizeSelection(0)
                 self.selectedType = (typeName, True, self.arraySize, False)
-            elif self.telemetryTypeName is not None and self.arraySize.startswith('.'):
+            elif self.telemetryType is not None and self.arraySize.startswith('.'):
                 argumentIndex = self.telemetryArguments.index(self.arraySize[1:])
                 argumentItem = self.arrayArgumentsListWidget.item(argumentIndex)
                 self.arrayArgumentsListWidget.setCurrentItem(argumentItem)
