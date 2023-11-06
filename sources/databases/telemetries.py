@@ -26,7 +26,7 @@ class TelemetryEditorWidget(QWidget):
 
         # Telemetry Table
         self.telemetryTable = QTableWidget(self)
-        self.telemetryTable.setColumnCount(3)  # Added one more column for the "Arguments" button
+        self.telemetryTable.setColumnCount(3)
         self.telemetryTable.setHorizontalHeaderLabels(['Name', '', 'Description'])
         self.telemetryTable.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.telemetryTable.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
@@ -98,7 +98,7 @@ class TelemetryEditorWidget(QWidget):
         dialog = TypeSelector(self.database, baseType, haveDataTypes=True, telemetryType=self.selectedTelemetry)
         result = dialog.exec_()
         if result == QDialog.Accepted:
-            # TODO : Add code for telemetry type change
+            # TODO : Add code for telemetry argument type change
             self.change.emit()
 
     def addTelemetryType(self):

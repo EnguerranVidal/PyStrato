@@ -38,6 +38,7 @@ class PyStratoGui(QMainWindow):
         self.examplesPath = os.path.join(self.presetPath, 'examples')
 
         # Main Window Settings
+        self.setGeometry(200, 200, 1000, 500)
         self.setWindowTitle('PyStrato')
         self.setWindowIcon(self.mainIcon)
         self.settings = loadSettings("settings")

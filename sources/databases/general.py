@@ -12,7 +12,7 @@ from PyQt5.QtGui import *
 # --------------------- Sources ----------------------- #
 from sources.databases.balloondata import BalloonPackageDatabase, createNewDatabase
 from sources.databases.units import UnitsEditorWidget
-from sources.databases.constants import ConstantsWidget
+from sources.databases.constants import ConstantEditorWidget
 from sources.databases.configurations import ConfigsEditorWidget
 from sources.databases.telemetries import TelemetryEditorWidget
 from sources.databases.telecommands import TelecommandsWidget
@@ -28,7 +28,7 @@ class DatabaseEditor(QTabWidget):
         self.database = database
 
         self.unitsTab = UnitsEditorWidget(database=self.database)
-        self.constantsTab = ConstantsWidget(database=self.database)
+        self.constantsTab = ConstantEditorWidget(database=self.database)
         self.configsTab = ConfigsEditorWidget(database=self.database)
         self.dataTypesTab = QWidget()
         self.telemetriesTab = TelemetryEditorWidget(database=self.database)
