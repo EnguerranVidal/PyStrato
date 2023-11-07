@@ -85,8 +85,8 @@ class TypeSelector(QDialog):
         self.arrayArgumentsListWidget = QListWidget(self)
         for constant in list(self.database.constants.keys()):
             self.arrayConstantListWidget.addItem(constant)
+        self.telemetryArguments = []
         if self.telemetryType is not None:
-            self.telemetryArguments = []
             for dataPoint in self.telemetryType.data:
                 argumentTypeName = self.database.getTypeName(dataPoint.type)
                 integer = argumentTypeName.startswith('int') or argumentTypeName.startswith('uint')
@@ -286,8 +286,9 @@ class TypeSelector(QDialog):
                                      self.selectedType[3])
 
     def changeSelectedTypeLabel(self, typeName, isArray, arraySize, isTelemetry):
-        typeName = typeName.lower() if typeName in self.baseTypeNames else typeName
-        self.selectedType = (typeName, isArray, arraySize, isTelemetry)
+        typeName = typeName.upper() if typeName in self.baseTypesValues else typeName
+        typeValue = typeName.lower() if typeName in self.baseTypeNames else typeName
+        self.selectedType = (typeValue, isArray, arraySize, isTelemetry)
         if not isArray:
             self.selectedTypeLabel.setText(f'Selected Type : {typeName}')
         elif isTelemetry:

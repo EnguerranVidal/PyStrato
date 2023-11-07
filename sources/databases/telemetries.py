@@ -80,6 +80,8 @@ class TelemetryEditorWidget(QWidget):
             self.telemetryArgumentsTable.insertRow(rowPosition)
             dataPointType = self.database.getTypeName(dataPoint.type)
             nameItem = QTableWidgetItem(dataPoint.name)
+            if dataPointType in self.baseTypesValues:
+                dataPointType = self.baseTypeNames[self.baseTypesValues.index(dataPointType)]
             typeButton = QPushButton(dataPointType)
             typeButton.clicked.connect(self.changingArgumentType)
             descriptionItem = QTableWidgetItem(dataPoint.description)

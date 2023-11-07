@@ -95,7 +95,8 @@ class ConfigsEditorWidget(QWidget):
         result = dialog.exec_()
         if result == QDialog.Accepted:
             selectedType = dialog.selectedType
-            configType = f'{selectedType[0]}[{selectedType[2]}]' if selectedType[1] else f'{selectedType[0]}'
+            selectedTypeName = selectedType[0].upper() if selectedType[0] in self.baseTypesValues else selectedType[0]
+            configType = f'{selectedTypeName}[{selectedType[2]}]' if selectedType[1] else f'{selectedTypeName}'
             # CHANGING TYPE BUTTON SHOWN TEXT
             if not self.isTypeValid(configType):
                 senderWidget.setStyleSheet('QPushButton {color: red;}')
@@ -163,7 +164,8 @@ class ConfigsEditorWidget(QWidget):
         matchingArrayFormat = re.search(r'(.*?)\[(.*?)\]', baseTypeName)
         if matchingArrayFormat:
             typeName, arraySize = matchingArrayFormat.group(1), matchingArrayFormat.group(2)
-            return typeName in acceptedTypes and arraySize.isdigit()
+            correctArraySize = arraySize.isdigit() or arraySize in list(self.database.constants.keys())
+            return typeName in acceptedTypes and correctArraySize
         else:
             return baseTypeName in acceptedTypes
 
