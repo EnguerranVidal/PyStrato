@@ -13,6 +13,7 @@ from sources.common.widgets.Widgets import *
 
 from sources.databases.general import DatabaseTabWidget, DatabaseEditor
 from sources.databases.units import UnitsEditorWidget
+from sources.databases.constants import ConstantEditorWidget
 from sources.databases.configurations import ConfigsEditorWidget
 from sources.databases.telemetries import TelemetryEditorWidget
 
@@ -1051,6 +1052,8 @@ class PyStratoGui(QMainWindow):
             editorPanelIndex = editor.currentIndex()
             selectedUnits = editor.unitsTab.unitsTable.selectedItems()
             self.removeUnitAct.setDisabled(not len(selectedUnits) > 0 or editorPanelIndex != 0)
+            selectedConstants = editor.constantsTab.constantsTable.selectedItems()
+            self.removeConstantAct.setDisabled(not len(selectedConstants) > 0 or editorPanelIndex != 1)
             selectedConfigs = editor.configsTab.configsTable.selectedItems()
             self.removeConfigurationAct.setDisabled(not len(selectedConfigs) > 0 or editorPanelIndex != 2)
             if not isEditorTelemetryArgumentOpen:
@@ -1110,7 +1113,7 @@ class PyStratoGui(QMainWindow):
 
     def addDatabaseUnit(self):
         databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
-        currentEditor = databaseTabEditor.currentWidget()
+        currentEditor: UnitsEditorWidget  = databaseTabEditor.currentWidget()
         if isinstance(currentEditor, UnitsEditorWidget):
             currentEditor.addUnit()
         else:
@@ -1129,14 +1132,28 @@ class PyStratoGui(QMainWindow):
             currentEditor.deleteUnit()
 
     def addDatabaseConstant(self):
-        pass
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: ConstantEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, ConstantEditorWidget):
+            currentEditor.addConstant()
+        else:
+            databaseTabEditor.setCurrentIndex(2)
+            currentEditor: ConstantEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.addConstant()
 
     def removeDatabaseConstant(self):
-        pass
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: ConstantEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, ConstantEditorWidget):
+            currentEditor.deleteConstant()
+        else:
+            databaseTabEditor.setCurrentIndex(0)
+            currentEditor: ConstantEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.deleteConstant()
 
     def addDatabaseConfig(self):
         databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
-        currentEditor = databaseTabEditor.currentWidget()
+        currentEditor: ConfigsEditorWidget = databaseTabEditor.currentWidget()
         if isinstance(currentEditor, ConfigsEditorWidget):
             currentEditor.addConfig()
         else:

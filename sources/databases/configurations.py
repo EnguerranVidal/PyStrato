@@ -133,7 +133,7 @@ class ConfigsEditorWidget(QWidget):
             # TODO : ADD ARRAY VALUE CHANGE HANDLING
         else:
             raise ValueError("Value not in regular C-Types")
-        # TODO : Change code for configuration default value change
+        # TODO : Add code for configuration default value change
         # self.database.configurations[row] = dataclasses.replace(configuration, defaultValue=defaultValue)
         self.change.emit()
 

@@ -35,6 +35,7 @@ class DatabaseEditor(QTabWidget):
         self.telecommandsTab = TelecommandsWidget(database=self.database)
 
         self.unitsTab.change.connect(self.editorChanged.emit)
+        self.constantsTab.change.connect(self.editorChanged.emit)
         self.configsTab.change.connect(self.editorChanged.emit)
         self.telemetriesTab.change.connect(self.editorChanged.emit)
 
