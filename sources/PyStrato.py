@@ -7,7 +7,7 @@ from functools import partial
 from PyQt5.QtCore import QDateTime, QThread
 
 # --------------------- Sources ----------------------- #
-from sources.SerialGS import SerialMonitor
+from sources.SerialGS import SerialMonitor, saveParserData
 from sources.common.utilities.FileHandling import loadSearchItemsFromJson
 from sources.common.widgets.Widgets import *
 
@@ -30,11 +30,11 @@ class PyStratoGui(QMainWindow):
         self.currentDir = path
         self.mainIcon = QIcon('sources/icons/PyStrato')
         # FOLDER PATHS
-        self.formatPath = os.path.join(self.currentDir, "formats")
+        self.formatPath = os.path.join(self.currentDir, "parsers")
         self.dataPath = os.path.join(self.currentDir, "data")
         self.savesPath = os.path.join(self.dataPath, 'saves')
-        self.backupPath = os.path.join(self.dataPath, "backups")
-        self.presetPath = os.path.join(self.dataPath, 'presets')
+        self.backupPath = os.path.join(self.dataPath, "_backups")
+        self.presetPath = os.path.join(self.dataPath, '_presets')
         self.autosavePath = os.path.join(self.presetPath, 'autosaves')
         self.examplesPath = os.path.join(self.presetPath, 'examples')
 
@@ -480,6 +480,10 @@ class PyStratoGui(QMainWindow):
         self.getGeolocationAct.triggered.connect(self.getWeatherForGeolocation)
 
         ########### HELP ###########
+        # Set Saving Parser Content
+        self.savingParserContentAct = QAction('&Save Parser Content', self, checkable=True, checked=self.settings["SAVING_SERIAL_CONTENT"])
+        self.savingParserContentAct.setStatusTip('Toggle Parser Content Saving')
+        self.savingParserContentAct.triggered.connect(self.setParserContentSaving)
         # Toggle Emulator Mode
         self.emulatorAct = QAction('&Emulator Mode', self, checkable=True, checked=self.settings["EMULATOR_MODE"])
         self.emulatorAct.setStatusTip("Toggle Emulator mode")
@@ -610,6 +614,7 @@ class PyStratoGui(QMainWindow):
 
         ###  HELP MENU  ###
         self.helpMenu = self.menubar.addMenu('&Help')
+        self.helpMenu.addAction(self.savingParserContentAct)
         self.helpMenu.addAction(self.emulatorAct)
         self.helpMenu.addSeparator()
         self.helpMenu.addAction(self.githubAct)
@@ -917,6 +922,9 @@ class PyStratoGui(QMainWindow):
 
     def newSerialData(self, content):
         self.displayTabWidget.updateTabDisplays(content)
+        if self.settings['SAVING_SERIAL_CONTENT']:
+            parserName, telemetryName, parserData = content['parser'], content['type'], content['data']
+            saveParserData(parserName, telemetryName, parserData, self.dataPath)
 
     def onSerialOutput(self, newLine):
         needScrolling = False
@@ -939,6 +947,10 @@ class PyStratoGui(QMainWindow):
         if self.serialWindow.isVisible():
             self.serialWindow = SerialWindow()
         self.serialWindow.show()
+
+    def setParserContentSaving(self, action):
+        self.settings["SAVING_SERIAL_CONTENT"] = action
+        saveSettings(self.settings, "settings")
 
     def setAutoscale(self, action):
         self.settings["AUTOSCALE"] = action

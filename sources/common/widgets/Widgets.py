@@ -29,7 +29,7 @@ class ContentStorage:
         self.settings = loadSettings('settings')
         paths = self.settings['FORMAT_FILES']
         for path in paths:
-            path = os.path.join(self.currentDir, 'formats', path)
+            path = os.path.join(self.currentDir, 'parsers', path)
             if os.path.isdir(path):
                 name, database = os.path.basename(path), BalloonPackageDatabase(path)
                 self.storage[name] = {

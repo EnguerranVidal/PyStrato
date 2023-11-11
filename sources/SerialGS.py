@@ -1,7 +1,9 @@
+import json
 import os
 import random
 import string
 from collections import OrderedDict
+from datetime import datetime
 from enum import Enum
 from typing import Dict, Any, Iterator
 
@@ -18,7 +20,7 @@ import time
 
 # --------------------- Sources ----------------------- #
 from sources.common.utilities.FileHandling import loadSettings
-from sources.databases.balloondata import BalloonPackageDatabase
+from sources.databases.balloondata import BalloonPackageDatabase, EComValueJsonEncoder
 
 
 def iterateRequiredDatapoints(telecommand: TelemetryType) -> Iterator[TelemetryDatapointType]:
@@ -31,6 +33,26 @@ def iterateRequiredDatapoints(telecommand: TelemetryType) -> Iterator[TelemetryD
             except DynamicSizeError as error:
                 parameters.pop(error.sizeMember, None)
     return (parameter for parameter in parameters.values())
+
+
+def saveParserData(parserName, telemetryType, content, dataDirectory):
+    try:
+        currentDatetime = datetime.now()
+        timeString = currentDatetime.strftime('%Y%m%d%H%M%S')
+        fileName = f'{telemetryType}_{timeString}.json'
+        parserDirectory = os.path.join(dataDirectory, parserName)
+        telemetryTypeDirectory = os.path.join(parserDirectory, telemetryType)
+        if not os.path.exists(parserDirectory):
+            os.mkdir(parserDirectory)
+        if not os.path.exists(telemetryTypeDirectory):
+            os.mkdir(telemetryTypeDirectory)
+        with open(os.path.join(telemetryTypeDirectory, fileName), "w") as file:
+            json.dump(content, file, indent=2, ensure_ascii=True, cls=EComValueJsonEncoder)
+
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        print("Printing content due to error:")
+        print(telemetryType, content)
 
 
 class SerialEmulator:
@@ -101,7 +123,7 @@ class SerialMonitor(QThread):
         self._active = False
         self.settings = loadSettings('settings')
         self.dataDir = os.path.join(self.currentDir, 'data')
-        self.formatDir = os.path.join(self.currentDir, 'formats')
+        self.formatDir = os.path.join(self.currentDir, 'parsers')
 
     def run(self):
         parsers = {}
