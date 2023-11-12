@@ -1,5 +1,5 @@
 Name,Type,Default Value,Description
-parachute trigger altitude,meter,5500,The altitude in meters as determined by GPS below which the parachute should get deployed.
+parachute trigger altitude,meter,DEFAULT_PARACHUTE_TRIGGER_ALTITUDE,The altitude in meters as determined by GPS below which the parachute should get deployed.
 parachute trigger pressure,bar,0.458,The pressure in bar below which the parachute should get deployed.
 altimeter min possible value,bar,0,"If the pressure sensor reports values below this, it will be considered broken."
 altimeter max possible value,bar,120000,"If the pressure sensor reports values above this, it will be considered broken."
