@@ -235,10 +235,11 @@ class UpdatableCommunicationDatabase(CommunicationDatabase):
                 argumentsToReplace = []
                 for i, argument in enumerate(telemetry.data):
                     pass  # TODO
-                arguments = list(telemetry.data)
-                for i, newArgument in argumentsToReplace:
-                    arguments[i] = newArgument
-                self.updateTelemetry(dataclasses.replace(telemetry, data=arguments), oldId=telemetry.id)
+                if argumentsToReplace:
+                    arguments = list(telemetry.data)
+                    for i, newArgument in argumentsToReplace:
+                        arguments[i] = newArgument
+                    self.updateTelemetry(dataclasses.replace(telemetry, data=arguments), oldId=telemetry.id)
 
             # Update all configuration defaults that use this constant.
             for configuration in self._configurations:
