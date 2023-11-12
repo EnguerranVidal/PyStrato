@@ -266,7 +266,22 @@ class UpdatableCommunicationDatabase(CommunicationDatabase):
         raise NotImplemented()  # TODO
 
     def updateConfiguration(self, configuration: Configuration, oldId: EnumType):
-        raise NotImplemented()  # TODO
+        if not isinstance(configuration.defaultValue, configuration.type.type):
+            raise ValueError(f'Invalid default value type for configuration {configuration.name}: '
+                             f'Should be {configuration.type.type}, got {type(configuration.defaultValue)}')
+        for oldIndex, existingConfig in enumerate(self._configurations):
+            if existingConfig.id is oldId:
+                break
+        else:
+            raise ValueError(f'Invalid old configuration id: {oldId} does not exist')
+        self._configurations[oldIndex] = configuration
+        if configuration.name != oldId.name:
+            if any(configId.name == configuration.name for configId in self.configurationEnum):
+                raise ValueError(f'Invalid configuration name: {configuration.name} already exists')
+            # Create new configuration enum
+            raise NotImplemented()  # TODO
+            # Replace the old configuration enum with the new one
+            # TODO
 
     def moveUnit(self, unit: Unit, newIndex: int):
         raise NotImplemented()  # TODO
