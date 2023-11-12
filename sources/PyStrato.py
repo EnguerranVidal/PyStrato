@@ -1319,5 +1319,4 @@ class LoadingTasksWorker(QObject):
         self.progress.emit((80, 'Loading Cities DataBase'))
         resultDict['CITIES'] = loadSearchItemsFromJson(self.currentDir)
         self.progress.emit((100, 'Loading User Interface'))
-        time.sleep(2)
         self.finished.emit(resultDict)
