@@ -1,3 +1,3 @@
 Name,Type,Description
 command number,uint8,The counter number of the command that generated this response.
-value,bytes[MAX_TELECOMMAND_RESPONSE_SIZE],The response value of the command.
+value,byte[MAX_TELECOMMAND_RESPONSE_SIZE],The response value of the command.
