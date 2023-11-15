@@ -14,6 +14,7 @@ from sources.databases.balloondata import BalloonPackageDatabase, createNewDatab
 from sources.databases.units import UnitsEditorWidget
 from sources.databases.constants import ConstantEditorWidget
 from sources.databases.configurations import ConfigsEditorWidget
+from sources.databases.sharedtypes import SharedTypesEditorWidget
 from sources.databases.telemetries import TelemetryEditorWidget
 from sources.databases.telecommands import TelecommandsWidget
 
@@ -30,7 +31,7 @@ class DatabaseEditor(QTabWidget):
         self.unitsTab = UnitsEditorWidget(database=self.database)
         self.constantsTab = ConstantEditorWidget(database=self.database)
         self.configsTab = ConfigsEditorWidget(database=self.database)
-        self.dataTypesTab = QWidget()
+        self.dataTypesTab = SharedTypesEditorWidget(database=self.database)
         self.telemetriesTab = TelemetryEditorWidget(database=self.database)
         self.telecommandsTab = TelecommandsWidget(database=self.database)
 

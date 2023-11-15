@@ -127,9 +127,9 @@ class PyStratoGui(QMainWindow):
     def _createToolBars(self):
         ########### DATABASES ###########
         self.databasesToolBar = QToolBar('Database', self)
-        self.databasesToolBar.addAction(self.newFormatAction)
-        self.databasesToolBar.addAction(self.openFormatAction)
-        self.databasesToolBar.addAction(self.saveFormatAction)
+        self.databasesToolBar.addAction(self.newParserAction)
+        self.databasesToolBar.addAction(self.openParserAction)
+        self.databasesToolBar.addAction(self.saveParserAction)
         self.databasesToolBar.addSeparator()
 
         ########### DISPLAYS ###########
@@ -290,46 +290,46 @@ class PyStratoGui(QMainWindow):
     def _createActions(self):
         ########### FORMATS ###########
         # New Format
-        self.newFormatAction = QAction('&New Format', self)
-        self.newFormatAction.setStatusTip('Create New Packet Format')
-        self.newFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-new-window-96.png'))
-        self.newFormatAction.setShortcut('Ctrl+N')
-        self.newFormatAction.triggered.connect(self.newFormatTab)
+        self.newParserAction = QAction('&New Parser', self)
+        self.newParserAction.setStatusTip('Create New Parser')
+        self.newParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-new-window-96.png'))
+        self.newParserAction.setShortcut('Ctrl+N')
+        self.newParserAction.triggered.connect(self.newParserTab)
         # Open Format
-        self.openFormatAction = QAction('&Open', self)
-        self.openFormatAction.setStatusTip('Open Packet Format')
-        self.openFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-open-in-browser-96.png'))
-        self.openFormatAction.setShortcut('Ctrl+O')
-        self.openFormatAction.triggered.connect(self.openFormatTab)
+        self.openParserAction = QAction('&Open', self)
+        self.openParserAction.setStatusTip('Open Parser')
+        self.openParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-open-in-browser-96.png'))
+        self.openParserAction.setShortcut('Ctrl+O')
+        self.openParserAction.triggered.connect(self.openParserTab)
         # Save Format
-        self.saveFormatAction = QAction('&Save', self)
-        self.saveFormatAction.setStatusTip('Save Packet Format')
-        self.saveFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-save-96.png'))
-        self.saveFormatAction.setShortcut('Ctrl+S')
-        self.saveFormatAction.triggered.connect(self.saveFormatTab)
+        self.saveParserAction = QAction('&Save', self)
+        self.saveParserAction.setStatusTip('Save Parser')
+        self.saveParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-save-96.png'))
+        self.saveParserAction.setShortcut('Ctrl+S')
+        self.saveParserAction.triggered.connect(self.saveParserTab)
         # Save As Format
-        self.saveAsFormatAction = QAction('&Save As', self)
-        self.saveAsFormatAction.setStatusTip('Save Packet Format As...')
-        self.saveAsFormatAction.triggered.connect(self.saveAsFormatTab)
+        self.saveAsParserAction = QAction('&Save As', self)
+        self.saveAsParserAction.setStatusTip('Save Parser As...')
+        self.saveAsParserAction.triggered.connect(self.saveAsParserTab)
         # Save All Formats
-        self.saveAllFormatAction = QAction('&Save All', self)
-        self.saveAllFormatAction.setStatusTip('Save All Packet Formats')
-        self.saveAllFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-save-all-96.png'))
-        self.saveAllFormatAction.triggered.connect(self.saveAllFormatTab)
+        self.saveAllParserAction = QAction('&Save All', self)
+        self.saveAllParserAction.setStatusTip('Save All Parsers')
+        self.saveAllParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-save-all-96.png'))
+        self.saveAllParserAction.triggered.connect(self.saveAllParserTab)
         # Close Format
-        self.closeFormatAction = QAction('&Close', self)
-        self.closeFormatAction.setStatusTip('Close Current Format')
-        self.closeFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-close-window-96.png'))
-        self.closeFormatAction.triggered.connect(self.closeFormatTab)
+        self.closeParserAction = QAction('&Close', self)
+        self.closeParserAction.setStatusTip('Close Current Parser')
+        self.closeParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-close-window-96.png'))
+        self.closeParserAction.triggered.connect(self.closeParserTab)
         # Import Format
-        self.importFormatAction = QAction('&Import Format', self)
-        self.importFormatAction.setStatusTip('Import Format')
-        self.importFormatAction.setIcon(QIcon('sources/icons/light-theme/icons8-download-96.png'))
-        self.importFormatAction.triggered.connect(self.importFormat)
+        self.importParserAction = QAction('&Import Parser', self)
+        self.importParserAction.setStatusTip('Import Parser')
+        self.importParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-download-96.png'))
+        self.importParserAction.triggered.connect(self.importFormat)
         # Tracked Formats
-        self.trackedFormatAction = QAction('&Tracked Formats', self)
-        self.trackedFormatAction.setStatusTip('Open Tracked Formats Selection Window')
-        self.trackedFormatAction.triggered.connect(self.openTrackedFormats)
+        self.trackedParserAction = QAction('&Tracked Parsers', self)
+        self.trackedParserAction.setStatusTip('Open Tracked Parsers Selection Window')
+        self.trackedParserAction.triggered.connect(self.openTrackedParsers)
         # Exit
         self.exitAct = QAction(QIcon('exit.png'), '&Exit', self)
         self.exitAct.setShortcut('Ctrl+Q')
@@ -504,22 +504,22 @@ class PyStratoGui(QMainWindow):
 
         ###  FILE MENU  ###
         self.fileMenu = self.menubar.addMenu('&File')
-        self.fileMenu.addAction(self.newFormatAction)
-        self.fileMenu.addAction(self.openFormatAction)
+        self.fileMenu.addAction(self.newParserAction)
+        self.fileMenu.addAction(self.openParserAction)
         self.recentMenu = QMenu('&Recent', self)
         self.recentMenu.aboutToShow.connect(self.populateRecentMenu)
 
         self.fileMenu.addMenu(self.recentMenu)
         self.fileMenu.addSeparator()
-        self.fileMenu.addAction(self.saveFormatAction)
-        self.fileMenu.addAction(self.saveAsFormatAction)
-        self.fileMenu.addAction(self.saveAllFormatAction)
+        self.fileMenu.addAction(self.saveParserAction)
+        self.fileMenu.addAction(self.saveAsParserAction)
+        self.fileMenu.addAction(self.saveAllParserAction)
         self.fileMenu.addSeparator()
-        self.fileMenu.addAction(self.closeFormatAction)
+        self.fileMenu.addAction(self.closeParserAction)
         self.fileMenu.addSeparator()
         self.manageFormatsMenu = QMenu('&Manage Formats', self)
-        self.manageFormatsMenu.addAction(self.importFormatAction)
-        self.manageFormatsMenu.addAction(self.trackedFormatAction)
+        self.manageFormatsMenu.addAction(self.importParserAction)
+        self.manageFormatsMenu.addAction(self.trackedParserAction)
         self.fileMenu.addMenu(self.manageFormatsMenu)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.exitAct)
@@ -646,7 +646,7 @@ class PyStratoGui(QMainWindow):
             path = os.path.join(self.presetPath, f"{currentLayout}.json")
             self.loadLayout(path, warning=False)
 
-    def newFormatTab(self):
+    def newParserTab(self):
         fullPaths = [os.path.join(self.formatPath, entry) for entry in os.listdir(self.formatPath)]
         databases = [os.path.basename(directory) for directory in fullPaths if os.path.isdir(directory)]
         dialog = NewDatabaseWindow(databases=databases)
@@ -655,7 +655,7 @@ class PyStratoGui(QMainWindow):
             name = self.newFormatWindow.nameLineEdit.text()
             self.packetTabWidget.newFormat(name)
 
-    def openFormatTab(self):
+    def openParserTab(self):
         if os.path.exists(self.formatPath):
             path = QFileDialog.getExistingDirectory(self, "Select Directory", self.formatPath)
         else:
@@ -676,7 +676,7 @@ class PyStratoGui(QMainWindow):
             self.settings['OPENED_RECENTLY'].pop()
         saveSettings(self.settings, 'settings')
 
-    def openRecentFile(self, filename):
+    def openRecentParser(self, filename):
         filenames = [os.path.basename(path) for path in self.settings['OPENED_RECENTLY']]
         path = self.settings['OPENED_RECENTLY'][filenames.index(filename)]
         if os.path.exists(path):
@@ -684,33 +684,33 @@ class PyStratoGui(QMainWindow):
             self.addToRecent(path)
         self.populateFileMenu()
 
-    def saveFormatTab(self):
+    def saveParserTab(self):
         self.packetTabWidget.saveFormat()
         self.graphsTabWidget.fillComboBox()
         self.populateFileMenu()
 
-    def saveAsFormatTab(self):
+    def saveAsParserTab(self):
         # Create Lines
         path = QFileDialog.getSaveFileName(self, 'Save File')
         self.packetTabWidget.saveFormat(path[0])
         self.graphsTabWidget.fillComboBox()
         self.populateFileMenu()
 
-    def saveAllFormatTab(self):
+    def saveAllParserTab(self):
         self.packetTabWidget.saveAllFormats()
         self.populateFileMenu()
 
-    def closeFormatTab(self):
+    def closeParserTab(self):
         self.packetTabWidget.closeFormat()
         self.populateFileMenu()
 
-    def openTrackedFormats(self):
+    def openTrackedParsers(self):
         self.trackedFormatsWindow = TrackedBalloonsWindow(self.currentDir)
-        self.trackedFormatsWindow.buttons.accepted.connect(self.editTrackedFormats)
+        self.trackedFormatsWindow.buttons.accepted.connect(self.editTrackedParsers)
         self.trackedFormatsWindow.buttons.rejected.connect(self.trackedFormatsWindow.close)
         self.trackedFormatsWindow.show()
 
-    def editTrackedFormats(self):
+    def editTrackedParsers(self):
         trackedFormats = self.trackedFormatsWindow.getListedValues()
         self.settings['FORMAT_FILES'] = trackedFormats
         saveSettings(self.settings, 'settings')
@@ -783,11 +783,8 @@ class PyStratoGui(QMainWindow):
                     layoutDescription = json.load(file)
                 testDisplay = DisplayTabWidget(self.currentDir)
                 testDisplay.applyLayoutDescription(layoutDescription)
-                # Move File to User Saves
                 shutil.copy(filePath, self.presetPath)
-                # Ask for Loading
-                choice = QMessageBox.question(None, "Load Layout", "Do you want to load this layout?",
-                                              QMessageBox.Yes | QMessageBox.No)
+                choice = QMessageBox.question(None, "Load Layout", "Do you want to load this layout?", QMessageBox.Yes | QMessageBox.No)
                 if choice == QMessageBox.Yes:
                     self.loadLayout(filePath)
                     self.settings['CURRENT_LAYOUT'] = os.path.basename(filePath)
@@ -999,16 +996,16 @@ class PyStratoGui(QMainWindow):
 
         # SAVE AND CLOSE ACTIONS
         if not self.packetTabWidget.databases:
-            self.saveFormatAction.setDisabled(True)
-            self.saveAllFormatAction.setDisabled(True)
-            self.saveAsFormatAction.setDisabled(True)
-            self.closeFormatAction.setDisabled(True)
+            self.saveParserAction.setDisabled(True)
+            self.saveAllParserAction.setDisabled(True)
+            self.saveAsParserAction.setDisabled(True)
+            self.closeParserAction.setDisabled(True)
 
         else:
-            self.saveFormatAction.setDisabled(not currentDatabaseChanges)
-            self.saveAsFormatAction.setDisabled(not currentDatabaseChanges)
-            self.saveAllFormatAction.setDisabled(not anyDatabaseChanges)
-            self.closeFormatAction.setDisabled(False)
+            self.saveParserAction.setDisabled(not currentDatabaseChanges)
+            self.saveAsParserAction.setDisabled(not currentDatabaseChanges)
+            self.saveAllParserAction.setDisabled(not anyDatabaseChanges)
+            self.closeParserAction.setDisabled(False)
 
     def populateRecentMenu(self):
         self.recentMenu.clear()
@@ -1016,7 +1013,7 @@ class PyStratoGui(QMainWindow):
         filenames = [os.path.basename(path) for path in self.settings['OPENED_RECENTLY']]
         for filename in filenames:
             action = QAction(filename, self)
-            action.triggered.connect(partial(self.openRecentFile, filename))
+            action.triggered.connect(partial(self.openRecentParser, filename))
             actions.append(action)
         self.recentMenu.addActions(actions)
 
@@ -1238,8 +1235,7 @@ class PyStratoGui(QMainWindow):
         dialog.exec_()
 
     def closeEvent(self, event):
-        reply = QMessageBox.question(self, 'Message', "Are you sure to quit?", QMessageBox.Yes |
-                                     QMessageBox.No, QMessageBox.No)
+        reply = QMessageBox.question(self, 'Message', "Are you sure to quit?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.stopSerial()
             time.sleep(0.5)
