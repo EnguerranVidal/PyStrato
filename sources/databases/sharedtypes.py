@@ -56,10 +56,15 @@ class SharedTypesEditorWidget(QWidget):
                 itemName = QTableWidgetItem(name)
                 self.table.setItem(rowPosition, 0, itemName)
                 category = self.getDataTypeCategory(typInfo)
-                if category not in ['Simple', 'Array']:
+                if category in ['Enum', 'Structure']:
                     editButton = QPushButton(category)
-                    editButton.clicked.connect(self.editDataTypeClicked)
-                    self.table.setCellWidget(rowPosition, 1, editButton)
+                else:
+                    buttonName = typInfo.baseTypeName
+                    if buttonName in self.baseTypesValues:
+                        buttonName = self.baseTypeNames[self.baseTypesValues.index(buttonName)]
+                    editButton = QPushButton(buttonName)
+                editButton.clicked.connect(self.editDataTypeClicked)
+                self.table.setCellWidget(rowPosition, 1, editButton)
                 descriptionItem = QTableWidgetItem(typInfo.description if typInfo.description else '')
                 self.table.setItem(rowPosition, 2, descriptionItem)
 
@@ -80,27 +85,39 @@ class SharedTypesEditorWidget(QWidget):
         senderWidget = self.sender()
         if isinstance(senderWidget, QPushButton):
             row = self.table.indexAt(senderWidget.pos()).row()
-            dataType = self.database.dataTypes[self.table.item(row, 0).text()]
+            name = self.table.item(row, 0).text()
+            baseType, dataType = senderWidget.text(), self.database.dataTypes[name]
             category = self.getDataTypeCategory(dataType)
-            editorContainer = QWidget()
-            editorLayout = QVBoxLayout(editorContainer)
-            goBackButton = QPushButton('Go Back', editorContainer)
-            goBackButton.clicked.connect(self.goBackToPreviousEditor)
             if category == 'Enum':
-                editor = EnumEditorWidget(self.database, self.table.item(row, 0).text())
+                editor = EnumEditorWidget(self.database, name)
+                self.goToEditor(editor)
             elif category == 'Structure':
-                editor = StructureEditorWidget(self.database, self.table.item(row, 0).text())
+                editor = StructureEditorWidget(self.database, name)
+                self.goToEditor(editor)
             else:
-                editor = QWidget()
-            editorLayout.addWidget(goBackButton)
-            editorLayout.addWidget(editor)
-            self.stackedWidget.addWidget(editorContainer)
-            self.stackedWidget.setCurrentWidget(editorContainer)
+                dialog = TypeSelector(self.database, baseType)
+                result = dialog.exec_()
+                if result == QDialog.Accepted:
+                    selectedType = dialog.selectedType
+                    selectedTypeName = selectedType[0].upper() if selectedType[0] in self.baseTypesValues else selectedType[0]
+                    configType = f'{selectedTypeName}[{selectedType[2]}]' if selectedType[1] else f'{selectedTypeName}'
+                    senderWidget.setText(configType)
+
+    def goToEditor(self, editor):
+        editorContainer = QWidget()
+        editorLayout = QVBoxLayout(editorContainer)
+        goBackButton = QPushButton('Go Back', editorContainer)
+        goBackButton.clicked.connect(self.goBackToPreviousEditor)
+        if isinstance(editor, StructureEditorWidget):
+            editor.elementEditCreation.connect(self.goToEditor)
+        editorLayout.addWidget(goBackButton)
+        editorLayout.addWidget(editor)
+        self.stackedWidget.addWidget(editorContainer)
+        self.stackedWidget.setCurrentWidget(editorContainer)
 
     def goBackToPreviousEditor(self):
         currentIndex = self.stackedWidget.currentIndex()
         self.stackedWidget.setCurrentIndex(currentIndex - 1)
-        # Removing Old Editor
         removingEditor = self.stackedWidget.widget(currentIndex)
         self.stackedWidget.removeWidget(removingEditor)
         removingEditor.deleteLater()
@@ -110,8 +127,9 @@ class EnumEditorWidget(QWidget):
     def __init__(self, database, dataType):
         super().__init__()
         # UI ELEMENTS
-        self.database, self.dataTypeName = database, dataType
-        self.dataTypeNameEdit = QLineEdit(self.dataTypeName)
+        self.database, self.dataType = database, dataType
+        self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
+        self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
         self.valuesTableWidget = QTableWidget()
         self.valuesTableWidget.setColumnCount(3)
         self.valuesTableWidget.setHorizontalHeaderLabels(['Name', 'Value', 'Description'])
@@ -125,12 +143,20 @@ class EnumEditorWidget(QWidget):
 
         # MAIN LAYOUT
         layout = QVBoxLayout(self)
-        layout.addWidget(self.dataTypeNameEdit)
         layout.addWidget(self.valuesTableWidget)
         layout.addWidget(self.addValueButton)
 
     def populateValues(self):
-        enumTypeInfo = self.database.getTypeInfo(self.dataTypeName)
+        print(self.dataType)
+        if isinstance(self.dataType, list):
+            enumTypeInfo = self.database.getTypeInfo(self.dataType[0])
+            for element in self.dataType[1:]:
+                for name, child in enumTypeInfo.type:
+                    if name == element:
+                        enumTypeInfo = enumTypeInfo.type[name]
+                        break
+        else:
+            enumTypeInfo = self.database.getTypeInfo(self.dataType)
         enumValues = enumTypeInfo.type.__members__
         self.valuesTableWidget.setRowCount(len(enumValues))
         for row, (name, value) in enumerate(enumValues.items()):
@@ -151,9 +177,14 @@ class EnumEditorWidget(QWidget):
 
 
 class StructureEditorWidget(QWidget):
+    elementEditCreation = pyqtSignal(QWidget)
+
     def __init__(self, database, dataType):
         super().__init__()
+        self.structureInfo = None
         self.database, self.dataType = database, dataType
+        self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
+        self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
 
         # ELEMENT TABLE & BUTTON
         self.elementTable = QTableWidget()
@@ -173,20 +204,56 @@ class StructureEditorWidget(QWidget):
         self.setLayout(mainLayout)
 
     def populateElements(self):
-        # Retrieve structure information from the database
-        structInfo = self.database.getTypeInfo(self.dataType)
+        if isinstance(self.dataType, list):
+            structInfo = self.database.getTypeInfo(self.dataType[0])
+            for element in self.dataType[1:]:
+                for name, child in structInfo.type:
+                    if name == element:
+                        structInfo = structInfo.type[name]
+                        break
+        else:
+            structInfo = self.database.getTypeInfo(self.dataType)
+        self.structureInfo = structInfo
         for row, (name, child) in enumerate(structInfo.type):
             rowPosition = self.elementTable.rowCount()
             self.elementTable.insertRow(rowPosition)
             nameItem = QTableWidgetItem(name)
             self.elementTable.setItem(row, 0, nameItem)
-            typeItem = QTableWidgetItem(child.baseTypeName)
-            self.elementTable.setItem(row, 1, typeItem)
+            category = self.getTypeCategory(child)
+            buttonName = category if category not in ['Simple', 'Array'] else child.baseTypeName
+            if buttonName in self.baseTypesValues:
+                buttonName = self.baseTypeNames[self.baseTypesValues.index(buttonName)]
+            editButton = QPushButton(buttonName)
+            editButton.clicked.connect(self.typeButtonClicked)
+            self.elementTable.setCellWidget(rowPosition, 1, editButton)
             descriptionItem = QTableWidgetItem(child.description)
             self.elementTable.setItem(row, 2, descriptionItem)
 
     def addElement(self):
         pass
+
+    def typeButtonClicked(self):
+        senderWidget = self.sender()
+        if isinstance(senderWidget, QPushButton):
+            row = self.elementTable.indexAt(senderWidget.pos()).row()
+            name = self.elementTable.item(row, 0).text()
+            baseType, dataType = senderWidget.text(), self.structureInfo.type[name]
+            category = self.getTypeCategory(dataType)
+            dataTypes = [self.dataType, name] if not isinstance(self.dataType, list) else self.dataType + [name]
+            if category == 'Enum':
+                editor = EnumEditorWidget(self.database, dataTypes)
+                self.elementEditCreation.emit(editor)
+            elif category == 'Structure':
+                editor = StructureEditorWidget(self.database, dataTypes)
+                self.elementEditCreation.emit(editor)
+            else:
+                dialog = TypeSelector(self.database, baseType)
+                result = dialog.exec_()
+                if result == QDialog.Accepted:
+                    selectedType = dialog.selectedType
+                    selectedTypeName = selectedType[0].upper() if selectedType[0] in self.baseTypesValues else selectedType[0]
+                    configType = f'{selectedTypeName}[{selectedType[2]}]' if selectedType[1] else f'{selectedTypeName}'
+                    senderWidget.setText(configType)
 
     @staticmethod
     def getTypeCategory(typeInfo):
