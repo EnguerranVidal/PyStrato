@@ -773,7 +773,7 @@ class AboutDialog(QDialog):
         aboutText = """
         <html>
         <body>
-        <p align="justify">About the PyStrato Software</p>
+        <p align="justify"><strong>About the PyStrato Software</strong></p>
 
         <p align="justify">Our Stratospheric Balloon Ground Station software is an open-source solution designed specifically for student projects involving stratospheric balloon missions. Developed by <a href='https://github.com/EnguerranVidal'>KeplerDream</a> for the TSI Master located in Toulouse (France), with ease of use and functionality in mind, our software provides a comprehensive suite of tools and features to support ground station operations.</p>
 
@@ -781,10 +781,10 @@ class AboutDialog(QDialog):
         <ul>
         <li><strong>Real-time telemetry data visualization :</strong>
         Visualize information in real_time through several diagram types and plots.</li>
-        <li><strong>Payload Telemetry Data Editing :</strong> 
-        Set up the telecommunication payload layout as to customize its constituents.</li>
+        <li><strong>Telemetry Parser Editing :</strong> 
+        Set up the <a href='https://ecom.readthedocs.io/en/latest/index.html'>Ecom</a> database parser as you wish.</li>
         <li><strong>Weather Forecast :</strong> 
-        Be able to get weather forecasts and air pollution levels from OpenWeatherMap.</li>
+        Be able to get weather forecasts and air pollution levels from <a href='https://openweathermap.org'>OpenWeatherMap</a>.</li>
         </ul>
 
         <p align="justify">This software is written in Python, utilizing the power and flexibility of the language to provide an intuitive user experience. We recommend using Python 3.9 for optimal performance.</p>

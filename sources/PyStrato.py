@@ -108,16 +108,17 @@ class PyStratoGui(QMainWindow):
         # Packet Tab Widget -----------------------------------------
         self.packetTabWidget = DatabaseTabWidget(self.currentDir)
         self.displayTabWidget = DisplayTabWidget(self.currentDir)
-        self.weatherTabWidget = WeatherWindow(self.loadingData, self.currentDir)
+        self.weatherTabWidget = WeatherWindow(self.loadingData, self.currentDir) if self.settings['ENABLE_WEATHER'] else QWidget()
         self.graphWidgetsList = []
         # Show created tabs
         self.packetTabWidget.show()
         self.displayTabWidget.show()
-        self.weatherTabWidget.show()
+        self.weatherTabWidget.setVisible(self.settings['ENABLE_WEATHER'])
         # Adding Tabs to Main Widget -------------------------------
         self.generalTabWidget.addTab(self.displayTabWidget, 'DISPLAY')
         self.generalTabWidget.addTab(self.packetTabWidget, 'PACKETS')
-        self.generalTabWidget.addTab(self.weatherTabWidget, 'WEATHER')
+        if self.settings['ENABLE_WEATHER']:
+            self.generalTabWidget.addTab(self.weatherTabWidget, 'WEATHER')
 
         self.generalTabWidget.currentChanged.connect(self.manageToolBars)
         self.packetTabWidget.tabChanged.connect(self.manageDatabaseToolBars)
@@ -163,16 +164,17 @@ class PyStratoGui(QMainWindow):
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.weatherToolBar.addWidget(spacer)
-        # GEOLOCATION & DATA UPDATING
-        self.weatherToolBar.addAction(self.updatingWeatherAct)
-        self.weatherToolBar.addAction(self.getGeolocationAct)
-        # SEARCH BAR
-        searchOptions = self.weatherTabWidget.citiesDataFrame['format']
-        self.locationSearchBar = SearchBar(self.currentDir, searchOptions)
-        self.locationSearchBar.setFixedWidth(300)
-        self.locationSearchBar.setFixedHeight(30)
-        self.locationSearchBar.searchDone.connect(self.onLocationSearchedClicked)
-        self.weatherToolBar.addWidget(self.locationSearchBar)
+        if self.settings['ENABLE_WEATHER']:
+            # GEOLOCATION & DATA UPDATING
+            self.weatherToolBar.addAction(self.updatingWeatherAct)
+            self.weatherToolBar.addAction(self.getGeolocationAct)
+            # SEARCH BAR
+            searchOptions = self.weatherTabWidget.citiesDataFrame['format']
+            self.locationSearchBar = SearchBar(self.currentDir, searchOptions)
+            self.locationSearchBar.setFixedWidth(300)
+            self.locationSearchBar.setFixedHeight(30)
+            self.locationSearchBar.searchDone.connect(self.onLocationSearchedClicked)
+            self.weatherToolBar.addWidget(self.locationSearchBar)
 
         ########### DATABASE PANELS ###########
         # UNIT BAR
@@ -1315,5 +1317,5 @@ class LoadingTasksWorker(QObject):
         self.progress.emit((80, 'Loading Cities DataBase'))
         resultDict['CITIES'] = loadSearchItemsFromJson(self.currentDir)
         self.progress.emit((100, 'Loading User Interface'))
-        time.sleep(2)
+        time.sleep(0.5)
         self.finished.emit(resultDict)
