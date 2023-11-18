@@ -220,9 +220,13 @@ class StructureEditorWidget(QWidget):
             nameItem = QTableWidgetItem(name)
             self.elementTable.setItem(row, 0, nameItem)
             category = self.getTypeCategory(child)
-            buttonName = category if category not in ['Simple', 'Array'] else child.baseTypeName
-            if buttonName in self.baseTypesValues:
-                buttonName = self.baseTypeNames[self.baseTypesValues.index(buttonName)]
+            # BUTTON NAME
+            if category in ['Simple', 'Array', 'Advanced'] or child.baseTypeName in list(self.database.dataTypes.keys()):
+                buttonName = child.baseTypeName
+                if buttonName in self.baseTypesValues:
+                    buttonName = self.baseTypeNames[self.baseTypesValues.index(buttonName)]
+            else:
+                buttonName = category
             editButton = QPushButton(buttonName)
             editButton.clicked.connect(self.typeButtonClicked)
             self.elementTable.setCellWidget(rowPosition, 1, editButton)
@@ -238,16 +242,16 @@ class StructureEditorWidget(QWidget):
             row = self.elementTable.indexAt(senderWidget.pos()).row()
             name = self.elementTable.item(row, 0).text()
             baseType, dataType = senderWidget.text(), self.structureInfo.type[name]
-            category = self.getTypeCategory(dataType)
             dataTypes = [self.dataType, name] if not isinstance(self.dataType, list) else self.dataType + [name]
-            if category == 'Enum':
+            if baseType == 'Enum':
                 editor = EnumEditorWidget(self.database, dataTypes)
                 self.elementEditCreation.emit(editor)
-            elif category == 'Structure':
+            elif baseType == 'Structure':
                 editor = StructureEditorWidget(self.database, dataTypes)
                 self.elementEditCreation.emit(editor)
             else:
-                dialog = TypeSelector(self.database, baseType)
+                print(self.dataType)
+                dialog = TypeSelector(self.database, typeName=baseType, dataType=dataTypes[0], haveDataTypes=True)
                 result = dialog.exec_()
                 if result == QDialog.Accepted:
                     selectedType = dialog.selectedType

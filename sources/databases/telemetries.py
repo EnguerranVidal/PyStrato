@@ -59,36 +59,17 @@ class TelemetryEditorWidget(QWidget):
     def populateTelemetryTable(self):
         self.telemetryTable.setRowCount(0)
         for telemetry in self.database.telemetryTypes:
-            rowPosition = self.telemetryTable.rowCount()
-            self.telemetryTable.insertRow(rowPosition)
-            nameItem = QTableWidgetItem(telemetry.id.name)
-            descriptionItem = QTableWidgetItem(getattr(telemetry.id, '__doc__', ''))
-            self.telemetryTable.setItem(rowPosition, 0, nameItem)
-            self.telemetryTable.setItem(rowPosition, 2, descriptionItem)
-
-            # Add Argument Switch Buttons
-            switchButton = QPushButton('Arguments')
-            switchButton.clicked.connect(self.switchToArguments)
-            self.telemetryTable.setCellWidget(rowPosition, 1, switchButton)
+            self.addTelemetryRow(telemetry.id.name, getattr(telemetry.id, '__doc__', ''))
         self.telemetryTable.resizeColumnsToContents()
         self.telemetryTable.itemSelectionChanged.connect(self.change.emit)
 
     def populateTelemetryArgumentsTable(self, telemetry):
         self.telemetryArgumentsTable.setRowCount(0)
         for dataPoint in telemetry.data:
-            rowPosition = self.telemetryArgumentsTable.rowCount()
-            self.telemetryArgumentsTable.insertRow(rowPosition)
             dataPointType = self.database.getTypeName(dataPoint.type)
-            nameItem = QTableWidgetItem(dataPoint.name)
             if dataPointType in self.baseTypesValues:
                 dataPointType = self.baseTypeNames[self.baseTypesValues.index(dataPointType)]
-            typeButton = QPushButton(dataPointType)
-            typeButton.clicked.connect(self.changingArgumentType)
-            descriptionItem = QTableWidgetItem(dataPoint.description)
-
-            self.telemetryArgumentsTable.setItem(rowPosition, 0, nameItem)
-            self.telemetryArgumentsTable.setCellWidget(rowPosition, 1, typeButton)
-            self.telemetryArgumentsTable.setItem(rowPosition, 2, descriptionItem)
+            self.addArgumentRow(dataPoint.name, dataPointType, dataPoint.description)
         self.telemetryArgumentsTable.resizeColumnsToContents()
         self.telemetryArgumentsTable.itemSelectionChanged.connect(self.change.emit)
         self.change.emit()
@@ -143,7 +124,7 @@ class TelemetryEditorWidget(QWidget):
             if result == QMessageBox.Yes:
                 for row in reversed(selectedRows):
                     self.telemetryArgumentsTable.removeRow(row)
-                    # TODO : Add telemetry deletion
+                    # TODO : Add telemetry argument deletion
                 self.change.emit()
 
     def addTelemetryRow(self, name, description=''):
@@ -152,7 +133,11 @@ class TelemetryEditorWidget(QWidget):
         nameItem = QTableWidgetItem(name)
         descriptionItem = QTableWidgetItem(description)
         self.telemetryTable.setItem(rowPosition, 0, nameItem)
-        self.telemetryTable.setItem(rowPosition, 1, descriptionItem)
+        self.telemetryTable.setItem(rowPosition, 2, descriptionItem)
+        # Add Argument Switch Buttons
+        switchButton = QPushButton('Arguments')
+        switchButton.clicked.connect(self.switchToArguments)
+        self.telemetryTable.setCellWidget(rowPosition, 1, switchButton)
 
     def addArgumentRow(self, name, baseTypeName, description):
         rowPosition = self.telemetryArgumentsTable.rowCount()
@@ -261,7 +246,7 @@ class TelemetryArgumentAdditionDialog(QDialog):
         self.baseTypeButton.clicked.connect(self.changingType)
         self.okButton = QPushButton('OK')
         self.cancelButton = QPushButton('Cancel')
-        self.okButton.clicked.connect(self.verifyTelemetryName)
+        self.okButton.clicked.connect(self.verifyArgumentName)
         self.cancelButton.clicked.connect(self.reject)
         # LAYOUT
         gridLayout = QGridLayout()
@@ -288,7 +273,7 @@ class TelemetryArgumentAdditionDialog(QDialog):
                 newType = dialog.unitsList.currentItem().text()
             self.baseTypeButton.setText(newType)
 
-    def verifyTelemetryName(self):
+    def verifyArgumentName(self):
         name = self.nameLineEdit.text()
         if name in self.argumentTypeNames:
             QMessageBox.warning(self, 'Used Name', 'This argument name is already in use.')

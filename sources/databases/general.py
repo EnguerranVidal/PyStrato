@@ -16,7 +16,7 @@ from sources.databases.constants import ConstantEditorWidget
 from sources.databases.configurations import ConfigsEditorWidget
 from sources.databases.sharedtypes import SharedTypesEditorWidget
 from sources.databases.telemetries import TelemetryEditorWidget
-from sources.databases.telecommands import TelecommandsWidget
+from sources.databases.telecommands import TelecommandEditorWidget
 
 
 ######################## CLASSES ########################
@@ -33,7 +33,7 @@ class DatabaseEditor(QTabWidget):
         self.configsTab = ConfigsEditorWidget(database=self.database)
         self.dataTypesTab = SharedTypesEditorWidget(database=self.database)
         self.telemetriesTab = TelemetryEditorWidget(database=self.database)
-        self.telecommandsTab = TelecommandsWidget(database=self.database)
+        self.telecommandsTab = TelecommandEditorWidget(database=self.database)
 
         self.unitsTab.change.connect(self.editorChanged.emit)
         self.constantsTab.change.connect(self.editorChanged.emit)

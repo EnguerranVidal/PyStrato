@@ -47,7 +47,7 @@ class ContentStorage:
 
 
 class TypeSelector(QDialog):
-    def __init__(self, database, typeName, haveDataTypes=False, telemetryType=None):
+    def __init__(self, database, typeName, haveDataTypes=False, telemetryType=None, dataType=None):
         super().__init__()
         self.selectedType = None
         self.setWindowTitle('Select a Type')
@@ -128,7 +128,7 @@ class TypeSelector(QDialog):
         self.sharedTypesInfoLabel = QLabel(self)
         if self.haveDataTypes:
             for sharedType in self.database.getSharedDataTypes():
-                if sharedType not in self.specialTypes:
+                if sharedType not in self.specialTypes and sharedType != dataType:
                     self.sharedTypesList.addItem(sharedType)
         self.sharedTypesList.setSelectionMode(QListWidget.SingleSelection)
         self.sharedTypesList.currentItemChanged.connect(self.displaySharedDataTypeInfo)
@@ -613,7 +613,7 @@ class TrackedBalloonsWindow(QWidget):
     def __init__(self, path):
         super().__init__()
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "formats")
+        self.format_path = os.path.join(self.current_dir, "parsers")
         self.setWindowTitle('Tracked Balloons')
         self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         self.settings = loadSettings("settings")

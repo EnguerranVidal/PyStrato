@@ -163,7 +163,6 @@ class BalloonPackageDatabase(CommunicationDatabase):
             self._saveTelemetry(os.path.join(tempDirPath, 'telemetry.csv'))
             self._saveTelemetryArguments(os.path.join(tempDirPath, 'telemetryArguments'))
             self._saveTypes(os.path.join(tempDirPath, 'sharedDataTypes.json'))
-
             self._saveTelecommands(os.path.join(tempDirPath, 'commands.csv'))
             self._saveTelecommandArguments(os.path.join(tempDirPath, 'commandArguments'))
             tempDataDir = dataDirectory + '.backup'
