@@ -16,6 +16,7 @@ from sources.databases.units import UnitsEditorWidget
 from sources.databases.constants import ConstantEditorWidget
 from sources.databases.configurations import ConfigsEditorWidget
 from sources.databases.telemetries import TelemetryEditorWidget
+from sources.databases.telecommands import TelecommandEditorWidget
 
 from sources.displays.general import DisplayTabWidget
 from sources.weather.general import WeatherWindow
@@ -199,6 +200,10 @@ class PyStratoGui(QMainWindow):
         self.telemetriesToolBar.addAction(self.removeTelemetryArgumentAct)
         # TELECOMMAND BAR
         self.telecommandsToolBar = QToolBar('Telecommands')
+        self.telecommandsToolBar.addAction(self.addTelecommandAct)
+        self.telecommandsToolBar.addAction(self.removeTelecommandAct)
+        self.telecommandsToolBar.addAction(self.addTelecommandArgumentAct)
+        self.telecommandsToolBar.addAction(self.removeTelecommandArgumentAct)
 
         ########### APPEARANCE ###########
         self.addToolBar(self.databasesToolBar)
@@ -370,7 +375,6 @@ class PyStratoGui(QMainWindow):
         self.removeConfigurationAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
         self.removeConfigurationAct.setStatusTip('Remove Database Configuration')
         self.removeConfigurationAct.triggered.connect(self.removeDatabaseConfig)
-
         # Add Telemetry
         self.addTelemetryAct = QAction('&Add Telemetry', self)
         self.addTelemetryAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
@@ -391,6 +395,26 @@ class PyStratoGui(QMainWindow):
         self.removeTelemetryArgumentAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-subnode-96.png'))
         self.removeTelemetryArgumentAct.setStatusTip('Remove Database Telemetry Argument')
         self.removeTelemetryArgumentAct.triggered.connect(self.removeDatabaseTelemetryArgument)
+        # Add Telecommand
+        self.addTelecommandAct = QAction('&Add Telecommand', self)
+        self.addTelecommandAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addTelecommandAct.setStatusTip('Add Database Telecommand')
+        self.addTelecommandAct.triggered.connect(self.addDatabaseTelecommand)
+        # Remove Telecommand
+        self.removeTelecommandAct = QAction('&Remove Telecommand', self)
+        self.removeTelecommandAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeTelecommandAct.setStatusTip('Remove Database Telecommand')
+        self.removeTelecommandAct.triggered.connect(self.removeDatabaseTelecommand)
+        # Add Telecommand Argument
+        self.addTelecommandArgumentAct = QAction('&Add Telemetry Argument', self)
+        self.addTelecommandArgumentAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-subnode-96.png'))
+        self.addTelecommandArgumentAct.setStatusTip('Add Database Telemetry Argument')
+        self.addTelecommandArgumentAct.triggered.connect(self.addDatabaseTelecommandArgument)
+        # Remove Telecommand Argument
+        self.removeTelecommandArgumentAct = QAction('&Remove Telecommand Argument', self)
+        self.removeTelecommandArgumentAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-subnode-96.png'))
+        self.removeTelecommandArgumentAct.setStatusTip('Remove Database Telecommand Argument')
+        self.removeTelecommandArgumentAct.triggered.connect(self.removeDatabaseTelecommandArgument)
         # LAYOUT -----------------------------------------------------
         # Save Layout
         self.saveLayoutAct = QAction('&Save', self)
@@ -584,6 +608,10 @@ class PyStratoGui(QMainWindow):
         self.telemetriesEditorMenu.addAction(self.addTelemetryArgumentAct)
         self.telemetriesEditorMenu.addAction(self.removeTelemetryArgumentAct)
         self.telecommandsEditorMenu = QMenu('&Telecommands')
+        self.telecommandsEditorMenu.addAction(self.addTelecommandAct)
+        self.telecommandsEditorMenu.addAction(self.removeTelecommandAct)
+        self.telecommandsEditorMenu.addAction(self.addTelecommandArgumentAct)
+        self.telecommandsEditorMenu.addAction(self.removeTelecommandArgumentAct)
         self.editorTabMenu.addMenu(self.unitEditorMenu)
         self.editorTabMenu.addMenu(self.constantEditorMenu)
         self.editorTabMenu.addMenu(self.configEditorMenu)
@@ -692,7 +720,6 @@ class PyStratoGui(QMainWindow):
         self.populateFileMenu()
 
     def saveAsParserTab(self):
-        # Create Lines
         path = QFileDialog.getSaveFileName(self, 'Save File')
         self.packetTabWidget.saveFormat(path[0])
         self.graphsTabWidget.fillComboBox()
@@ -1060,6 +1087,7 @@ class PyStratoGui(QMainWindow):
         editor: DatabaseEditor = self.packetTabWidget.currentWidget()
         if self.generalTabWidget.currentIndex() == 1 and editor is not None:
             isEditorTelemetryArgumentOpen = editor.telemetriesTab.telemetryArgumentsTable.isVisible()
+            isEditorTelecommandArgumentOpen = editor.telecommandsTab.telecommandArgumentsTable.isVisible()
             editorPanelIndex = editor.currentIndex()
             selectedUnits = editor.unitsTab.unitsTable.selectedItems()
             self.removeUnitAct.setDisabled(not len(selectedUnits) > 0 or editorPanelIndex != 0)
@@ -1074,11 +1102,21 @@ class PyStratoGui(QMainWindow):
                 self.removeTelemetryArgumentAct.setDisabled(True)
             else:
                 selectedArguments = editor.telemetriesTab.telemetryArgumentsTable.selectedItems()
-                print(selectedArguments)
                 self.removeTelemetryArgumentAct.setDisabled(not len(selectedArguments) > 0 or editorPanelIndex != 4)
                 self.addTelemetryArgumentAct.setDisabled(False)
                 self.addTelemetryAct.setDisabled(False)
                 self.removeTelemetryAct.setDisabled(True)
+            if not isEditorTelecommandArgumentOpen:
+                selectedTelecommands = editor.telecommandsTab.telecommandTable.selectedItems()
+                self.removeTelecommandAct.setDisabled(not len(selectedTelecommands) > 0 or editorPanelIndex != 5)
+                self.addTelecommandArgumentAct.setDisabled(True)
+                self.removeTelecommandArgumentAct.setDisabled(True)
+            else:
+                selectedArguments = editor.telecommandsTab.telecommandArgumentsTable.selectedItems()
+                self.removeTelecommandArgumentAct.setDisabled(not len(selectedArguments) > 0 or editorPanelIndex != 5)
+                self.addTelecommandArgumentAct.setDisabled(False)
+                self.addTelecommandAct.setDisabled(False)
+                self.removeTelecommandAct.setDisabled(True)
         self.populateFileMenu()
 
     def selectBaud(self, action):
@@ -1213,6 +1251,38 @@ class PyStratoGui(QMainWindow):
     def removeDatabaseTelemetryArgument(self):
         databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
         currentEditor: TelemetryEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, TelemetryEditorWidget):
+            currentEditor.deleteArgumentType()
+
+    def addDatabaseTelecommand(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: TelecommandEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, TelecommandEditorWidget):
+            currentEditor.addTelecommandType()
+        else:
+            databaseTabEditor.setCurrentIndex(5)
+            currentEditor: TelecommandEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.addTelecommandType()
+
+    def removeDatabaseTelecommand(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: TelecommandEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, TelecommandEditorWidget):
+            currentEditor.deleteTelecommandType()
+
+    def addDatabaseTelecommandArgument(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: TelecommandEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, TelecommandEditorWidget):
+            currentEditor.addArgumentType()
+        else:
+            databaseTabEditor.setCurrentIndex(5)
+            currentEditor: TelecommandEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.addArgumentType()
+
+    def removeDatabaseTelecommandArgument(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: TelecommandEditorWidget = databaseTabEditor.currentWidget()
         if isinstance(currentEditor, TelemetryEditorWidget):
             currentEditor.deleteArgumentType()
 

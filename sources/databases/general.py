@@ -21,9 +21,6 @@ from sources.databases.telecommands import TelecommandEditorWidget
 
 ######################## CLASSES ########################
 class DatabaseEditor(QTabWidget):
-    tabChanged = pyqtSignal()
-    editorChanged = pyqtSignal()
-
     def __init__(self, database: BalloonPackageDatabase):
         super(QTabWidget, self).__init__()
         self.database = database
@@ -35,11 +32,6 @@ class DatabaseEditor(QTabWidget):
         self.telemetriesTab = TelemetryEditorWidget(database=self.database)
         self.telecommandsTab = TelecommandEditorWidget(database=self.database)
 
-        self.unitsTab.change.connect(self.editorChanged.emit)
-        self.constantsTab.change.connect(self.editorChanged.emit)
-        self.configsTab.change.connect(self.editorChanged.emit)
-        self.telemetriesTab.change.connect(self.editorChanged.emit)
-
         self.addTab(self.unitsTab, 'UNITS')
         self.addTab(self.constantsTab, 'CONSTANTS')
         self.addTab(self.configsTab, 'CONFIG')
@@ -47,11 +39,10 @@ class DatabaseEditor(QTabWidget):
         self.addTab(self.telemetriesTab, 'TELEMETRIES')
         self.addTab(self.telecommandsTab, 'TELECOMMANDS')
 
-        self.currentChanged.connect(self.tabChanged)
+        self.currentChanged.connect(self.editorTabChanged)
         self.setTabPosition(QTabWidget.East)
 
     def editorTabChanged(self, index):
-        self.tabChanged.emit()
         if index == 2:
             self.configsTab.validateConfigurations()
 
@@ -73,20 +64,31 @@ class DatabaseTabWidget(QTabWidget):
         createNewDatabase(newDatabasePath)
         database = BalloonPackageDatabase(newDatabasePath)
         self.databases[name] = database
+        # EDITOR CREATION AND SIGNALS' CONNECTIONS
         editor = DatabaseEditor(self.databases[name])
-        editor.tabChanged.connect(self.tabChanged.emit)
-        editor.editorChanged.connect(self.databaseChanged.emit)
+        editor.unitsTab.change.connect(self.databaseChanged.emit)
+        editor.constantsTab.change.connect(self.databaseChanged.emit)
+        editor.configsTab.change.connect(self.databaseChanged.emit)
+        editor.dataTypesTab.change.connect(self.databaseChanged.emit)
+        editor.telemetriesTab.change.connect(self.databaseChanged.emit)
+        editor.telecommandsTab.change.connect(self.databaseChanged.emit)
+        editor.currentChanged.connect(self.tabChanged.emit)
         self.addTab(editor, name)
         self.tabChanged.emit()
 
     def openFormat(self, path):
         database = BalloonPackageDatabase(path)
         name = os.path.basename(path)
-        # Creating Tab in Editing Tabs
         self.databases[name] = database
+        # EDITOR CREATION AND SIGNALS' CONNECTIONS
         editor = DatabaseEditor(self.databases[name])
-        editor.tabChanged.connect(self.tabChanged.emit)
-        editor.editorChanged.connect(self.databaseChanged.emit)
+        editor.unitsTab.change.connect(self.databaseChanged.emit)
+        editor.constantsTab.change.connect(self.databaseChanged.emit)
+        editor.configsTab.change.connect(self.databaseChanged.emit)
+        editor.dataTypesTab.change.connect(self.databaseChanged.emit)
+        editor.telemetriesTab.change.connect(self.databaseChanged.emit)
+        editor.telecommandsTab.change.connect(self.databaseChanged.emit)
+        editor.currentChanged.connect(self.tabChanged.emit)
         self.addTab(editor, name)
         self.tabChanged.emit()
 
