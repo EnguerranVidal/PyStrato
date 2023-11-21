@@ -308,7 +308,7 @@ class ArgumentSelectorWidget(QWidget):
         self.selectedTypes = {}
         self.currentDir = path
         self.typeFilter = typeFilter
-        self.formatPath = os.path.join(self.currentDir, "formats")
+        self.formatPath = os.path.join(self.currentDir, "parsers")
         self.databases = None
         self.settings = loadSettings('settings')
         # Set up combo box
