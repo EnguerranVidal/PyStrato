@@ -44,7 +44,6 @@ class PyStratoGui(QMainWindow):
         self.setWindowTitle('PyStrato')
         self.setWindowIcon(self.mainIcon)
         self.settings = loadSettings("settings")
-        # self._center()
         # FPS in StatusBar
         self.lastUpdate = time.perf_counter()
         self.avgFps = 0.0
@@ -1216,10 +1215,10 @@ class PyStratoGui(QMainWindow):
         if isinstance(currentEditor, ConfigsEditorWidget):
             currentEditor.deleteConfig()
 
-    def addDatabaseSharedType(self):
+    def addDatabaseSharedTypeElement(self):
         pass
 
-    def removeDatabaseSharedType(self):
+    def removeDatabaseSharedTypeElement(self):
         pass
 
     def addDatabaseTelemetry(self):

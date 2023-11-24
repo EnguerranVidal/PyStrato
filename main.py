@@ -11,12 +11,15 @@ def main(*args):
 
     def showPyStratoGui(loadingData):
         pyStratoGui.initializeUI(loadingData)
+        if pyStratoGui.settings['MAXIMIZED']:
+            pyStratoGui.showMaximized()
+        else:
+            pyStratoGui.showNormal()
         pyStratoGui.show()
         splashScreen.close()
 
     splashScreen.workerFinished.connect(showPyStratoGui)
     splashScreen.show()
-    app.setStyle('Windows')
     sys.exit(app.exec_())
 
 

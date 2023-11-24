@@ -28,25 +28,25 @@ class SharedTypesEditorWidget(QWidget):
         self.database = database
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
+        self.editorCategories = []
 
         # DATATYPES TABLE
         self.table = QTableWidget()
+        sharedTypesContainer, sharedTypesLayout = QWidget(), QVBoxLayout()
         self.table.setColumnCount(3)  # Added a new column for 'Edit' buttons
         self.table.setHorizontalHeaderLabels(['Shared Type', '', 'Description'])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-
-        self.addElementButton = QPushButton('Add Element')
-        self.addElementButton.clicked.connect(self.addElement)
+        sharedTypesLayout.addWidget(self.table)
+        sharedTypesContainer.setLayout(sharedTypesLayout)
 
         # STACKED WIDGET
         self.stackedWidget = QStackedWidget()
-        self.stackedWidget.addWidget(self.table)
+        self.stackedWidget.addWidget(sharedTypesContainer)
         mainLayout = QVBoxLayout()
         mainLayout.addWidget(self.stackedWidget)
-        mainLayout.addWidget(self.addElementButton)
         self.setLayout(mainLayout)
         self.populateDataTypes()
 
@@ -103,10 +103,10 @@ class SharedTypesEditorWidget(QWidget):
                 result = dialog.exec_()
                 if result == QDialog.Accepted:
                     selectedType = dialog.selectedType
-                    selectedTypeName = selectedType[0].upper() if selectedType[0] in self.baseTypesValues else \
-                    selectedType[0]
+                    selectedTypeName = selectedType[0].upper() if selectedType[0] in self.baseTypesValues else selectedType[0]
                     configType = f'{selectedTypeName}[{selectedType[2]}]' if selectedType[1] else f'{selectedTypeName}'
                     senderWidget.setText(configType)
+                    self.change.emit()
 
     def goToEditor(self, editor):
         editorContainer = QWidget()
@@ -115,6 +115,8 @@ class SharedTypesEditorWidget(QWidget):
         goBackButton.clicked.connect(self.goBackToPreviousEditor)
         if isinstance(editor, StructureEditorWidget):
             editor.elementEditCreation.connect(self.goToEditor)
+        editor.change.connect(self.change.emit)
+        self.editorCategories.append(editor)
         editorLayout.addWidget(goBackButton)
         editorLayout.addWidget(editor)
         self.stackedWidget.addWidget(editorContainer)
@@ -127,16 +129,39 @@ class SharedTypesEditorWidget(QWidget):
         removingEditor = self.stackedWidget.widget(currentIndex)
         self.stackedWidget.removeWidget(removingEditor)
         removingEditor.deleteLater()
+        self.editorCategories.pop(-1)
         self.change.emit()
 
     def addElement(self):
-        dialog = ElementAdditionDialog(self.database, '')
+        dialog = ElementAdditionDialog(self.database, None)
         result = dialog.exec_()
+        if result == QDialog.Accepted:
+            elementCategoryIndex = dialog.stackedWidget.currentIndex()
+            category = ['Enum', 'Structure', 'Other'][elementCategoryIndex - 1]
+            print(category)
+            rowPosition = self.table.rowCount()
+            self.table.insertRow(rowPosition)
+            itemName = QTableWidgetItem(dialog.elementName)
+            self.table.setItem(rowPosition, 0, itemName)
+            if category in ['Enum', 'Structure']:
+                editButton = QPushButton(category)
+            else:
+                buttonName = dialog.elementType
+                if buttonName in self.baseTypesValues:
+                    buttonName = self.baseTypeNames[self.baseTypesValues.index(buttonName)]
+                editButton = QPushButton(buttonName)
+            editButton.clicked.connect(self.editDataTypeClicked)
+            self.table.setCellWidget(rowPosition, 1, editButton)
+            descriptionItem = QTableWidgetItem('')
+            self.table.setItem(rowPosition, 2, descriptionItem)
+            # TODO : Add code to add sharedDataType to database
+            self.change.emit()
 
 
 class ElementAdditionDialog(QDialog):
-    def __init__(self, database, dataType):
+    def __init__(self, database, dataType=None):
         super().__init__()
+        self.elementName, self.elementType = None, None
         self.database, self.dataType = database, dataType
         self.setWindowTitle('Add New Element')
         self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
@@ -144,7 +169,18 @@ class ElementAdditionDialog(QDialog):
         self.baseTypesValues = [baseType.value for baseType in TypeInfo.BaseType]
         self.baseTypeNames = [baseType.name for baseType in TypeInfo.BaseType]
         self.intTypeNames = [baseType for baseType in self.baseTypeNames if baseType.startswith('INT') or baseType.startswith('UINT')]
-
+        if dataType is None:
+            self.elementList = [name for name, typInfo in self.database.dataTypes.items()]
+        elif isinstance(dataType, list):
+            structInfo = self.database.getTypeInfo(self.dataType[0])
+            for element in self.dataType[1:]:
+                for name, child in structInfo.type:
+                    if name == element:
+                        structInfo = structInfo.type[name]
+            self.elementList = [name for name, child in structInfo.type]
+        else:
+            structInfo = self.database.getTypeInfo(self.dataType)
+            self.elementList = [name for name, child in structInfo.type]
         # CATEGORIES SELECTION
         categoryLayout = QHBoxLayout()
         categoryButtonGroup = QButtonGroup(self)
@@ -181,6 +217,7 @@ class ElementAdditionDialog(QDialog):
         self.stackedWidget.addWidget(structureSelector)
         self.otherLineEdit = QLineEdit()
         self.otherTypeButton = QPushButton(self.baseTypeNames[0])
+        self.otherTypeButton.clicked.connect(self.changeOtherType)
         otherSelector = QWidget()
         otherLayout = QVBoxLayout(otherSelector)
         otherLayout.addWidget(self.otherLineEdit)
@@ -205,26 +242,26 @@ class ElementAdditionDialog(QDialog):
 
     def categoryChosen(self, button):
         categoryName = button.text()
+        currentElementName = self.getCurrentElementName()
         if categoryName == 'ENUM':
             self.stackedWidget.setCurrentIndex(1)
+            self.enumLineEdit.setText(currentElementName)
         elif categoryName == 'STRUCT':
             self.stackedWidget.setCurrentIndex(2)
+            self.structureLineEdit.setText(currentElementName)
         elif categoryName == 'OTHER':
             self.stackedWidget.setCurrentIndex(3)
+            self.otherLineEdit.setText(currentElementName)
         else:
             self.stackedWidget.setCurrentIndex(0)
 
-    def changeEnumType(self):
-        dialog = TypeSelector(self.database, typeName=self.enumTypeComboBox.text(), dataType=self.dataType[0])
-        result = dialog.exec_()
-        if result == QDialog.Accepted:
-            selectedType = dialog.selectedType
-            selectedTypeName = selectedType[0].upper() if selectedType[0] in self.baseTypesValues else selectedType[0]
-            configType = f'{selectedTypeName}[{selectedType[2]}]' if selectedType[1] else f'{selectedTypeName}'
-            self.enumTypeComboBox.setText(configType)
-
     def changeOtherType(self):
-        dialog = TypeSelector(self.database, typeName=self.otherTypeButton.text(), dataType=self.dataType[0], haveDataTypes=True)
+        if self.dataType is None:
+            dialog = TypeSelector(self.database, typeName=self.otherTypeButton.text())
+        elif isinstance(self.dataType, list):
+            dialog = TypeSelector(self.database, typeName=self.otherTypeButton.text(), dataType=self.dataType[0], haveDataTypes=True)
+        else:
+            dialog = TypeSelector(self.database, typeName=self.otherTypeButton.text(), dataType=self.dataType, haveDataTypes=True)
         result = dialog.exec_()
         if result == QDialog.Accepted:
             selectedType = dialog.selectedType
@@ -232,12 +269,36 @@ class ElementAdditionDialog(QDialog):
             configType = f'{selectedTypeName}[{selectedType[2]}]' if selectedType[1] else f'{selectedTypeName}'
             self.otherTypeButton.setText(configType)
 
+    def getCurrentElementName(self):
+        currentIndex = self.stackedWidget.currentIndex()
+        if currentIndex == 1:
+            return self.enumLineEdit.text()
+        elif currentIndex == 2:
+            return self.structureLineEdit.text()
+        elif currentIndex == 3:
+            return self.otherLineEdit.text()
+        else:
+            return ''
+
     def verifyElementName(self):
-        pass
+        name = self.getCurrentElementName()
+        if name in self.elementList:
+            if self.dataType is None:
+                QMessageBox.warning(self, 'Used Name', 'This data-type name is already in use.')
+            else:
+                QMessageBox.warning(self, 'Used Name', 'This element name is already in use.')
+        elif len(name) == 0:
+            QMessageBox.warning(self, 'No Name Entered', 'No name was entered.')
+        else:
+            self.elementName = name
+            self.elementType = self.enumTypeComboBox.currentText() if self.stackedWidget.currentIndex() == 1 else self.otherTypeButton.text()
+            self.accept()
 
 
 # ENUMERATORS -----------------------------------------------------------------------------
 class EnumEditorWidget(QWidget):
+    change = pyqtSignal()
+
     def __init__(self, database, dataType):
         super().__init__()
         # UI ELEMENTS
@@ -318,7 +379,7 @@ class EnumEditorWidget(QWidget):
                 for row in reversed(selectedRows):
                     self.valuesTableWidget.removeRow(row)
                     # TODO : Add enum value deletion
-                    # TODO : Add code to update possible enum values
+                    # TODO : Add code to update other enum values based on the changes
                 self.change.emit()
 
 
@@ -335,7 +396,7 @@ class EnumValueAdditionDialog(QDialog):
         self.nameLineEdit = QLineEdit()
         self.okButton = QPushButton('OK')
         self.cancelButton = QPushButton('Cancel')
-        self.okButton.clicked.connect(self.verifyTelemetryName)
+        self.okButton.clicked.connect(self.verifyEnumValueName)
         self.cancelButton.clicked.connect(self.reject)
         # LAYOUT
         buttonLayout = QHBoxLayout()
@@ -347,7 +408,7 @@ class EnumValueAdditionDialog(QDialog):
         layout.addLayout(buttonLayout)
         self.setLayout(layout)
 
-    def verifyTelemetryName(self):
+    def verifyEnumValueName(self):
         name = self.nameLineEdit.text()
         if name in self.names:
             QMessageBox.warning(self, 'Used Name', 'This enum value name is already in use.')
@@ -373,6 +434,7 @@ class EnumValueDeletionMessageBox(QMessageBox):
 # STRUCTURES -----------------------------------------------------------------------------
 class StructureEditorWidget(QWidget):
     elementEditCreation = pyqtSignal(QWidget)
+    change = pyqtSignal()
 
     def __init__(self, database, dataType):
         super().__init__()
@@ -389,13 +451,10 @@ class StructureEditorWidget(QWidget):
         self.elementTable.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.elementTable.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.populateElements()
-        self.addElementButton = QPushButton('Add Element')
-        self.addElementButton.clicked.connect(self.addElement)
 
         # MAIN LAYOUT
         mainLayout = QVBoxLayout()
         mainLayout.addWidget(self.elementTable)
-        mainLayout.addWidget(self.addElementButton)
         self.setLayout(mainLayout)
 
     def populateElements(self):
@@ -432,6 +491,26 @@ class StructureEditorWidget(QWidget):
     def addElement(self):
         dialog = ElementAdditionDialog(self.database, self.dataType)
         result = dialog.exec_()
+        if result == QDialog.Accepted:
+            elementCategoryIndex = dialog.stackedWidget.currentIndex()
+            category = ['Enum', 'Structure', 'Other'][elementCategoryIndex]
+            rowPosition = self.elementTable.rowCount()
+            self.elementTable.insertRow(rowPosition)
+            itemName = QTableWidgetItem(dialog.elementName)
+            self.elementTable.setItem(rowPosition, 0, itemName)
+            if category in ['Enum', 'Structure']:
+                editButton = QPushButton(category)
+            else:
+                buttonName = dialog.elementType
+                if buttonName in self.baseTypesValues:
+                    buttonName = self.baseTypeNames[self.baseTypesValues.index(buttonName)]
+                editButton = QPushButton(buttonName)
+            editButton.clicked.connect(self.editDataTypeClicked)
+            self.elementTable.setCellWidget(rowPosition, 1, editButton)
+            descriptionItem = QTableWidgetItem('')
+            self.elementTable.setItem(rowPosition, 2, descriptionItem)
+            # TODO : Add code to add element in struct
+            self.change.emit()
 
     def typeButtonClicked(self):
         senderWidget = self.sender()
