@@ -89,6 +89,7 @@ class MultiCurveGraphEditDialog(QWidget):
     def __init__(self, path, graph: MultiCurveGraph = None):
         super().__init__(parent=graph)
         self.currentDir = path
+        self.hide()
         self.colorCycler = ColorCycler()
         # Central Editing Widget for curves
         self.centralWidget = QStackedWidget(self)

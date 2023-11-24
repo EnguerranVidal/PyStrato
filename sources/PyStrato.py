@@ -15,6 +15,7 @@ from sources.databases.general import DatabaseTabWidget, DatabaseEditor
 from sources.databases.units import UnitsEditorWidget
 from sources.databases.constants import ConstantEditorWidget
 from sources.databases.configurations import ConfigsEditorWidget
+from sources.databases.sharedtypes import SharedTypesEditorWidget, EnumEditorWidget, StructureEditorWidget
 from sources.databases.telemetries import TelemetryEditorWidget
 from sources.databases.telecommands import TelecommandEditorWidget
 
@@ -26,10 +27,9 @@ from sources.weather.general import WeatherWindow
 class PyStratoGui(QMainWindow):
     def __init__(self, path):
         super().__init__()
-        self.loadingData = None
-        self.hide()
-        self.currentDir = path
+        self.currentDir, self.loadingData = path, None
         self.mainIcon = QIcon('sources/icons/PyStrato')
+        self.hide()
         # FOLDER PATHS
         self.formatPath = os.path.join(self.currentDir, "parsers")
         self.dataPath = os.path.join(self.currentDir, "data")
@@ -191,6 +191,12 @@ class PyStratoGui(QMainWindow):
         self.configsToolBar.addAction(self.removeConfigurationAct)
         # SHARED DATA TYPE BAR
         self.sharedDataTypesToolBar = QToolBar('SharedDataTypes')
+        self.sharedDataTypesToolBar.addAction(self.addDataTypeAct)
+        self.sharedDataTypesToolBar.addAction(self.removeDataTypeAct)
+        self.sharedDataTypesToolBar.addAction(self.changeDataTypeAct)
+        self.sharedDataTypesToolBar.addSeparator()
+        self.sharedDataTypesToolBar.addAction(self.addEnumValueAct)
+        self.sharedDataTypesToolBar.addAction(self.removeEnumValueAct)
         # TELEMETRY BAR
         self.telemetriesToolBar = QToolBar('Telemetries')
         self.telemetriesToolBar.addAction(self.addTelemetryAct)
@@ -374,6 +380,31 @@ class PyStratoGui(QMainWindow):
         self.removeConfigurationAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
         self.removeConfigurationAct.setStatusTip('Remove Database Configuration')
         self.removeConfigurationAct.triggered.connect(self.removeDatabaseConfig)
+        # Add SharedDataType
+        self.addDataTypeAct = QAction('&Add Shared DataType', self)
+        self.addDataTypeAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addDataTypeAct.setStatusTip('Add Shared DataType')
+        self.addDataTypeAct.triggered.connect(self.addSharedTypeElement)
+        # Edit SharedDataType
+        self.changeDataTypeAct = QAction('&Change Shared DataType', self)
+        self.changeDataTypeAct.setIcon(QIcon('sources/icons/light-theme/icons8-edit-96.png'))
+        self.changeDataTypeAct.setStatusTip('Change Shared DataType Category')
+        self.changeDataTypeAct.triggered.connect(self.changeSharedTypeElementCategory)
+        # Remove SharedDataType
+        self.removeDataTypeAct = QAction('&Remove Shared DataType', self)
+        self.removeDataTypeAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeDataTypeAct.setStatusTip('Remove Shared DataType')
+        self.removeDataTypeAct.triggered.connect(self.removeSharedTypeElement)
+        # Add Telemetry Argument
+        self.addEnumValueAct = QAction('&Add Enum Value', self)
+        self.addEnumValueAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-subnode-96.png'))
+        self.addEnumValueAct.setStatusTip('Add Enumeration value')
+        self.addEnumValueAct.triggered.connect(self.addSharedEnumValue)
+        # Remove Telemetry Argument
+        self.removeEnumValueAct = QAction('&Remove Enum Value', self)
+        self.removeEnumValueAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-subnode-96.png'))
+        self.removeEnumValueAct.setStatusTip('Remove Enumeration value')
+        self.removeEnumValueAct.triggered.connect(self.removeSharedEnumValue)
         # Add Telemetry
         self.addTelemetryAct = QAction('&Add Telemetry', self)
         self.addTelemetryAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
@@ -601,6 +632,12 @@ class PyStratoGui(QMainWindow):
         self.configEditorMenu.addAction(self.addConfigurationAct)
         self.configEditorMenu.addAction(self.removeConfigurationAct)
         self.sharedTypesEditorMenu = QMenu('Shared Data Types')
+        self.sharedTypesEditorMenu.addAction(self.addDataTypeAct)
+        self.sharedTypesEditorMenu.addAction(self.removeDataTypeAct)
+        self.sharedTypesEditorMenu.addAction(self.changeDataTypeAct)
+        self.sharedTypesEditorMenu.addSeparator()
+        self.sharedTypesEditorMenu.addAction(self.addEnumValueAct)
+        self.sharedTypesEditorMenu.addAction(self.removeEnumValueAct)
         self.telemetriesEditorMenu = QMenu('&Telemetries')
         self.telemetriesEditorMenu.addAction(self.addTelemetryAct)
         self.telemetriesEditorMenu.addAction(self.removeTelemetryAct)
@@ -1094,6 +1131,7 @@ class PyStratoGui(QMainWindow):
             self.removeConstantAct.setDisabled(not len(selectedConstants) > 0 or editorPanelIndex != 1)
             selectedConfigs = editor.configsTab.configsTable.selectedItems()
             self.removeConfigurationAct.setDisabled(not len(selectedConfigs) > 0 or editorPanelIndex != 2)
+            # TELEMETRY ACTIONS
             if not isEditorTelemetryArgumentOpen:
                 selectedTelemetries = editor.telemetriesTab.telemetryTable.selectedItems()
                 self.removeTelemetryAct.setDisabled(not len(selectedTelemetries) > 0 or editorPanelIndex != 4)
@@ -1105,6 +1143,7 @@ class PyStratoGui(QMainWindow):
                 self.addTelemetryArgumentAct.setDisabled(False)
                 self.addTelemetryAct.setDisabled(False)
                 self.removeTelemetryAct.setDisabled(True)
+            # TELECOMMAND ACTIONS
             if not isEditorTelecommandArgumentOpen:
                 selectedTelecommands = editor.telecommandsTab.telecommandTable.selectedItems()
                 self.removeTelecommandAct.setDisabled(not len(selectedTelecommands) > 0 or editorPanelIndex != 5)
@@ -1116,6 +1155,30 @@ class PyStratoGui(QMainWindow):
                 self.addTelecommandArgumentAct.setDisabled(False)
                 self.addTelecommandAct.setDisabled(False)
                 self.removeTelecommandAct.setDisabled(True)
+            # SHARED DATATYPES
+            sharedDataTypeEditor = editor.dataTypesTab
+            if len(sharedDataTypeEditor.editorCategories) == 0:
+                selectedDataTypes = sharedDataTypeEditor.table.selectedItems()
+                self.removeDataTypeAct.setDisabled(not len(selectedDataTypes) > 0 or editorPanelIndex != 3)
+                self.changeDataTypeAct.setDisabled(not len(selectedDataTypes) > 0 or editorPanelIndex != 3)
+                self.addDataTypeAct.setDisabled(False)
+                self.addEnumValueAct.setDisabled(True)
+                self.removeEnumValueAct.setDisabled(True)
+            else:
+                if isinstance(sharedDataTypeEditor.editorCategories[-1], EnumEditorWidget):
+                    selectedValues = sharedDataTypeEditor.editorCategories[-1].valuesTableWidget.selectedItems()
+                    self.removeDataTypeAct.setDisabled(True)
+                    self.changeDataTypeAct.setDisabled(True)
+                    self.addDataTypeAct.setDisabled(True)
+                    self.addEnumValueAct.setDisabled(False)
+                    self.removeEnumValueAct.setDisabled(not len(selectedValues) > 0 or editorPanelIndex != 3)
+                if isinstance(sharedDataTypeEditor.editorCategories[-1], StructureEditorWidget):
+                    selectedElements = sharedDataTypeEditor.editorCategories[-1].elementTable.selectedItems()
+                    self.removeDataTypeAct.setDisabled(not len(selectedElements) > 0 or editorPanelIndex != 3)
+                    self.changeDataTypeAct.setDisabled(not len(selectedElements) > 0 or editorPanelIndex != 3)
+                    self.addDataTypeAct.setDisabled(False)
+                    self.addEnumValueAct.setDisabled(True)
+                    self.removeEnumValueAct.setDisabled(True)
         self.populateFileMenu()
 
     def selectBaud(self, action):
@@ -1215,11 +1278,50 @@ class PyStratoGui(QMainWindow):
         if isinstance(currentEditor, ConfigsEditorWidget):
             currentEditor.deleteConfig()
 
-    def addDatabaseSharedTypeElement(self):
-        pass
+    def addSharedTypeElement(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: SharedTypesEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, SharedTypesEditorWidget):
+            currentEditor.addDataType()
+        else:
+            databaseTabEditor.setCurrentIndex(3)
+            currentEditor: SharedTypesEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.addDataType()
 
-    def removeDatabaseSharedTypeElement(self):
-        pass
+    def changeSharedTypeElementCategory(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: SharedTypesEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, SharedTypesEditorWidget):
+            currentEditor.changeDataTypeCategory()
+        else:
+            databaseTabEditor.setCurrentIndex(3)
+            currentEditor: SharedTypesEditorWidget = databaseTabEditor.currentWidget()
+            currentEditor.changeDataTypeCategory()
+
+    def removeSharedTypeElement(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: SharedTypesEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, SharedTypesEditorWidget):
+            currentEditor.removeDataType()
+
+    def addSharedEnumValue(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: SharedTypesEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, SharedTypesEditorWidget):
+            if isinstance(currentEditor.editorCategories[-1], EnumEditorWidget):
+                currentEditor.editorCategories[-1].addEnumValue()
+        else:
+            databaseTabEditor.setCurrentIndex(3)
+            currentEditor: SharedTypesEditorWidget = databaseTabEditor.currentWidget()
+            if isinstance(currentEditor.editorCategories[-1], EnumEditorWidget):
+                currentEditor.editorCategories[-1].addEnumValue()
+
+    def removeSharedEnumValue(self):
+        databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()
+        currentEditor: SharedTypesEditorWidget = databaseTabEditor.currentWidget()
+        if isinstance(currentEditor, SharedTypesEditorWidget):
+            if isinstance(currentEditor.editorCategories[-1], EnumEditorWidget):
+                currentEditor.editorCategories[-1].deleteEnumValue()
 
     def addDatabaseTelemetry(self):
         databaseTabEditor: DatabaseEditor = self.packetTabWidget.currentWidget()

@@ -71,6 +71,8 @@ class SharedTypesEditorWidget(QWidget):
                 self.table.setCellWidget(rowPosition, 1, editButton)
                 descriptionItem = QTableWidgetItem(typInfo.description if typInfo.description else '')
                 self.table.setItem(rowPosition, 2, descriptionItem)
+        self.table.itemSelectionChanged.connect(self.change.emit)
+        self.table.itemChanged.connect(self.changingNameOrDescription)
 
     @staticmethod
     def getDataTypeCategory(typeInfo):
@@ -132,30 +134,56 @@ class SharedTypesEditorWidget(QWidget):
         self.editorCategories.pop(-1)
         self.change.emit()
 
-    def addElement(self):
-        dialog = ElementAdditionDialog(self.database, None)
-        result = dialog.exec_()
-        if result == QDialog.Accepted:
-            elementCategoryIndex = dialog.stackedWidget.currentIndex()
-            category = ['Enum', 'Structure', 'Other'][elementCategoryIndex - 1]
-            print(category)
-            rowPosition = self.table.rowCount()
-            self.table.insertRow(rowPosition)
-            itemName = QTableWidgetItem(dialog.elementName)
-            self.table.setItem(rowPosition, 0, itemName)
-            if category in ['Enum', 'Structure']:
-                editButton = QPushButton(category)
-            else:
-                buttonName = dialog.elementType
-                if buttonName in self.baseTypesValues:
-                    buttonName = self.baseTypeNames[self.baseTypesValues.index(buttonName)]
-                editButton = QPushButton(buttonName)
-            editButton.clicked.connect(self.editDataTypeClicked)
-            self.table.setCellWidget(rowPosition, 1, editButton)
-            descriptionItem = QTableWidgetItem('')
-            self.table.setItem(rowPosition, 2, descriptionItem)
-            # TODO : Add code to add sharedDataType to database
-            self.change.emit()
+    def addDataType(self):
+        if len(self.editorCategories) == 0:
+            dialog = ElementAdditionDialog(self.database, None)
+            result = dialog.exec_()
+            if result == QDialog.Accepted:
+                elementCategoryIndex = dialog.stackedWidget.currentIndex()
+                category = ['Enum', 'Structure', 'Other'][elementCategoryIndex - 1]
+                rowPosition = self.table.rowCount()
+                self.table.insertRow(rowPosition)
+                itemName = QTableWidgetItem(dialog.elementName)
+                self.table.setItem(rowPosition, 0, itemName)
+                if category in ['Enum', 'Structure']:
+                    editButton = QPushButton(category)
+                else:
+                    buttonName = dialog.elementType
+                    if buttonName in self.baseTypesValues:
+                        buttonName = self.baseTypeNames[self.baseTypesValues.index(buttonName)]
+                    editButton = QPushButton(buttonName)
+                editButton.clicked.connect(self.editDataTypeClicked)
+                self.table.setCellWidget(rowPosition, 1, editButton)
+                descriptionItem = QTableWidgetItem('')
+                self.table.setItem(rowPosition, 2, descriptionItem)
+                # TODO : Add code to add sharedDataType to database
+                self.change.emit()
+        else:
+            if isinstance(self.editorCategories[-1], StructureEditorWidget):
+                self.editorCategories[-1].addElement()
+
+    def changeDataTypeCategory(self):
+        if len(self.editorCategories) == 0:
+            pass
+        else:
+            if isinstance(self.editorCategories[-1], StructureEditorWidget):
+                self.editorCategories[-1].changeElementCategory()
+
+    def removeDataType(self):
+        if len(self.editorCategories) == 0:
+            pass
+        else:
+            if isinstance(self.editorCategories[-1], StructureEditorWidget):
+                self.editorCategories[-1].removeElement()
+
+    def changingNameOrDescription(self, item):
+        row, column, text = item.row, item.column, item.text
+        if column == 0:
+            # TODO : Add name change for struct elements
+            pass
+        if column == 2:
+            # TODO : Add description change for struct elements
+            pass
 
 
 class ElementAdditionDialog(QDialog):
@@ -335,6 +363,7 @@ class EnumEditorWidget(QWidget):
             self.addValueRow(name, str(value.value), value.__doc__ if value.__doc__ else '')
         self.valuesTableWidget.resizeColumnsToContents()
         self.valuesTableWidget.itemChanged.connect(self.changeEnumValue)
+        self.valuesTableWidget.itemSelectionChanged.connect(self.change.emit)
 
     def addValueRow(self, name, value, description):
         rowPosition = self.valuesTableWidget.rowCount()
@@ -487,6 +516,8 @@ class StructureEditorWidget(QWidget):
             self.elementTable.setCellWidget(rowPosition, 1, editButton)
             descriptionItem = QTableWidgetItem(child.description)
             self.elementTable.setItem(row, 2, descriptionItem)
+        self.elementTable.itemSelectionChanged.connect(self.change.emit)
+        self.elementTable.itemChanged.connect(self.changingNameOrDescription)
 
     def addElement(self):
         dialog = ElementAdditionDialog(self.database, self.dataType)
@@ -511,6 +542,31 @@ class StructureEditorWidget(QWidget):
             self.elementTable.setItem(rowPosition, 2, descriptionItem)
             # TODO : Add code to add element in struct
             self.change.emit()
+
+    def changeElementCategory(self):
+        # TODO : Add element category change
+        pass
+
+    def removeElement(self):
+        selectedRows = [item.row() for item in self.unitsTable.selectedItems()]
+        if len(selectedRows):
+            selectedRows = sorted(list(set(selectedRows)))
+            dialog = ElementDeletionMessageBox(selectedRows)
+            result = dialog.exec_()
+            if result == QMessageBox.Yes:
+                for row in reversed(selectedRows):
+                    self.elementTable.removeRow(row)
+                    # TODO : Add element deletion
+                self.change.emit()
+
+    def changingNameOrDescription(self, item):
+        row, column, text = item.row, item.column, item.text
+        if column == 0:
+            # TODO : Add name change for struct elements
+            pass
+        if column == 2:
+            # TODO : Add description change for struct elements
+            pass
 
     def typeButtonClicked(self):
         senderWidget = self.sender()
@@ -547,3 +603,16 @@ class StructureEditorWidget(QWidget):
             return 'Simple'
         else:
             return 'Advanced'
+
+
+class ElementDeletionMessageBox(QMessageBox):
+    def __init__(self, selectedRows):
+        super().__init__()
+        self.setModal(True)
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
+        self.setIcon(QMessageBox.Question)
+        self.setWindowTitle('Confirmation')
+        self.setText(f'You are going to delete {len(selectedRows)} element(s).\n Do you want to proceed?')
+        self.addButton(QMessageBox.Yes)
+        self.addButton(QMessageBox.No)
+        self.setDefaultButton(QMessageBox.No)
