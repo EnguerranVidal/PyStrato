@@ -7,7 +7,7 @@ ___
  [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 
 
-## About The Project
+## ABOUT THE PROJECT
 ___
 <div style="text-align: justify;">
 
@@ -25,34 +25,36 @@ for more information.
 
 
 
-## Getting Started
+## GETTING STARTED
 ___
-<div style="text-align: justify;">
-
+### INSTALLATION
+1. Cloning the Github Repository
 ```
 git clone https://github.com/EnguerranVidal/PyStrato.git
 ```
-
+2. Going in the Repository Directory
 ```
 cd PyStrato
 ```
-
+3. Creating PyEnv Environment
 ```
 pyenv virtualenv 3.9 pystrato
 pyenv local pystrato
 ```
-
+4. Installing PyStrato Requirements
 ```
 pip install -r requirements.txt
 ```
 
+### STARTING GUI
+```
+python main.py
+```
 
-</div>
 
 
 
-
-## Roadmap
+## FUTURE ROADMAP
 ___
 - [x] Revamping Ecom Database Editing
 - [ ] Add Working Display Layout Saving
