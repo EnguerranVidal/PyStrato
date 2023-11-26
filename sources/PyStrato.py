@@ -719,7 +719,7 @@ class PyStratoGui(QMainWindow):
         result = dialog.exec_()
         if result == QDialog.Accepted:
             name = self.newFormatWindow.nameLineEdit.text()
-            self.packetTabWidget.newFormat(name)
+            self.packetTabWidget.newParser(name)
 
     def openParserTab(self):
         if os.path.exists(self.formatPath):
@@ -727,7 +727,7 @@ class PyStratoGui(QMainWindow):
         else:
             path = QFileDialog.getExistingDirectory(self, "Select Directory")
         if os.path.abspath(path) not in [os.path.abspath(self.formatPath), os.path.abspath(self.currentDir)]:
-            self.packetTabWidget.openFormat(path)
+            self.packetTabWidget.openParser(path)
             self.addToRecent(path)
         self.populateFileMenu()
 
@@ -746,27 +746,27 @@ class PyStratoGui(QMainWindow):
         filenames = [os.path.basename(path) for path in self.settings['OPENED_RECENTLY']]
         path = self.settings['OPENED_RECENTLY'][filenames.index(filename)]
         if os.path.exists(path):
-            self.packetTabWidget.openFormat(path)
+            self.packetTabWidget.openParser(path)
             self.addToRecent(path)
         self.populateFileMenu()
 
     def saveParserTab(self):
-        self.packetTabWidget.saveFormat()
+        self.packetTabWidget.saveParser()
         self.graphsTabWidget.fillComboBox()
         self.populateFileMenu()
 
     def saveAsParserTab(self):
         path = QFileDialog.getSaveFileName(self, 'Save File')
-        self.packetTabWidget.saveFormat(path[0])
+        self.packetTabWidget.saveParser(path[0])
         self.graphsTabWidget.fillComboBox()
         self.populateFileMenu()
 
     def saveAllParserTab(self):
-        self.packetTabWidget.saveAllFormats()
+        self.packetTabWidget.saveAllParsers()
         self.populateFileMenu()
 
     def closeParserTab(self):
-        self.packetTabWidget.closeFormat()
+        self.packetTabWidget.closeParser()
         self.populateFileMenu()
 
     def openTrackedParsers(self):
@@ -1047,6 +1047,7 @@ class PyStratoGui(QMainWindow):
             self.recentMenu.setDisabled(True)
         else:
             self.recentMenu.setDisabled(False)
+
         index = self.packetTabWidget.currentIndex()
         anyDatabaseChanges = False
         currentDatabaseChanges = False
@@ -1058,7 +1059,7 @@ class PyStratoGui(QMainWindow):
                     currentDatabaseChanges = True
                 if i >= index:
                     break
-
+        self.packetTabWidget.unsavedChanges = anyDatabaseChanges
         # SAVE AND CLOSE ACTIONS
         if not self.packetTabWidget.databases:
             self.saveParserAction.setDisabled(True)
@@ -1408,18 +1409,46 @@ class PyStratoGui(QMainWindow):
         dialog.exec_()
 
     def closeEvent(self, event):
-        reply = QMessageBox.question(self, 'Message', "Are you sure to quit?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            self.stopSerial()
-            time.sleep(0.5)
-            self.serialMonitorTimer.stop()
-            self.settings['MAXIMIZED'] = 1 if self.isMaximized() else 0
-            saveSettings(self.settings, 'settings')
-            for window in QApplication.topLevelWidgets():
-                window.close()
-            event.accept()
+        if self.packetTabWidget.unsavedChanges:
+            unsavedMessage = "There are unsaved changes in the editor. What do you want to do?"
+            buttons = QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
+            reply = QMessageBox.question(self, 'Unsaved Changes', unsavedMessage, buttons, QMessageBox.Save)
+            if reply == QMessageBox.Save:
+                self.saveAllParserTab()
+                self.stopSerial()
+                time.sleep(0.5)
+                self.serialMonitorTimer.stop()
+                self.settings['MAXIMIZED'] = 1 if self.isMaximized() else 0
+                saveSettings(self.settings, 'settings')
+                for window in QApplication.topLevelWidgets():
+                    window.close()
+                event.accept()
+            elif reply == QMessageBox.Discard:
+                self.stopSerial()
+                time.sleep(0.5)
+                self.serialMonitorTimer.stop()
+                self.settings['MAXIMIZED'] = 1 if self.isMaximized() else 0
+                saveSettings(self.settings, 'settings')
+                for window in QApplication.topLevelWidgets():
+                    window.close()
+                event.accept()
+            else:
+                event.ignore()
+                return
         else:
-            event.ignore()
+            buttons = QMessageBox.Yes | QMessageBox.No
+            reply = QMessageBox.question(self, 'Exit', "Are you sure to quit?", buttons, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.stopSerial()
+                time.sleep(0.5)
+                self.serialMonitorTimer.stop()
+                self.settings['MAXIMIZED'] = 1 if self.isMaximized() else 0
+                saveSettings(self.settings, 'settings')
+                for window in QApplication.topLevelWidgets():
+                    window.close()
+                event.accept()
+            else:
+                event.ignore()
 
 
 class LoadingSplashScreen(QSplashScreen):
