@@ -2,6 +2,7 @@
 import shutil
 from datetime import datetime
 from functools import partial
+import qdarktheme
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtCore import QDateTime, QThread
@@ -44,6 +45,9 @@ class PyStratoGui(QMainWindow):
         self.setWindowTitle('PyStrato')
         self.setWindowIcon(self.mainIcon)
         self.settings = loadSettings("settings")
+        # Theme Setting
+        qdarktheme.enable_hi_dpi()
+        qdarktheme.setup_theme('dark' if self.settings['DARK_THEME'] else 'light')
         # FPS in StatusBar
         self.lastUpdate = time.perf_counter()
         self.avgFps = 0.0
@@ -474,6 +478,11 @@ class PyStratoGui(QMainWindow):
         self.layoutAutoSaveAct = QAction('&AutoSave', self, checkable=True, checked=self.settings["LAYOUT_AUTOSAVE"])
         self.layoutAutoSaveAct.setStatusTip('Toggle Layout Autosave')
         self.layoutAutoSaveAct.triggered.connect(self.setLayoutAutoSave)
+        # THEME --------------------------------------------------------
+        themeText = 'Light Theme' if self.settings['DARK_THEME'] else 'Dark Theme'
+        self.darkModeAct = QAction(f'&{themeText}', self)
+        self.darkModeAct.setStatusTip(f' Applying {themeText}')
+        self.darkModeAct.triggered.connect(self.toggleDarkMode)
 
         ########### DISPLAYS ###########
         # Add New Display Tab
@@ -655,6 +664,9 @@ class PyStratoGui(QMainWindow):
         self.editorTabMenu.addMenu(self.telemetriesEditorMenu)
         self.editorTabMenu.addMenu(self.telecommandsEditorMenu)
         self.windowMenu.addMenu(self.editorTabMenu)
+        # Theme
+        self.windowMenu.addSeparator()
+        self.windowMenu.addAction(self.darkModeAct)
 
         ###  TOOLS MENU  ###
         self.toolsMenu = self.menubar.addMenu('&Tools')
@@ -1387,6 +1399,14 @@ class PyStratoGui(QMainWindow):
         currentEditor: TelecommandEditorWidget = databaseTabEditor.currentWidget()
         if isinstance(currentEditor, TelemetryEditorWidget):
             currentEditor.deleteArgumentType()
+
+    def toggleDarkMode(self):
+        qdarktheme.setup_theme('light' if self.settings['DARK_THEME'] else 'dark')
+        self.settings['DARK_THEME'] = not self.settings['DARK_THEME']
+        saveSettings(self.settings, 'settings')
+        themeText = 'Light Theme' if self.settings['DARK_THEME'] else 'Dark Theme'
+        self.darkModeAct.setText(f'&{themeText}')
+        self.darkModeAct.setStatusTip(f' Applying {themeText}')
 
     def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()

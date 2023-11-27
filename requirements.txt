@@ -6,6 +6,7 @@ numpy~=1.25.2
 pandas~=2.0.3
 plotly~=5.16.1
 pyqt5~=5.15.9
+pyqtdarktheme~=2.1.0
 pyqtgraph~=0.13.3
 PyQtWebEngine~=5.15.6
 pyserial~=3.5

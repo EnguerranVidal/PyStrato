@@ -120,21 +120,12 @@ class MultiCurveGraphEditDialog(QWidget):
         self.addCurveButtonCentral.clicked.connect(self.addNewCurve)
         self.centralWidget.addWidget(self.addCurveButtonCentral)
         self.centralWidget.setCurrentIndex(1)
-
-        # BackGround Color and Showing Legend
-        self.backgroundColorFrame = ColorEditor('Background Color', color=graph.backgroundColor, parent=self)
-        self.backgroundColorFrame.colorChanged.connect(self.changeEditorsBackground)
         self.showLegendCheckBox = QCheckBox('Show Legend')
-
-        # Options Layout
-        optionsLayout = QGridLayout()
-        optionsLayout.addWidget(self.backgroundColorFrame, 0, 0, 1, 1)
-        optionsLayout.addWidget(self.showLegendCheckBox, 0, 1, 1, 1)
 
         # Main Layout
         layout = QVBoxLayout()
         layout.addWidget(self.centralWidget)
-        layout.addLayout(optionsLayout)
+        layout.addWidget(self.showLegendCheckBox)
         self.setLayout(layout)
 
     def addNewCurve(self):
