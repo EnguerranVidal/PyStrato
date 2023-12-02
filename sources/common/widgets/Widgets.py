@@ -315,19 +315,19 @@ class ArgumentSelectorWidget(QWidget):
         self.comboBox = QComboBox()
         self.fillComboBox()
         self.comboBox.currentIndexChanged.connect(self.changeComboBox)
-
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
         # Set up buttons and label
         self.previousButton = QPushButton()
         self.previousButton.setStyleSheet("border: none;")
         self.previousButton.setFlat(True)
-        self.previousButton.setIcon(QIcon('sources/icons/light-theme/icons8-previous-96.png'))
+        self.previousButton.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-back-96.png'))
         self.previousButton.setIconSize(QSize(20, 20))
         self.previousButton.clicked.connect(self.previousTelemetry)
 
         self.nextButton = QPushButton()
         self.nextButton.setStyleSheet("border: none;")
         self.nextButton.setFlat(True)
-        self.nextButton.setIcon(QIcon('sources/icons/light-theme/icons8-next-96.png'))
+        self.nextButton.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-forward-96.png'))
         self.nextButton.setIconSize(QSize(20, 20))
         self.nextButton.clicked.connect(self.nextTelemetry)
         self.label = QLabel("Label")
@@ -444,8 +444,6 @@ class ArgumentSelectorWidget(QWidget):
 
 
 class ArgumentSelector(QDialog):
-    selected = pyqtSignal()
-
     def __init__(self, path, parent=None):
         super().__init__(parent)
         self.selectedArgument = None
@@ -463,8 +461,8 @@ class ArgumentSelector(QDialog):
         bottomRowLayout = QHBoxLayout()
         self.selectButton = QPushButton("Select")
         self.cancelButton = QPushButton("Cancel")
-        self.selectButton.clicked.connect(self.selectedPushed)
-        self.cancelButton.clicked.connect(self.cancelPushed)
+        self.selectButton.clicked.connect(self.accept)
+        self.cancelButton.clicked.connect(self.reject)
         bottomRowLayout.addWidget(self.selectButton)
         bottomRowLayout.addWidget(self.cancelButton)
 
@@ -476,14 +474,6 @@ class ArgumentSelector(QDialog):
         mainLayout.addWidget(self.itemSelectionWidget)
         mainLayout.addLayout(bottomRowLayout)
         self.setLayout(mainLayout)
-
-    def selectedPushed(self):
-        if self.selectedArgument is not None:
-            self.selected.emit()
-            self.close()
-
-    def cancelPushed(self):
-        self.close()
 
     def selectionMade(self):
         currentItem = self.itemSelectionWidget.treeWidget.currentItem()
@@ -512,7 +502,8 @@ class ArgumentSelector(QDialog):
             itemName = currentItem.text(0)
             # Updating Value
             self.selectionNameLabel.setText(itemName)
-            self.selectedArgument = '{}${}${}'.format(database, telemetry, '$'.join(itemAncestors))
+            self.selectedArgument = f"{database}${telemetry}${'$'.join(itemAncestors)}"
+            print(self.selectedArgument)
             if unitName is not None:
                 self.argumentUnit = self.itemSelectionWidget.databases[database][0].units[unitName][0]
             else:

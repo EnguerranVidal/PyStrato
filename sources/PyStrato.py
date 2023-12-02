@@ -20,7 +20,8 @@ from sources.databases.sharedtypes import SharedTypesEditorWidget, EnumEditorWid
 from sources.databases.telemetries import TelemetryEditorWidget
 from sources.databases.telecommands import TelecommandEditorWidget
 
-from sources.displays.general import DisplayTabWidget
+from sources.displays.general import DisplayTabWidget, DisplayDockWidget
+from sources.displays.graphs import MultiCurveGraph
 from sources.weather.general import WeatherWindow
 
 
@@ -46,8 +47,11 @@ class PyStratoGui(QMainWindow):
         self.setWindowIcon(self.mainIcon)
         self.settings = loadSettings("settings")
         # Theme Setting
-        qdarktheme.enable_hi_dpi()
-        qdarktheme.setup_theme('dark' if self.settings['DARK_THEME'] else 'light')
+        if self.settings['DARK_THEME']:
+            qdarktheme.setup_theme('dark', additional_qss="QToolTip {color: black;}")
+        else:
+            qdarktheme.setup_theme('light')
+        self.icons = {}
         # FPS in StatusBar
         self.lastUpdate = time.perf_counter()
         self.avgFps = 0.0
@@ -89,6 +93,7 @@ class PyStratoGui(QMainWindow):
         # Initialize Interface
         self._checkEnvironment()
         self._generateTabs()
+        self._createIcons()
         self._createActions()
         self._createMenuBar()
         self._createToolBars()
@@ -101,6 +106,33 @@ class PyStratoGui(QMainWindow):
 
         if self.settings['LAYOUT_AUTOSAVE']:
             self.startupAutosave()
+
+    def _createIcons(self):
+        theme = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        iconPath = os.path.join(self.currentDir, f'sources/icons/{theme}')
+        self.icons['NEW_WINDOW'] = QIcon(os.path.join(iconPath, 'icons8-new-window-96.png'))
+        self.icons['OPEN_IN_BROWSER'] = QIcon(os.path.join(iconPath, 'icons8-open-in-browser-96.png'))
+        self.icons['SAVE'] = QIcon(os.path.join(iconPath, 'icons8-save-96.png'))
+        self.icons['SAVE_ALL'] = QIcon(os.path.join(iconPath, 'icons8-save-all-96.png'))
+        self.icons['CLOSE_WINDOW'] = QIcon(os.path.join(iconPath, 'icons8-close-window-96.png'))
+        self.icons['DOWNLOAD'] = QIcon(os.path.join(iconPath, 'icons8-download-96.png'))
+        self.icons['ADD_NEW'] = QIcon(os.path.join(iconPath, 'icons8-add-new-96.png'))
+        self.icons['NEGATIVE'] = QIcon(os.path.join(iconPath, 'icons8-negative-96.png'))
+        self.icons['EDIT'] = QIcon(os.path.join(iconPath, 'icons8-edit-96.png'))
+        self.icons['ADD_SUBNODE'] = QIcon(os.path.join(iconPath, 'icons8-add-subnode-96.png'))
+        self.icons['DELETE_SUBNODE'] = QIcon(os.path.join(iconPath, 'icons8-delete-subnode-96.png'))
+        self.icons['ADD_FOLDER'] = QIcon(os.path.join(iconPath, 'icons8-add-folder-96.png'))
+        self.icons['DELETE_FOLDER'] = QIcon(os.path.join(iconPath, 'icons8-delete-folder-96.png'))
+        self.icons['FULL_SCREEN'] = QIcon(os.path.join(iconPath, 'icons8-full-screen-96.png'))
+        self.icons['FOUR_SQUARES'] = QIcon(os.path.join(iconPath, 'icons8-four-squares-96.png'))
+        self.icons['COMBO_CHART'] = QIcon(os.path.join(iconPath, 'icons8-combo-chart-96.png'))
+        self.icons['PLAY'] = QIcon(os.path.join(iconPath, 'icons8-play-96.png'))
+        self.icons['STOP'] = QIcon(os.path.join(iconPath, 'icons8-stop-96.png'))
+        self.icons['MONITOR'] = QIcon(os.path.join(iconPath, 'icons8-monitor-96.png'))
+        self.icons['RESET'] = QIcon(os.path.join(iconPath, 'icons8-reset-96.png'))
+        self.icons['MY_LOCATION'] = QIcon(os.path.join(iconPath, 'icons8-my-location-96.png'))
+        self.icons['GITHUB'] = QIcon(os.path.join(iconPath, 'icons8-github-96.png'))
+        self.icons['HELP'] = QIcon(os.path.join(iconPath, 'icons8-help-96.png'))
 
     def _generateTabs(self):
         self.generalTabWidget = QTabWidget(self)
@@ -308,19 +340,19 @@ class PyStratoGui(QMainWindow):
         # New Format
         self.newParserAction = QAction('&New Parser', self)
         self.newParserAction.setStatusTip('Create New Parser')
-        self.newParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-new-window-96.png'))
+        self.newParserAction.setIcon(self.icons['NEW_WINDOW'])
         self.newParserAction.setShortcut('Ctrl+N')
         self.newParserAction.triggered.connect(self.newParserTab)
         # Open Format
         self.openParserAction = QAction('&Open', self)
         self.openParserAction.setStatusTip('Open Parser')
-        self.openParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-open-in-browser-96.png'))
+        self.openParserAction.setIcon(self.icons['OPEN_IN_BROWSER'])
         self.openParserAction.setShortcut('Ctrl+O')
         self.openParserAction.triggered.connect(self.openParserTab)
         # Save Format
         self.saveParserAction = QAction('&Save', self)
         self.saveParserAction.setStatusTip('Save Parser')
-        self.saveParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-save-96.png'))
+        self.saveParserAction.setIcon(self.icons['SAVE'])
         self.saveParserAction.setShortcut('Ctrl+S')
         self.saveParserAction.triggered.connect(self.saveParserTab)
         # Save As Format
@@ -330,17 +362,17 @@ class PyStratoGui(QMainWindow):
         # Save All Formats
         self.saveAllParserAction = QAction('&Save All', self)
         self.saveAllParserAction.setStatusTip('Save All Parsers')
-        self.saveAllParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-save-all-96.png'))
+        self.saveAllParserAction.setIcon(self.icons['SAVE_ALL'])
         self.saveAllParserAction.triggered.connect(self.saveAllParserTab)
         # Close Format
         self.closeParserAction = QAction('&Close', self)
         self.closeParserAction.setStatusTip('Close Current Parser')
-        self.closeParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-close-window-96.png'))
+        self.closeParserAction.setIcon(self.icons['CLOSE_WINDOW'])
         self.closeParserAction.triggered.connect(self.closeParserTab)
         # Import Format
         self.importParserAction = QAction('&Import Parser', self)
         self.importParserAction.setStatusTip('Import Parser')
-        self.importParserAction.setIcon(QIcon('sources/icons/light-theme/icons8-download-96.png'))
+        self.importParserAction.setIcon(self.icons['DOWNLOAD'])
         self.importParserAction.triggered.connect(self.importFormat)
         # Tracked Formats
         self.trackedParserAction = QAction('&Tracked Parsers', self)
@@ -356,97 +388,97 @@ class PyStratoGui(QMainWindow):
         # EDITOR PANEL -----------------------------------------------
         # Add Unit
         self.addUnitAct = QAction('&Add Unit', self)
-        self.addUnitAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addUnitAct.setIcon(self.icons['ADD_NEW'])
         self.addUnitAct.setStatusTip('Add Database Unit')
         self.addUnitAct.triggered.connect(self.addDatabaseUnit)
         # Remove Unit
         self.removeUnitAct = QAction('&Remove Unit', self)
-        self.removeUnitAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeUnitAct.setIcon(self.icons['NEGATIVE'])
         self.removeUnitAct.setStatusTip('Remove Database Unit')
         self.removeUnitAct.triggered.connect(self.removeDatabaseUnit)
         # Add Constant
         self.addConstantAct = QAction('&Add Constant', self)
-        self.addConstantAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addConstantAct.setIcon(self.icons['ADD_NEW'])
         self.addConstantAct.setStatusTip('Add Database Constant')
         self.addConstantAct.triggered.connect(self.addDatabaseConstant)
         # Remove Constant
         self.removeConstantAct = QAction('&Remove Constant', self)
-        self.removeConstantAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeConstantAct.setIcon(self.icons['NEGATIVE'])
         self.removeConstantAct.setStatusTip('Remove Database Constant')
         self.removeConstantAct.triggered.connect(self.removeDatabaseConstant)
         # Add Configuration
         self.addConfigurationAct = QAction('&Add Configuration', self)
-        self.addConfigurationAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addConfigurationAct.setIcon(self.icons['ADD_NEW'])
         self.addConfigurationAct.setStatusTip('Add Database Configuration')
         self.addConfigurationAct.triggered.connect(self.addDatabaseConfig)
         # Remove Configuration
         self.removeConfigurationAct = QAction('&Remove Configuration', self)
-        self.removeConfigurationAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeConfigurationAct.setIcon(self.icons['NEGATIVE'])
         self.removeConfigurationAct.setStatusTip('Remove Database Configuration')
         self.removeConfigurationAct.triggered.connect(self.removeDatabaseConfig)
         # Add SharedDataType
         self.addDataTypeAct = QAction('&Add Shared DataType', self)
-        self.addDataTypeAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addDataTypeAct.setIcon(self.icons['ADD_NEW'])
         self.addDataTypeAct.setStatusTip('Add Shared DataType')
         self.addDataTypeAct.triggered.connect(self.addSharedTypeElement)
         # Edit SharedDataType
         self.changeDataTypeAct = QAction('&Change Shared DataType', self)
-        self.changeDataTypeAct.setIcon(QIcon('sources/icons/light-theme/icons8-edit-96.png'))
+        self.changeDataTypeAct.setIcon(self.icons['EDIT'])
         self.changeDataTypeAct.setStatusTip('Change Shared DataType Category')
         self.changeDataTypeAct.triggered.connect(self.changeSharedTypeElementCategory)
         # Remove SharedDataType
         self.removeDataTypeAct = QAction('&Remove Shared DataType', self)
-        self.removeDataTypeAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeDataTypeAct.setIcon(self.icons['NEGATIVE'])
         self.removeDataTypeAct.setStatusTip('Remove Shared DataType')
         self.removeDataTypeAct.triggered.connect(self.removeSharedTypeElement)
         # Add Telemetry Argument
         self.addEnumValueAct = QAction('&Add Enum Value', self)
-        self.addEnumValueAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-subnode-96.png'))
+        self.addEnumValueAct.setIcon(self.icons['ADD_SUBNODE'])
         self.addEnumValueAct.setStatusTip('Add Enumeration value')
         self.addEnumValueAct.triggered.connect(self.addSharedEnumValue)
         # Remove Telemetry Argument
         self.removeEnumValueAct = QAction('&Remove Enum Value', self)
-        self.removeEnumValueAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-subnode-96.png'))
+        self.removeEnumValueAct.setIcon(self.icons['DELETE_SUBNODE'])
         self.removeEnumValueAct.setStatusTip('Remove Enumeration value')
         self.removeEnumValueAct.triggered.connect(self.removeSharedEnumValue)
         # Add Telemetry
         self.addTelemetryAct = QAction('&Add Telemetry', self)
-        self.addTelemetryAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addTelemetryAct.setIcon(self.icons['ADD_NEW'])
         self.addTelemetryAct.setStatusTip('Add Database Telemetry')
         self.addTelemetryAct.triggered.connect(self.addDatabaseTelemetry)
         # Remove Telemetry
         self.removeTelemetryAct = QAction('&Remove Telemetry', self)
-        self.removeTelemetryAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeTelemetryAct.setIcon(self.icons['NEGATIVE'])
         self.removeTelemetryAct.setStatusTip('Remove Database Telemetry')
         self.removeTelemetryAct.triggered.connect(self.removeDatabaseTelemetry)
         # Add Telemetry Argument
         self.addTelemetryArgumentAct = QAction('&Add Telemetry Argument', self)
-        self.addTelemetryArgumentAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-subnode-96.png'))
+        self.addTelemetryArgumentAct.setIcon(self.icons['ADD_SUBNODE'])
         self.addTelemetryArgumentAct.setStatusTip('Add Database Telemetry Argument')
         self.addTelemetryArgumentAct.triggered.connect(self.addDatabaseTelemetryArgument)
         # Remove Telemetry Argument
         self.removeTelemetryArgumentAct = QAction('&Remove Telemetry Argument', self)
-        self.removeTelemetryArgumentAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-subnode-96.png'))
+        self.removeTelemetryArgumentAct.setIcon(self.icons['DELETE_SUBNODE'])
         self.removeTelemetryArgumentAct.setStatusTip('Remove Database Telemetry Argument')
         self.removeTelemetryArgumentAct.triggered.connect(self.removeDatabaseTelemetryArgument)
         # Add Telecommand
         self.addTelecommandAct = QAction('&Add Telecommand', self)
-        self.addTelecommandAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-new-96.png'))
+        self.addTelecommandAct.setIcon(self.icons['ADD_NEW'])
         self.addTelecommandAct.setStatusTip('Add Database Telecommand')
         self.addTelecommandAct.triggered.connect(self.addDatabaseTelecommand)
         # Remove Telecommand
         self.removeTelecommandAct = QAction('&Remove Telecommand', self)
-        self.removeTelecommandAct.setIcon(QIcon('sources/icons/light-theme/icons8-negative-96.png'))
+        self.removeTelecommandAct.setIcon(self.icons['NEGATIVE'])
         self.removeTelecommandAct.setStatusTip('Remove Database Telecommand')
         self.removeTelecommandAct.triggered.connect(self.removeDatabaseTelecommand)
         # Add Telecommand Argument
         self.addTelecommandArgumentAct = QAction('&Add Telemetry Argument', self)
-        self.addTelecommandArgumentAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-subnode-96.png'))
+        self.addTelecommandArgumentAct.setIcon(self.icons['ADD_SUBNODE'])
         self.addTelecommandArgumentAct.setStatusTip('Add Database Telemetry Argument')
         self.addTelecommandArgumentAct.triggered.connect(self.addDatabaseTelecommandArgument)
         # Remove Telecommand Argument
         self.removeTelecommandArgumentAct = QAction('&Remove Telecommand Argument', self)
-        self.removeTelecommandArgumentAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-subnode-96.png'))
+        self.removeTelecommandArgumentAct.setIcon(self.icons['DELETE_SUBNODE'])
         self.removeTelecommandArgumentAct.setStatusTip('Remove Database Telecommand Argument')
         self.removeTelecommandArgumentAct.triggered.connect(self.removeDatabaseTelecommandArgument)
         # LAYOUT -----------------------------------------------------
@@ -487,29 +519,29 @@ class PyStratoGui(QMainWindow):
         ########### DISPLAYS ###########
         # Add New Display Tab
         self.newDisplayTabAct = QAction('&New Display Tab', self)
-        self.newDisplayTabAct.setIcon(QIcon('sources/icons/light-theme/icons8-add-folder-96.png'))
+        self.newDisplayTabAct.setIcon(self.icons['ADD_FOLDER'])
         self.newDisplayTabAct.setStatusTip('Create New Display Tab')
         self.newDisplayTabAct.setShortcut('Ctrl+Shift+N')
         self.newDisplayTabAct.triggered.connect(lambda: self.displayTabWidget.addNewTab())
         # Close Display Tab
         self.closeDisplayTabAct = QAction('&Close Display Tab', self)
-        self.closeDisplayTabAct.setIcon(QIcon('sources/icons/light-theme/icons8-delete-folder-96.png'))
+        self.closeDisplayTabAct.setIcon(self.icons['DELETE_FOLDER'])
         self.closeDisplayTabAct.setStatusTip('Close Display Tab')
         self.closeDisplayTabAct.setShortcut('Ctrl+Shift+X')
         self.closeDisplayTabAct.triggered.connect(self.displayTabWidget.closeCurrentTab)
         # Add Simple Indicator
         self.newSimpleIndicatorAct = QAction('&Simple Indicator', self)
-        self.newSimpleIndicatorAct.setIcon(QIcon('sources/icons/light-theme/icons8-full-screen-96.png'))
+        self.newSimpleIndicatorAct.setIcon(self.icons['FULL_SCREEN'])
         self.newSimpleIndicatorAct.setStatusTip('Add New Simple Indicator')
         self.newSimpleIndicatorAct.triggered.connect(self.displayTabWidget.addSimpleIndicator)
         # Add Grid Indicator
         self.newGridIndicatorAct = QAction('&Grid Indicator', self)
-        self.newGridIndicatorAct.setIcon(QIcon('sources/icons/light-theme/icons8-four-squares-96.png'))
+        self.newGridIndicatorAct.setIcon(self.icons['FOUR_SQUARES'])
         self.newGridIndicatorAct.setStatusTip('Add New Grid Simple Indicator')
         self.newGridIndicatorAct.triggered.connect(self.displayTabWidget.addGridIndicator)
         # Add MultiCurve Graph
         self.newMultiCurveAct = QAction('&MultiCurve Graph', self)
-        self.newMultiCurveAct.setIcon(QIcon('sources/icons/light-theme/icons8-combo-chart-96.png'))
+        self.newMultiCurveAct.setIcon(self.icons['COMBO_CHART'])
         self.newMultiCurveAct.setStatusTip('Add New MultiCurve Graph')
         self.newMultiCurveAct.triggered.connect(self.displayTabWidget.addMultiCurveGraph)
 
@@ -517,30 +549,30 @@ class PyStratoGui(QMainWindow):
         # Run Serial
         self.runSerialAct = QAction('&Run', self)
         self.runSerialAct.setShortcut('Ctrl+R')
-        self.runSerialAct.setIcon(QIcon('sources/icons/light-theme/icons8-play-96.png'))
+        self.runSerialAct.setIcon(self.icons['PLAY'])
         self.runSerialAct.setStatusTip('Run Serial Monitoring')
         self.runSerialAct.triggered.connect(self.startSerial)
         # Stop Serial
         self.stopSerialAct = QAction('&Stop', self)
-        self.stopSerialAct.setIcon(QIcon('sources/icons/light-theme/icons8-stop-96.png'))
+        self.stopSerialAct.setIcon(self.icons['STOP'])
         self.stopSerialAct.setStatusTip('Stop Serial Monitoring')
         self.stopSerialAct.triggered.connect(self.stopSerial)
         # Opening Serial Monitor
         self.openMonitorAct = QAction('&Open Serial Monitor', self)
         self.openMonitorAct.setShortcut('Ctrl+M')
-        self.openMonitorAct.setIcon(QIcon('sources/icons/light-theme/icons8-monitor-96.png'))
+        self.openMonitorAct.setIcon(self.icons['MONITOR'])
         self.openMonitorAct.setStatusTip('Open Serial Monitor')
         self.openMonitorAct.triggered.connect(self.openSerialMonitor)
 
         ########### WEATHER ###########
         # Updating Weather Tabs
         self.updatingWeatherAct = QAction('&Update Weather Data', self)
-        self.updatingWeatherAct.setIcon(QIcon('sources/icons/light-theme/icons8-reset-96.png'))
+        self.updatingWeatherAct.setIcon(self.icons['RESET'])
         self.updatingWeatherAct.setStatusTip('Updating All Weather Tabs')
         self.updatingWeatherAct.triggered.connect(self.updateWeatherTabs)
         # Using Geolocation
         self.getGeolocationAct = QAction('&Get GeoLocation Weather', self)
-        self.getGeolocationAct.setIcon(QIcon('sources/icons/light-theme/icons8-my-location-96.png'))
+        self.getGeolocationAct.setIcon(self.icons['MY_LOCATION'])
         self.getGeolocationAct.setStatusTip('Get Weather From Geolocation')
         self.getGeolocationAct.triggered.connect(self.getWeatherForGeolocation)
 
@@ -555,12 +587,12 @@ class PyStratoGui(QMainWindow):
         self.emulatorAct.triggered.connect(self.setEmulatorMode)
         # Visit GitHub Page
         self.githubAct = QAction('&Visit GitHub', self)
-        self.githubAct.setIcon(QIcon('sources/icons/light-theme/icons8-github-96.png'))
+        self.githubAct.setIcon(self.icons['GITHUB'])
         self.githubAct.setStatusTip('Visit GitHub Page')
         self.githubAct.triggered.connect(self.openGithub)
         # Open About Page
         self.aboutAct = QAction('&About', self)
-        self.aboutAct.setIcon(QIcon('sources/icons/light-theme/icons8-help-96.png'))
+        self.aboutAct.setIcon(self.icons['HELP'])
         self.aboutAct.setStatusTip('About This Software')
         self.aboutAct.triggered.connect(self.openAbout)
 
@@ -1401,12 +1433,63 @@ class PyStratoGui(QMainWindow):
             currentEditor.deleteArgumentType()
 
     def toggleDarkMode(self):
-        qdarktheme.setup_theme('light' if self.settings['DARK_THEME'] else 'dark')
         self.settings['DARK_THEME'] = not self.settings['DARK_THEME']
         saveSettings(self.settings, 'settings')
         themeText = 'Light Theme' if self.settings['DARK_THEME'] else 'Dark Theme'
         self.darkModeAct.setText(f'&{themeText}')
         self.darkModeAct.setStatusTip(f' Applying {themeText}')
+        self._setTheme()
+
+    def _setTheme(self):
+        if self.settings['DARK_THEME']:
+            qdarktheme.setup_theme('dark', additional_qss="QToolTip {color: black;}")
+        else:
+            qdarktheme.setup_theme('light')
+        # UPDATING ICONS
+        self._createIcons()
+        self.newParserAction.setIcon(self.icons['NEW_WINDOW'])
+        self.openParserAction.setIcon(self.icons['OPEN_IN_BROWSER'])
+        self.saveParserAction.setIcon(self.icons['SAVE'])
+        self.saveAllParserAction.setIcon(self.icons['SAVE_ALL'])
+        self.closeParserAction.setIcon(self.icons['CLOSE_WINDOW'])
+        self.importParserAction.setIcon(self.icons['DOWNLOAD'])
+        self.addUnitAct.setIcon(self.icons['ADD_NEW'])
+        self.removeUnitAct.setIcon(self.icons['NEGATIVE'])
+        self.addConstantAct.setIcon(self.icons['ADD_NEW'])
+        self.removeConstantAct.setIcon(self.icons['NEGATIVE'])
+        self.addConfigurationAct.setIcon(self.icons['ADD_NEW'])
+        self.removeConfigurationAct.setIcon(self.icons['NEGATIVE'])
+        self.addDataTypeAct.setIcon(self.icons['ADD_NEW'])
+        self.changeDataTypeAct.setIcon(self.icons['EDIT'])
+        self.removeDataTypeAct.setIcon(self.icons['NEGATIVE'])
+        self.addEnumValueAct.setIcon(self.icons['ADD_SUBNODE'])
+        self.removeEnumValueAct.setIcon(self.icons['DELETE_SUBNODE'])
+        self.addTelemetryAct.setIcon(self.icons['ADD_NEW'])
+        self.removeTelemetryAct.setIcon(self.icons['NEGATIVE'])
+        self.addTelemetryArgumentAct.setIcon(self.icons['ADD_SUBNODE'])
+        self.removeTelemetryArgumentAct.setIcon(self.icons['DELETE_SUBNODE'])
+        self.addTelecommandAct.setIcon(self.icons['ADD_NEW'])
+        self.removeTelecommandAct.setIcon(self.icons['NEGATIVE'])
+        self.addTelecommandArgumentAct.setIcon(self.icons['ADD_SUBNODE'])
+        self.removeTelecommandArgumentAct.setIcon(self.icons['DELETE_SUBNODE'])
+        self.newDisplayTabAct.setIcon(self.icons['ADD_FOLDER'])
+        self.closeDisplayTabAct.setIcon(self.icons['DELETE_FOLDER'])
+        self.newSimpleIndicatorAct.setIcon(self.icons['FULL_SCREEN'])
+        self.newGridIndicatorAct.setIcon(self.icons['FOUR_SQUARES'])
+        self.newMultiCurveAct.setIcon(self.icons['COMBO_CHART'])
+        self.runSerialAct.setIcon(self.icons['PLAY'])
+        self.stopSerialAct.setIcon(self.icons['STOP'])
+        self.openMonitorAct.setIcon(self.icons['MONITOR'])
+        self.getGeolocationAct.setIcon(self.icons['MY_LOCATION'])
+        self.githubAct.setIcon(self.icons['GITHUB'])
+        self.aboutAct.setIcon(self.icons['HELP'])
+        # UPDATING PLOT WIDGETS
+        displayTabs = [self.displayTabWidget.tabWidget.widget(index) for index in range(self.displayTabWidget.tabWidget.count())]
+        for tab in displayTabs:
+            for dockWidget in tab.findChildren(QDockWidget):
+                if dockWidget.isVisible() and isinstance(dockWidget, DisplayDockWidget):
+                    dockWidget.button.setIcon(self.icons['EDIT'])
+                    dockWidget.display.changeTheme()
 
     def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()

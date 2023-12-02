@@ -16,45 +16,43 @@ from sources.common.widgets.basic import BasicDisplay
 
 ######################## CLASSES ########################
 class MultiCurveGraph(BasicDisplay):
-    def __init__(self, path, parent=None, backgroundColor='#ffffff'):
+    def __init__(self, path, parent=None):
         super().__init__(path, parent)
         self.curveProperties = []
-        self.content = None
+        self.content, self.settings = None, loadSettings('settings')
         self.styleDict = {'Solid': Qt.SolidLine, 'Dash': Qt.DashLine, 'Dot': Qt.DotLine,
                           'DashDot': Qt.DashDotLine, 'DashDotDot': Qt.DashDotDotLine}
         layout = QVBoxLayout(self)
 
         # Plot Widget
         self.plotWidget = pg.PlotWidget(self)
-        self.plotWidget.setBackground(backgroundColor)
+        self.plotWidget.setBackground("k" if self.settings['DARK_THEME'] else "w")
         self.plotWidget.addLegend()
 
         # Parameters
-        self.backgroundColor = backgroundColor
         self.showLegend = False
         layout.addWidget(self.plotWidget)
         self.settingsWidget = MultiCurveGraphEditDialog(self.currentDir, self)
 
     def getDescription(self):
-        graphDescription = {'DISPLAY_TYPE': 'MULTI_CURVE_GRAPH',
-                            'BACKGROUND_COLOR': self.backgroundColor,
-                            'NB_CURVES': len(self.curveProperties)}
+        graphDescription = {'DISPLAY_TYPE': 'MULTI_CURVE_GRAPH', 'NB_CURVES': len(self.curveProperties)}
         for i in range(len(self.curveProperties)):
             graphDescription[i] = self.curveProperties[i]
         return graphDescription
 
+    def changeTheme(self):
+        self.settings = loadSettings('settings')
+        self.plotWidget.setBackground("k" if self.settings['DARK_THEME'] else "w")
+        self.settingsWidget.changeTheme(darkTheme=self.settings['DARK_THEME'])
+
     def applyChanges(self, editWidget):
         editWidget = self.settingsWidget
-        self.backgroundColor = editWidget.backgroundColorFrame.colorLabel.text()
-        self.plotWidget.setBackground(self.backgroundColor)
         self.showLegend = editWidget.showLegendCheckBox.isChecked()
         # TODO Add Legend ShowCase
         if self.showLegend:
             pass
         else:
             pass
-        backgroundColor = editWidget.backgroundColorFrame.colorLabel.text()
-        self.backgroundColor = backgroundColor
         self.curveProperties = []
         for i in range(editWidget.tabWidget.count()):
             properties, editor = {}, editWidget.tabWidget.widget(i)
@@ -72,7 +70,6 @@ class MultiCurveGraph(BasicDisplay):
             self.content = content
             self.plotWidget.clear()
             for curve in self.curveProperties:
-                name = curve['NAME']
                 color, lineStyle, thickness = QColor(curve['COLOR']), curve['STYLE'], curve['THICKNESS']
                 style = self.styleDict[lineStyle]
                 pen = pg.mkPen(color=color, width=thickness, style=style)
@@ -135,12 +132,24 @@ class MultiCurveGraphEditDialog(QWidget):
             lineColor = self.colorCycler.next(0, inHexCode=True)
         else:
             lineColor = self.colorCycler.next(inHexCode=True)
-        bkColor = self.backgroundColorFrame.colorLabel.text()
         names = [self.tabWidget.widget(i).name for i in range(self.tabWidget.count())]
         name = nameGiving(names, 'Curve', startingIndex=1, firstName=False)
-        curveEditor = CurveEditor(self.currentDir, self, name=name, lineColor=lineColor, bkColor=bkColor)
+        curveEditor = CurveEditor(self.currentDir, self, name=name, lineColor=lineColor)
         self.tabWidget.addTab(curveEditor, name)
         self.tabWidget.widget(count).nameChange.connect(self.changeTabNames)
+
+    def changeTheme(self, darkTheme=False):
+        for i in range(self.tabWidget.count()):
+            curveEditor: CurveEditor = self.tabWidget.widget(i)
+            curveEditor.linePropertiesEditor.plotWidget.setBackground("k" if darkTheme else "w")
+            themeFolder = 'dark-theme' if darkTheme else 'light-theme'
+            selectionButtonPixmap = QPixmap(f'sources/icons/{themeFolder}/icons8-add-database-96.png').scaled(25, 25)
+            xPixMap = QPixmap(f'sources/icons/{themeFolder}/icons8-x-coordinate-96.png').scaled(25, 25)
+            yPixMap = QPixmap(f'sources/icons/{themeFolder}/icons8-y-coordinate-96.png').scaled(25, 25)
+            curveEditor.linePropertiesEditor.labelEditX.setPixmap(xPixMap)
+            curveEditor.linePropertiesEditor.labelEditY.setPixmap(yPixMap)
+            curveEditor.linePropertiesEditor.buttonSelectorX.setIcon(QIcon(selectionButtonPixmap))
+            curveEditor.linePropertiesEditor.buttonSelectorY.setIcon(QIcon(selectionButtonPixmap))
 
     def removeExistingCurve(self):
         currentIndex = self.tabWidget.currentIndex()
@@ -153,8 +162,7 @@ class MultiCurveGraphEditDialog(QWidget):
         for i in range(self.tabWidget.count()):
             self.tabWidget.setTabText(i, self.tabWidget.widget(i).name)
 
-    def changeEditorsBackground(self):
-        bkColor = self.backgroundColorFrame.colorLabel.text()
+    def changeEditorsBackground(self, bkColor):
         for i in range(self.tabWidget.count()):
             editor = self.tabWidget.widget(i)
             if isinstance(editor, CurveEditor):
@@ -164,9 +172,8 @@ class MultiCurveGraphEditDialog(QWidget):
 class CurveEditor(QWidget):
     nameChange = pyqtSignal()
 
-    def __init__(self, path, parent=None, name: str = 'Curve 1', lineColor: str = '#FF0000', bkColor: str = '#FFFFFF'):
+    def __init__(self, path, parent=None, name: str = 'Curve 1', lineColor: str = '#FF0000'):
         super().__init__(parent)
-        self.curveArgumentSelector = None
         self.currentDir = path
         self.name = name
         # TODO Get Parameters from parent and index or from .ini file
@@ -174,16 +181,20 @@ class CurveEditor(QWidget):
         # Setting editing widgets
         self.lineEditX = QLineEdit()
         self.lineEditY = QLineEdit()
-        selectionButtonPixmap = QPixmap('sources/icons/light-theme/icons8-add-database-96.png').scaled(25, 25)
-        labelEditX = QLabel()
-        labelEditX.setPixmap(QPixmap('sources/icons/light-theme/icons8-x-coordinate-96.png').scaled(25, 25))
-        labelEditY = QLabel()
-        labelEditY.setPixmap(QPixmap('sources/icons/light-theme/icons8-y-coordinate-96.png').scaled(25, 25))
+        self.settings = loadSettings('settings')
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        selectionButtonPixmap = QPixmap(f'sources/icons/{themeFolder}/icons8-add-database-96.png').scaled(25, 25)
+        xPixMap = QPixmap(f'sources/icons/{themeFolder}/icons8-x-coordinate-96.png').scaled(25, 25)
+        yPixMap = QPixmap(f'sources/icons/{themeFolder}/icons8-y-coordinate-96.png').scaled(25, 25)
+        self.labelEditX = QLabel()
+        self.labelEditX.setPixmap(xPixMap)
+        self.labelEditY = QLabel()
+        self.labelEditY.setPixmap(yPixMap)
         self.buttonSelectorX = QPushButton()
-        self.buttonSelectorX.setIcon(QIcon(selectionButtonPixmap))
-        self.buttonSelectorX.clicked.connect(self.openCurveArgumentSelectorX)
         self.buttonSelectorY = QPushButton()
+        self.buttonSelectorX.setIcon(QIcon(selectionButtonPixmap))
         self.buttonSelectorY.setIcon(QIcon(selectionButtonPixmap))
+        self.buttonSelectorX.clicked.connect(self.openCurveArgumentSelectorX)
         self.buttonSelectorY.clicked.connect(self.openCurveArgumentSelectorY)
 
         nameLabel = QLabel('Name: ')
@@ -192,36 +203,32 @@ class CurveEditor(QWidget):
         self.nameEdit.textChanged.connect(self.nameChanged)
 
         bottomLayout = QHBoxLayout()
-        self.linePropertiesEditor = LinePropertiesEditor(self, lineColor=lineColor, bkColor=bkColor)
+        self.linePropertiesEditor = LinePropertiesEditor(self, lineColor=lineColor)
         bottomLayout.addWidget(self.linePropertiesEditor)
 
         layout = QGridLayout()
         layout.addWidget(nameLabel, 0, 0, 1, 1)
         layout.addWidget(self.nameEdit, 0, 1, 1, 1)
-        layout.addWidget(labelEditX, 1, 0)
+        layout.addWidget(self.labelEditX, 1, 0)
         layout.addWidget(self.lineEditX, 1, 1)
         layout.addWidget(self.buttonSelectorX, 1, 2)
-        layout.addWidget(labelEditY, 2, 0)
+        layout.addWidget(self.labelEditY, 2, 0)
         layout.addWidget(self.lineEditY, 2, 1)
         layout.addWidget(self.buttonSelectorY, 2, 2)
         layout.addLayout(bottomLayout, 3, 0, 1, 3)
         self.setLayout(layout)
 
     def openCurveArgumentSelectorX(self):
-        self.curveArgumentSelector = ArgumentSelector(self.currentDir, self)
-        self.curveArgumentSelector.selected.connect(self.argumentSelectedX)
-        self.curveArgumentSelector.exec_()
+        dialog = ArgumentSelector(self.currentDir, self)
+        result = dialog.exec_()
+        if result == QMessageBox.Accepted:
+            self.lineEditX.setText(dialog.selectedArgument)
 
     def openCurveArgumentSelectorY(self):
-        self.curveArgumentSelector = ArgumentSelector(self.currentDir, self)
-        self.curveArgumentSelector.selected.connect(self.argumentSelectedY)
-        self.curveArgumentSelector.exec_()
-
-    def argumentSelectedX(self):
-        self.lineEditX.setText(self.curveArgumentSelector.selectedArgument)
-
-    def argumentSelectedY(self):
-        self.lineEditY.setText(self.curveArgumentSelector.selectedArgument)
+        dialog = ArgumentSelector(self.currentDir, self)
+        result = dialog.exec_()
+        if result == QMessageBox.Accepted:
+            self.lineEditY.setText(dialog.selectedArgument)
 
     def nameChanged(self):
         self.name = self.nameEdit.text()
@@ -229,10 +236,9 @@ class CurveEditor(QWidget):
 
 
 class LinePropertiesEditor(QWidget):
-    def __init__(self, parent=None, lineStyle: str = 'Solid', thickness: int = 2,
-                 lineColor: str = '#FF0000', bkColor: str = '#FFFFFF'):
+    def __init__(self, parent=None, lineStyle: str = 'Solid', thickness: int = 2, lineColor: str = '#FF0000'):
         super().__init__(parent)
-        # LINESTYLES
+        # LINE STYLES
         self.lineColor = lineColor
         self.lineStyles = ['Solid', 'Dash', 'Dot', 'DashDot', 'DashDotDot']
         assert lineStyle in self.lineStyles, 'Specified line style \'' + lineStyle + ' is not recognized.'
@@ -256,7 +262,6 @@ class LinePropertiesEditor(QWidget):
         self.colorEditor.colorChanged.connect(self.updateLineDisplay)
 
         # PLOT WIDGET
-        self.backgroundColor = bkColor
         self.plotWidget = pg.PlotWidget()
         self.plotWidget.setMouseEnabled(x=False, y=False)
         self.plotWidget.setMenuEnabled(False)
@@ -264,12 +269,10 @@ class LinePropertiesEditor(QWidget):
         self.plotWidget.setLabel('left', '')
         self.plotWidget.showAxis('bottom', False)
         self.plotWidget.showAxis('left', False)
-        self.plotWidget.setBackground(QColor(self.backgroundColor))
         self.plotWidget.setMaximumHeight(self.lineStyleComboBox.sizeHint().height())
         self.plotWidget.setMaximumWidth(self.lineStyleComboBox.sizeHint().width())
-        self.plotWidget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # Set the size policy
-        self.plotWidget.plot([0, 1, 2, 3], [0, 1, 0, 1],
-                             pen=self.createPen(self.currentLineStyle, width=self.thickness, color=self.lineColor))
+        self.plotWidget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.plotWidget.plot([0, 1, 2, 3], [0, 1, 0, 1], pen=self.createPen(self.currentLineStyle, width=self.thickness, color=self.lineColor))
 
         # RIGHT LAYOUT
         rightLayout = QGridLayout()
@@ -303,18 +306,12 @@ class LinePropertiesEditor(QWidget):
             raise ValueError('Given line style', line_style, ' is not recognized.')
         return pg.mkPen(color=color, width=width, style=style)
 
-    def changeBackground(self, bkColor):
-        self.backgroundColor = bkColor
-        self.updateLineDisplay()
-
     def updateLineDisplay(self):
         self.currentLineStyle = self.lineStyleComboBox.currentText()
         self.thickness = self.thicknessSpinBox.value()
         self.lineColor = self.colorEditor.colorLabel.text()
         self.plotWidget.clear()
-        self.plotWidget.setBackground(QColor(self.backgroundColor))
-        self.plotWidget.plot([0, 1, 2, 3], [0, 1, 0, 1],
-                             pen=self.createPen(self.currentLineStyle, width=self.thickness, color=self.lineColor))
+        self.plotWidget.plot([0, 1, 2, 3], [0, 1, 0, 1], pen=self.createPen(self.currentLineStyle, width=self.thickness, color=self.lineColor))
 
 
 class ColorEditor(QGroupBox):

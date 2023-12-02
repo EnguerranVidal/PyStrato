@@ -108,15 +108,11 @@ class DisplayTabWidget(QMainWindow):
         currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
     def getLayoutDescription(self):
-        dockAreas = {1: Qt.LeftDockWidgetArea, 2: Qt.RightDockWidgetArea,
-                     4: Qt.TopDockWidgetArea, 8: Qt.BottomDockWidgetArea}
         tabs = [self.tabWidget.widget(index) for index in range(self.tabWidget.count())]
         tabNames = [self.tabWidget.tabText(index) for index in range(self.tabWidget.count())]
         description = {}
-
         for tab, tabName in zip(tabs, tabNames):
             tabDescription = {}
-
             for dockWidget in tab.findChildren(QDockWidget):
                 if dockWidget.isVisible():
                     displayName = dockWidget.windowTitle()
@@ -161,6 +157,7 @@ class DisplayTabWidget(QMainWindow):
                 dockWidget.repaint()
 
 
+
 class DisplayDockWidget(QDockWidget):
     def __init__(self, name: str, widget: Optional[BasicDisplay] = None):
         super().__init__()
@@ -187,6 +184,7 @@ class DisplayDockWidget(QDockWidget):
         self.button.animation.setEndValue(QPoint(self.width() - self.button.width(), 0))
         self.button.animation.start()
         self.button.setVisible(True)
+        self.button.raise_()
 
     def leaveEvent(self, event):
         # Animate the button back to the top of the widget
@@ -194,6 +192,7 @@ class DisplayDockWidget(QDockWidget):
         self.button.animation.setEndValue(QPoint(self.width() - self.button.width(), -self.button.height()))
         self.button.animation.start()
         self.button.setVisible(False)
+        self.button.lower()
 
     def openSettings(self):
         self.parametersEditWindow = ParameterDialog(parent=self, editWidget=self.display.settingsWidget)
@@ -315,7 +314,9 @@ class HoverButton(QPushButton):
     def __init__(self, parent=None):
         super().__init__(parent)
         # Set the icon and icon size
-        self.setIcon(QIcon('sources/icons/light-theme/icons8-edit-96.png'))
+        self.settings = loadSettings('settings')
+        buttonTheme = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        self.setIcon(QIcon(f'sources/icons/{buttonTheme}/icons8-edit-96.png'))
         self.setIconSize(QSize(25, 25))
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)

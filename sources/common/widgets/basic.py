@@ -23,6 +23,9 @@ class BasicDisplay(QWidget):
     def updateContent(self, content):
         pass
 
+    def changeTheme(self):
+        pass
+
     @staticmethod
     def getDescription():
         return {'TYPE': 'BASIC_DISPLAY'}
