@@ -3,6 +3,7 @@ import sys
 
 
 def main(*args):
+    qdarktheme.enable_hi_dpi()
     app = QApplication(sys.argv)
     currentDirectory = os.path.dirname(os.path.realpath(__file__))
     splashScreenPath = os.path.join(currentDirectory, "sources/icons/SplashScreen.png")

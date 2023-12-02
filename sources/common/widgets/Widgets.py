@@ -315,19 +315,19 @@ class ArgumentSelectorWidget(QWidget):
         self.comboBox = QComboBox()
         self.fillComboBox()
         self.comboBox.currentIndexChanged.connect(self.changeComboBox)
-
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
         # Set up buttons and label
         self.previousButton = QPushButton()
         self.previousButton.setStyleSheet("border: none;")
         self.previousButton.setFlat(True)
-        self.previousButton.setIcon(QIcon('sources/icons/light-theme/icons8-previous-96.png'))
+        self.previousButton.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-back-96.png'))
         self.previousButton.setIconSize(QSize(20, 20))
         self.previousButton.clicked.connect(self.previousTelemetry)
 
         self.nextButton = QPushButton()
         self.nextButton.setStyleSheet("border: none;")
         self.nextButton.setFlat(True)
-        self.nextButton.setIcon(QIcon('sources/icons/light-theme/icons8-next-96.png'))
+        self.nextButton.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-forward-96.png'))
         self.nextButton.setIconSize(QSize(20, 20))
         self.nextButton.clicked.connect(self.nextTelemetry)
         self.label = QLabel("Label")
@@ -444,8 +444,6 @@ class ArgumentSelectorWidget(QWidget):
 
 
 class ArgumentSelector(QDialog):
-    selected = pyqtSignal()
-
     def __init__(self, path, parent=None):
         super().__init__(parent)
         self.selectedArgument = None
@@ -463,8 +461,8 @@ class ArgumentSelector(QDialog):
         bottomRowLayout = QHBoxLayout()
         self.selectButton = QPushButton("Select")
         self.cancelButton = QPushButton("Cancel")
-        self.selectButton.clicked.connect(self.selectedPushed)
-        self.cancelButton.clicked.connect(self.cancelPushed)
+        self.selectButton.clicked.connect(self.accept)
+        self.cancelButton.clicked.connect(self.reject)
         bottomRowLayout.addWidget(self.selectButton)
         bottomRowLayout.addWidget(self.cancelButton)
 
@@ -476,14 +474,6 @@ class ArgumentSelector(QDialog):
         mainLayout.addWidget(self.itemSelectionWidget)
         mainLayout.addLayout(bottomRowLayout)
         self.setLayout(mainLayout)
-
-    def selectedPushed(self):
-        if self.selectedArgument is not None:
-            self.selected.emit()
-            self.close()
-
-    def cancelPushed(self):
-        self.close()
 
     def selectionMade(self):
         currentItem = self.itemSelectionWidget.treeWidget.currentItem()
@@ -512,7 +502,8 @@ class ArgumentSelector(QDialog):
             itemName = currentItem.text(0)
             # Updating Value
             self.selectionNameLabel.setText(itemName)
-            self.selectedArgument = '{}${}${}'.format(database, telemetry, '$'.join(itemAncestors))
+            self.selectedArgument = f"{database}${telemetry}${'$'.join(itemAncestors)}"
+            print(self.selectedArgument)
             if unitName is not None:
                 self.argumentUnit = self.itemSelectionWidget.databases[database][0].units[unitName][0]
             else:
@@ -1118,17 +1109,16 @@ class ScrollableContainer(QScrollArea):
 class ScrollableWidget(QWidget):
     def __init__(self, path, widgetList, widgetsToScroll=3):
         super(ScrollableWidget, self).__init__()
-
+        self.settings = loadSettings('settings')
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
         # SCROLLING BUTTONS AND AREA
         # Scroll Left Button
         self.currentDir = path
-        self.scrollLeftButton = SquareIconButton(
-            os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-back-96.png'), self, flat=True)
+        self.scrollLeftButton = SquareIconButton(f'sources/icons/{themeFolder}/icons8-back-96.png', self, flat=True)
         self.scrollLeftButton.clicked.connect(self.scrollLeft)
         self.scrollLeftButton.setFixedWidth(30)
         # Scroll Right Button
-        self.scrollRightButton = SquareIconButton(
-            os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-forward-96.png'), self, flat=True)
+        self.scrollRightButton = SquareIconButton(f'sources/icons/{themeFolder}/icons8-forward-96.png', self, flat=True)
         self.scrollRightButton.clicked.connect(self.scrollRight)
         self.scrollRightButton.setFixedWidth(30)
         # Scroll Area
@@ -1167,14 +1157,19 @@ class ScrollableWidget(QWidget):
         self.scrollAnimation.setEndValue(self.currentScrollPosition * self.widgetWidth)
         self.scrollAnimation.start()
 
+    def changeTheme(self):
+        self.settings = loadSettings('settings')
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        self.scrollLeftButton.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-back-96.png'))
+        self.scrollRightButton.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-forward-96.png'))
+
 
 class SearchBar(QLineEdit):
     searchDone = pyqtSignal()
 
-    def __init__(self, path, searchOptions, maxSuggestions=5, parent=None):
+    def __init__(self, searchOptions, maxSuggestions=5, parent=None):
         super(SearchBar, self).__init__(parent)
         self.selection = ''
-        self.currentDir = path
         self.searchOptions = searchOptions
         self.maxSuggestions = maxSuggestions
 
@@ -1189,18 +1184,24 @@ class SearchBar(QLineEdit):
         searchCompleter.activated.connect(self.onCompleterActivated)
 
         # SEARCH ACTION BUTTON
-        searchButtonAction = QAction(self)
-        searchButtonAction.setIcon(
-            QIcon(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-search-96.png')))
-        searchButtonAction.triggered.connect(self.performSearch)
-        self.addAction(searchButtonAction, QLineEdit.TrailingPosition)
+        self.searchButtonAction = QAction(self)
+        self.settings = loadSettings('settings')
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        self.searchButtonAction.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-search-96.png'))
+        self.searchButtonAction.triggered.connect(self.performSearch)
+        self.addAction(self.searchButtonAction, QLineEdit.TrailingPosition)
 
     def performSearch(self):
         if self.text() != '':
-            closest_suggestion = self.completer().currentCompletion()
-            self.selection = closest_suggestion
+            closestSuggestion = self.completer().currentCompletion()
+            self.selection = closestSuggestion
             self.searchDone.emit()
             QTimer.singleShot(0, self.clearLineEdit)
+
+    def changeTheme(self):
+        self.settings = loadSettings('settings')
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        self.searchButtonAction.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-search-96.png'))
 
     def onCompleterActivated(self, text):
         self.selection = text
@@ -1252,6 +1253,7 @@ class ArrowWidget(QLabel):
         self.updateIcon(self.angle)
 
     def updateIcon(self, angle):
+        self.angle = angle
         pixmap = QPixmap(self.iconPath)
         pixmap = pixmap.scaledToWidth(100)
         rotated_pixmap = pixmap.transformed(

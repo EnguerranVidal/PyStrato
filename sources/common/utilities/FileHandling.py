@@ -115,7 +115,7 @@ def loadSettings(path):
             else:
                 parameters[line[0]] = split_setting
         elif line[0] in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE',
-                         'LAYOUT_AUTOSAVE', 'SAVING_SERIAL_CONTENT', 'ENABLE_WEATHER', 'MAXIMIZED']:
+                         'LAYOUT_AUTOSAVE', 'SAVING_SERIAL_CONTENT', 'ENABLE_WEATHER', 'MAXIMIZED', 'DARK_THEME']:
             parameters[line[0]] = bool(int(line[1].rstrip("\n")))
         elif line[0] in ['LOCATIONS']:
             line[1] = line[1].rstrip("\n")
@@ -142,7 +142,7 @@ def saveSettings(parameters, path):
             if setting in ['AVAILABLE_BAUDS', 'FORMAT_FILES', 'OPENED_RECENTLY']:
                 file.write(setting + '=' + ','.join(parameters[setting]) + '\n')
             elif setting in ['AUTOSCROLL', 'AUTOSCALE', 'EMULATOR_MODE',
-                             'LAYOUT_AUTOSAVE', 'SAVING_SERIAL_CONTENT', 'ENABLE_WEATHER', 'MAXIMIZED']:
+                             'LAYOUT_AUTOSAVE', 'SAVING_SERIAL_CONTENT', 'ENABLE_WEATHER', 'MAXIMIZED', 'DARK_THEME']:
                 file.write(setting + '=' + str(int(parameters[setting])) + '\n')
             elif setting in ['LOCATIONS']:
                 locations_data = []

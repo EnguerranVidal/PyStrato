@@ -36,27 +36,21 @@ class SingleIndicator(BasicDisplay):
 
     def getDescription(self):
         palette = self.palette()
-        bgColor = palette.color(QPalette.Base).name()
 
         font = self.indicatorLabel.font()
         fontFamily = font.family()
         fontSize = font.pointSize()
-        fontColor = self.indicatorLabel.palette().color(QPalette.WindowText).name()
         description = {'DISPLAY_TYPE': 'SINGLE_INDICATOR',
                        'ARGUMENT': self.argument,
                        'ARGUMENT_UNIT': self.argumentUnit,
                        'SHOW_UNIT': int(self.showUnit),
                        'FONT_FAMILY': fontFamily,
                        'FONT_SIZE': fontSize,
-                       'FONT_COLOR': fontColor,
-                       'BACKGROUND_COLOR': bgColor,
                        'TEXT_PLACEMENT': self.textAlignment
                        }
         return description
 
     def applyChanges(self, editWidget):
-        backgroundColor = editWidget.backgroundColor.colorLabel.text()
-        fontColor = editWidget.fontColor.colorLabel.text()
         font = QFont(editWidget.fontModelComboBox.currentText())
         fontSize = editWidget.fontSizeSpinBox.value()
         font.setPixelSize(fontSize * QFontMetricsF(font).height() / font.pointSizeF())
@@ -65,14 +59,6 @@ class SingleIndicator(BasicDisplay):
         self.indicatorLabel.setFont(font)
         self.indicatorLabel.setAutoFillBackground(True)
         self.indicatorLabel.setFont(font)
-        self.indicatorLabel.setStyleSheet("background-color: " + backgroundColor + "; color: " + fontColor + ";")
-        bgColor = QColor(backgroundColor)
-
-        # Set the background color of the SingleIndicator widget
-        palette = self.palette()
-        palette.setColor(self.backgroundRole(), bgColor)
-        self.setPalette(palette)
-
         # Text Alignment
         if editWidget.positionLeftButton.isChecked():
             self.indicatorLabel.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
@@ -144,21 +130,11 @@ class SingleIndicatorEditDialog(QWidget):
         valueLayout.addWidget(self.lineEdit)
         valueLayout.addWidget(self.button)
 
-        # Show Unit Checkbox
-        self.unitCheckbox = QCheckBox("Show Unit")
-
-        # Get the current font, font size, font color, and background color of the indicatorLabel
+        # CURRENT FONT & UNIT
         currentFont = parent.indicatorLabel.font()
         currentFontSize = currentFont.pointSize()
-        currentFontColor = parent.indicatorLabel.palette().color(QPalette.WindowText)
-        currentBackgroundColor = parent.indicatorLabel.palette().color(QPalette.Window)
+        self.unitCheckbox = QCheckBox("Show Unit")
 
-        # Colors (Font & Background)
-        colorLayout = QGridLayout()
-        self.fontColor = ColorEditor('Font Color', color=currentFontColor.name())
-        self.backgroundColor = ColorEditor('Background Color', color=currentBackgroundColor.name())
-        colorLayout.addWidget(self.fontColor, 0, 0)
-        colorLayout.addWidget(self.backgroundColor, 0, 1)
         # Create a QSpinBox for selecting font size
         fontSizeLabel = QLabel("Font Size:")
         self.fontSizeSpinBox = QSpinBox()
@@ -217,7 +193,6 @@ class SingleIndicatorEditDialog(QWidget):
         mainLayout = QVBoxLayout()
         mainLayout.addLayout(valueLayout)
         mainLayout.addWidget(self.unitCheckbox)
-        mainLayout.addLayout(colorLayout)
         mainLayout.addLayout(positionLayout)
         mainLayout.addLayout(fontLayout)
         self.setLayout(mainLayout)
@@ -254,9 +229,7 @@ class GridIndicator(BasicDisplay):
 
     def getDescription(self):
         palette = self.palette()
-        bgColor = palette.color(QPalette.Base).name()
         gridDescription = {'DISPLAY_TYPE': 'GRID_INDICATOR',
-                           'BACKGROUND_COLOR': bgColor,
                            'DIMENSIONS': [self.nbRows, self.nbColumns]}
         for i in range(self.nbRows):
             for j in range(self.nbColumns):
@@ -264,14 +237,12 @@ class GridIndicator(BasicDisplay):
                 font = indicator.label.font()
                 fontFamily = font.family()
                 fontSize = font.pointSize()
-                fontColor = indicator.label.palette().color(QPalette.WindowText).name()
                 description = {'NAME': indicator.title(),
                                'ARGUMENT': indicator.argument,
                                'ARGUMENT_UNIT': indicator.argumentUnit,
                                'SHOW_UNIT': int(indicator.showUnit),
                                'FONT_FAMILY': fontFamily,
                                'FONT_SIZE': fontSize,
-                               'FONT_COLOR': fontColor,
                                'TEXT_PLACEMENT': indicator.textAlignment}
                 key = str(i) + str(j)
                 gridDescription[key] = description
@@ -298,8 +269,6 @@ class GridIndicator(BasicDisplay):
     def applyChanges(self, editWidget=None):
         if editWidget is None:
             editWidget = self.settingsWidget
-        backgroundColor = editWidget.backgroundColor.colorLabel.text()
-        self.bgColor = backgroundColor
         self.nbRows = editWidget.rowSpinBox.value()
         self.nbColumns = editWidget.columnSpinBox.value()
         # Fill and update Grid
@@ -358,15 +327,10 @@ class GridIndicatorEditDialog(QWidget):
         self.rowSpinBox.valueChanged.connect(self.updateGridEditor)
         self.mainWidget.addWidget(self.gridEditor)
 
-        # Create Background color selector
-        currentBackgroundColor = parent.palette().color(QPalette.Window)
-        self.backgroundColor = ColorEditor('Background Color', color=currentBackgroundColor.name())
-
         # Create the main layout and add the spin box layout
         self.mainLayout = QGridLayout()
         self.mainLayout.addWidget(self.spinBoxWidget, 0, 0, Qt.AlignLeft)
         self.mainLayout.addWidget(self.mainWidget, 1, 0, Qt.AlignCenter)
-        self.mainLayout.addWidget(self.backgroundColor, 2, 0, Qt.AlignCenter)
         self.setLayout(self.mainLayout)
 
         self.hide()
@@ -474,19 +438,11 @@ class LabelEditor(QWidget):
         valueLayout.addWidget(self.lineEdit)
         valueLayout.addWidget(self.button)
 
-        # Get the current font, font size, font color, and background color of the indicatorLabel
+        # CURRENT FONT & UNIT
         label = QLabel()
         currentFont = label.font()
         currentFontSize = currentFont.pointSize()
-        currentFontColor = label.palette().color(QPalette.WindowText)
-
-        # Unit and Font Color
-        unitAndColorLayout = QHBoxLayout()
         self.unitCheckbox = QCheckBox("Show Unit")
-        self.fontColor = ColorEditor('Font Color', color=currentFontColor.name())
-        unitAndColorLayout.addWidget(self.unitCheckbox)
-        unitAndColorLayout.addWidget(self.fontColor)
-
         # --------- Positioning Buttons --------
         self.positionButtonGroup = QButtonGroup(self)
         # LEFT
@@ -565,7 +521,7 @@ class LabelEditor(QWidget):
         mainLayout = QVBoxLayout()
         mainLayout.addLayout(self.topLayout)
         mainLayout.addLayout(valueLayout)
-        mainLayout.addLayout(unitAndColorLayout)
+        mainLayout.addWidget(self.unitCheckbox)
         mainLayout.addLayout(positionLayout)
         mainLayout.addLayout(fontLayout)
         self.setLayout(mainLayout)
@@ -618,23 +574,11 @@ class LabeledIndicator(QGroupBox):
         self.applyEditorSettings(self.editor)
 
     def applyEditorSettings(self, labelEditor: LabelEditor):
-        backgroundColor = self.parentWidget.bgColor
-        fontColor = labelEditor.fontColor.colorLabel.text()
         font = QFont(labelEditor.fontModelComboBox.currentText())
         fontSize = labelEditor.fontSizeSpinBox.value()
         font.setPixelSize(fontSize * QFontMetricsF(font).height() / font.pointSizeF())
-
         self.label.setAutoFillBackground(True)
         self.label.setFont(font)
-        self.label.setAutoFillBackground(True)
-        self.label.setFont(font)
-        self.label.setStyleSheet("background-color: " + backgroundColor + "; color: " + fontColor + ";")
-        bgColor = QColor(backgroundColor)
-
-        # Set the background color of the SingleIndicator widget
-        palette = self.palette()
-        palette.setColor(self.backgroundRole(), bgColor)
-        self.setPalette(palette)
 
         # Text Alignment
         if labelEditor.positionLeftButton.isChecked():

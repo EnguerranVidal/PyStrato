@@ -54,11 +54,12 @@ class DatabaseTabWidget(QTabWidget):
     def __init__(self, path):
         super(QWidget, self).__init__()
         self.hide()
+        self.unsavedChanges = True
         self.currentDirectory = path
         self.formatPath = os.path.join(self.currentDirectory, "formats")
         self.databases = {}
 
-    def newFormat(self, name):
+    def newParser(self, name):
         newDatabasePath = os.path.join(self.formatPath, name)
         os.makedirs(newDatabasePath)
         createNewDatabase(newDatabasePath)
@@ -76,7 +77,7 @@ class DatabaseTabWidget(QTabWidget):
         self.addTab(editor, name)
         self.tabChanged.emit()
 
-    def openFormat(self, path):
+    def openParser(self, path):
         database = BalloonPackageDatabase(path)
         name = os.path.basename(path)
         self.databases[name] = database
@@ -92,10 +93,10 @@ class DatabaseTabWidget(QTabWidget):
         self.addTab(editor, name)
         self.tabChanged.emit()
 
-    def saveFormat(self, path=None):
+    def saveParser(self, path=None):
         pass
 
-    def saveAllFormats(self):
+    def saveAllParsers(self):
         pass
 
     @staticmethod
@@ -105,10 +106,10 @@ class DatabaseTabWidget(QTabWidget):
     def _closeDatabase(self, index: int):
         pass
 
-    def closeFormat(self):
+    def closeParser(self):
         pass
 
-    def closeAllFormat(self):
+    def closeAllParser(self):
         pass
 
 
