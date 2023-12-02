@@ -206,7 +206,7 @@ class PyStratoGui(QMainWindow):
             self.weatherToolBar.addAction(self.getGeolocationAct)
             # SEARCH BAR
             searchOptions = self.weatherTabWidget.citiesDataFrame['format']
-            self.locationSearchBar = SearchBar(self.currentDir, searchOptions)
+            self.locationSearchBar = SearchBar(searchOptions)
             self.locationSearchBar.setFixedWidth(300)
             self.locationSearchBar.setFixedHeight(30)
             self.locationSearchBar.searchDone.connect(self.onLocationSearchedClicked)
@@ -1445,6 +1445,7 @@ class PyStratoGui(QMainWindow):
             qdarktheme.setup_theme('dark', additional_qss="QToolTip {color: black;}")
         else:
             qdarktheme.setup_theme('light')
+        self.locationSearchBar.changeTheme()
         # UPDATING ICONS
         self._createIcons()
         self.newParserAction.setIcon(self.icons['NEW_WINDOW'])
@@ -1480,16 +1481,22 @@ class PyStratoGui(QMainWindow):
         self.runSerialAct.setIcon(self.icons['PLAY'])
         self.stopSerialAct.setIcon(self.icons['STOP'])
         self.openMonitorAct.setIcon(self.icons['MONITOR'])
+        self.updatingWeatherAct.setIcon(self.icons['RESET'])
         self.getGeolocationAct.setIcon(self.icons['MY_LOCATION'])
         self.githubAct.setIcon(self.icons['GITHUB'])
         self.aboutAct.setIcon(self.icons['HELP'])
         # UPDATING PLOT WIDGETS
         displayTabs = [self.displayTabWidget.tabWidget.widget(index) for index in range(self.displayTabWidget.tabWidget.count())]
-        for tab in displayTabs:
-            for dockWidget in tab.findChildren(QDockWidget):
+        for displayTab in displayTabs:
+            for dockWidget in displayTab.findChildren(QDockWidget):
                 if dockWidget.isVisible() and isinstance(dockWidget, DisplayDockWidget):
                     dockWidget.button.setIcon(self.icons['EDIT'])
                     dockWidget.display.changeTheme()
+        if self.weatherTabWidget.forecastTabDisplay:
+            locationTabs = [self.weatherTabWidget.forecastTabDisplay.widget(index) for index in range(self.weatherTabWidget.forecastTabDisplay.count())]
+            for locationTab in locationTabs:
+                locationTab.scrollableDayWidget.changeTheme()
+                locationTab.observationDisplay.changeTheme()
 
     def updateStatus(self):
         self.datetime = QDateTime.currentDateTime()

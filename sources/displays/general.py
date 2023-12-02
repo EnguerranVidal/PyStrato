@@ -157,7 +157,6 @@ class DisplayTabWidget(QMainWindow):
                 dockWidget.repaint()
 
 
-
 class DisplayDockWidget(QDockWidget):
     def __init__(self, name: str, widget: Optional[BasicDisplay] = None):
         super().__init__()

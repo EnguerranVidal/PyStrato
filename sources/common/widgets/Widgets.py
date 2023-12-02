@@ -1109,17 +1109,16 @@ class ScrollableContainer(QScrollArea):
 class ScrollableWidget(QWidget):
     def __init__(self, path, widgetList, widgetsToScroll=3):
         super(ScrollableWidget, self).__init__()
-
+        self.settings = loadSettings('settings')
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
         # SCROLLING BUTTONS AND AREA
         # Scroll Left Button
         self.currentDir = path
-        self.scrollLeftButton = SquareIconButton(
-            os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-back-96.png'), self, flat=True)
+        self.scrollLeftButton = SquareIconButton(f'sources/icons/{themeFolder}/icons8-back-96.png', self, flat=True)
         self.scrollLeftButton.clicked.connect(self.scrollLeft)
         self.scrollLeftButton.setFixedWidth(30)
         # Scroll Right Button
-        self.scrollRightButton = SquareIconButton(
-            os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-forward-96.png'), self, flat=True)
+        self.scrollRightButton = SquareIconButton(f'sources/icons/{themeFolder}/icons8-forward-96.png', self, flat=True)
         self.scrollRightButton.clicked.connect(self.scrollRight)
         self.scrollRightButton.setFixedWidth(30)
         # Scroll Area
@@ -1158,14 +1157,19 @@ class ScrollableWidget(QWidget):
         self.scrollAnimation.setEndValue(self.currentScrollPosition * self.widgetWidth)
         self.scrollAnimation.start()
 
+    def changeTheme(self):
+        self.settings = loadSettings('settings')
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        self.scrollLeftButton.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-back-96.png'))
+        self.scrollRightButton.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-forward-96.png'))
+
 
 class SearchBar(QLineEdit):
     searchDone = pyqtSignal()
 
-    def __init__(self, path, searchOptions, maxSuggestions=5, parent=None):
+    def __init__(self, searchOptions, maxSuggestions=5, parent=None):
         super(SearchBar, self).__init__(parent)
         self.selection = ''
-        self.currentDir = path
         self.searchOptions = searchOptions
         self.maxSuggestions = maxSuggestions
 
@@ -1180,18 +1184,24 @@ class SearchBar(QLineEdit):
         searchCompleter.activated.connect(self.onCompleterActivated)
 
         # SEARCH ACTION BUTTON
-        searchButtonAction = QAction(self)
-        searchButtonAction.setIcon(
-            QIcon(os.path.join(self.currentDir, 'sources/icons/light-theme/icons8-search-96.png')))
-        searchButtonAction.triggered.connect(self.performSearch)
-        self.addAction(searchButtonAction, QLineEdit.TrailingPosition)
+        self.searchButtonAction = QAction(self)
+        self.settings = loadSettings('settings')
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        self.searchButtonAction.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-search-96.png'))
+        self.searchButtonAction.triggered.connect(self.performSearch)
+        self.addAction(self.searchButtonAction, QLineEdit.TrailingPosition)
 
     def performSearch(self):
         if self.text() != '':
-            closest_suggestion = self.completer().currentCompletion()
-            self.selection = closest_suggestion
+            closestSuggestion = self.completer().currentCompletion()
+            self.selection = closestSuggestion
             self.searchDone.emit()
             QTimer.singleShot(0, self.clearLineEdit)
+
+    def changeTheme(self):
+        self.settings = loadSettings('settings')
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        self.searchButtonAction.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-search-96.png'))
 
     def onCompleterActivated(self, text):
         self.selection = text
@@ -1243,6 +1253,7 @@ class ArrowWidget(QLabel):
         self.updateIcon(self.angle)
 
     def updateIcon(self, angle):
+        self.angle = angle
         pixmap = QPixmap(self.iconPath)
         pixmap = pixmap.scaledToWidth(100)
         rotated_pixmap = pixmap.transformed(

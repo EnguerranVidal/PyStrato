@@ -15,6 +15,7 @@ from PyQt5.QtGui import *
 # --------------------- Sources ----------------------- #
 from sources.common.utilities.Functions import getTextHeight
 from sources.common.widgets.Widgets import ArrowWidget, ScrollableWidget
+from sources.common.utilities.FileHandling import loadSettings
 
 
 ######################## CLASSES ########################
@@ -110,6 +111,7 @@ class WeatherObservationDisplay(QWidget):
         self.observationData = observationData
         self.pollutionData = pollutionData
         self.observationTime = datetime.fromtimestamp(self.observationData['dt'])
+        self.settings = loadSettings('settings')
 
         # OBSERVATION LAYOUT ----------------------------------
         observationFrame = QFrame()
@@ -160,7 +162,8 @@ class WeatherObservationDisplay(QWidget):
         windSpeed = self.observationData['wind']['speed'] * 3.6 if self.metric else self.observationData['wind']['speed']
         windSpeedLabel = QLabel(f"<b>{int(windSpeed):.1f} km/h</b>")
         windInfoLayout.addWidget(windSpeedLabel, alignment=Qt.AlignLeft)
-        windDirectionWidget = ArrowWidget("sources/icons/light-theme/icons8-navigation-96.png", self.observationData["wind"]["deg"] + 180)
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        windDirectionWidget = ArrowWidget(f"sources/icons/{themeFolder}/icons8-navigation-96.png", self.observationData["wind"]["deg"] + 180)
         windInfoLayout.addWidget(windDirectionWidget, alignment=Qt.AlignLeft)
         bottomRow.addLayout(windInfoLayout, 1, 0, 1, 1, alignment=Qt.AlignLeft)
         # Humidity Level
@@ -308,6 +311,12 @@ class WeatherObservationDisplay(QWidget):
         nh3Value = pollutionData['list'][0]['components']['nh3']
         self.nh3Label.setText(f"<b>{nh3Value} μg/m<sup>3</sup></b>")
 
+    def changeTheme(self):
+        self.settings = loadSettings('settings')
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        self.windDirectionWidget.iconPath = f"sources/icons/{themeFolder}/icons8-navigation-96.png"
+        self.windDirectionWidget.setAngle(self.windDirectionWidget.angle)
+
 
 class WeatherDisplay(QWidget):
     def __init__(self, path, observationData, pollutionData, forecastData, metric=True):
@@ -378,6 +387,7 @@ class WeatherDisplay(QWidget):
         self.dayWidgets = []
         now = datetime.now()
         today = now.strftime('%Y-%m-%d')
+        forecastData = list(forecastData)
         for index, dayData in enumerate(forecastData):
             if not index:
                 newDayData = dayData.copy()
