@@ -79,7 +79,7 @@ class SingleIndicator(BasicDisplay):
     def updateContent(self, content=None):
         self.generalSettings = loadSettings('settings')
         # If content is there, retrieve the Argument
-        argumentMapping = self.argument.split('$')
+        argumentMapping = self.argument.split('/')
         if argumentMapping != ['']:  # There is an argument in the parameters
             if content is None:
                 value = ''
@@ -199,19 +199,18 @@ class SingleIndicatorEditDialog(QWidget):
         self.hide()
 
     def openArgumentSelector(self):
-        self.valueArgumentSelector = ArgumentSelector(self.currentDir, self)
-        self.valueArgumentSelector.selected.connect(self.argumentSelected)
-        self.valueArgumentSelector.exec_()
-
-    def argumentSelected(self):
-        self.selectedUnit = self.valueArgumentSelector.argumentUnit
-        if self.selectedUnit is None:
-            self.unitCheckbox.setEnabled(False)
-            self.unitCheckbox.setChecked(False)
-        else:
-            self.unitCheckbox.setEnabled(True)
-            self.unitCheckbox.setChecked(True)
-        self.lineEdit.setText(self.valueArgumentSelector.selectedArgument)
+        dialog = ArgumentSelector(self.currentDir, self)
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            self.selectedUnit = dialog.argumentUnit
+            if self.selectedUnit is None:
+                self.unitCheckbox.setEnabled(False)
+                self.unitCheckbox.setChecked(False)
+            else:
+                self.unitCheckbox.setEnabled(True)
+                self.unitCheckbox.setChecked(True)
+            self.lineEdit.setText(dialog.selectedArgument)
+            self.lineEdit.adjustSize()
 
 
 ############################## GRID INDICATOR ##############################
@@ -539,19 +538,18 @@ class LabelEditor(QWidget):
         self.goBackToGrid.emit()
 
     def openArgumentSelector(self):
-        self.curveArgumentSelector = ArgumentSelector(self.currentDir, self)
-        self.curveArgumentSelector.selected.connect(self.argumentSelected)
-        self.curveArgumentSelector.exec_()
-
-    def argumentSelected(self):
-        self.selectedUnit = self.curveArgumentSelector.argumentUnit
-        if self.selectedUnit is None:
-            self.unitCheckbox.setEnabled(False)
-            self.unitCheckbox.setChecked(False)
-        else:
-            self.unitCheckbox.setEnabled(True)
-            self.unitCheckbox.setChecked(True)
-        self.lineEdit.setText(self.curveArgumentSelector.selectedArgument)
+        dialog = ArgumentSelector(self.currentDir, self)
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            self.selectedUnit = dialog.argumentUnit
+            if self.selectedUnit is None:
+                self.unitCheckbox.setEnabled(False)
+                self.unitCheckbox.setChecked(False)
+            else:
+                self.unitCheckbox.setEnabled(True)
+                self.unitCheckbox.setChecked(True)
+            self.lineEdit.setText(dialog.selectedArgument)
+            self.lineEdit.adjustSize()
 
 
 class LabeledIndicator(QGroupBox):
@@ -599,7 +597,7 @@ class LabeledIndicator(QGroupBox):
 
     def updateLabelContent(self, content=None):
         self.generalSettings = loadSettings('settings')
-        argumentMapping = self.argument.split('$')
+        argumentMapping = self.argument.split('/')
         if argumentMapping != ['']:  # There is an argument in the parameters
             if content is None:
                 value = ''

@@ -74,7 +74,7 @@ class MultiCurveGraph(BasicDisplay):
                 style = self.styleDict[lineStyle]
                 pen = pg.mkPen(color=color, width=thickness, style=style)
                 argumentX, argumentY = curve['ARGUMENTS']
-                argumentXMapping, argumentYMapping = argumentX.split('$'), argumentY.split('$')
+                argumentXMapping, argumentYMapping = argumentX.split('/'), argumentY.split('/')
                 if argumentXMapping != [''] and argumentYMapping != ['']:  # Both arguments are defined.
                     valueX = reduce(operator.getitem, argumentXMapping, self.content.storage)
                     valueY = reduce(operator.getitem, argumentYMapping, self.content.storage)
@@ -223,12 +223,14 @@ class CurveEditor(QWidget):
         result = dialog.exec_()
         if result == QMessageBox.Accepted:
             self.lineEditX.setText(dialog.selectedArgument)
+            self.lineEditX.adjustSize()
 
     def openCurveArgumentSelectorY(self):
         dialog = ArgumentSelector(self.currentDir, self)
         result = dialog.exec_()
         if result == QMessageBox.Accepted:
             self.lineEditY.setText(dialog.selectedArgument)
+            self.lineEditY.adjustSize()
 
     def nameChanged(self):
         self.name = self.nameEdit.text()

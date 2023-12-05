@@ -160,14 +160,12 @@ class DisplayTabWidget(QMainWindow):
 class DisplayDockWidget(QDockWidget):
     def __init__(self, name: str, widget: Optional[BasicDisplay] = None):
         super().__init__()
-        self.dockingProperties = {'MOVING': True, 'FLOATING': True,
-                                  'CLOSABLE': True, 'TITLEBAR': True}
+        self.dockingProperties = {'MOVING': True, 'FLOATING': True, 'CLOSABLE': True, 'TITLEBAR': True}
         if widget is None:
             widget = BasicDisplay()
         self.display = widget
         self.setWidget(self.display)
-        self.setAllowedAreas(Qt.TopDockWidgetArea | Qt.LeftDockWidgetArea |
-                             Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
+        self.setAllowedAreas(Qt.TopDockWidgetArea | Qt.LeftDockWidgetArea | Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
         self.parametersEditWindow = None
         self.setWindowTitle(name)
         self.button = HoverButton(self.display)

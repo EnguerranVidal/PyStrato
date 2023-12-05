@@ -12,7 +12,7 @@ from sources.SerialGS import SerialMonitor, saveParserData
 from sources.common.utilities.FileHandling import loadSearchItemsFromJson
 from sources.common.widgets.Widgets import *
 
-from sources.databases.general import DatabaseTabWidget, DatabaseEditor
+from sources.databases.general import DatabaseTabWidget, DatabaseEditor, NewDatabaseWindow
 from sources.databases.units import UnitsEditorWidget
 from sources.databases.constants import ConstantEditorWidget
 from sources.databases.configurations import ConfigsEditorWidget
@@ -21,7 +21,6 @@ from sources.databases.telemetries import TelemetryEditorWidget
 from sources.databases.telecommands import TelecommandEditorWidget
 
 from sources.displays.general import DisplayTabWidget, DisplayDockWidget
-from sources.displays.graphs import MultiCurveGraph
 from sources.weather.general import WeatherWindow
 
 
@@ -814,17 +813,12 @@ class PyStratoGui(QMainWindow):
         self.populateFileMenu()
 
     def openTrackedParsers(self):
-        self.trackedFormatsWindow = TrackedBalloonsWindow(self.currentDir)
-        self.trackedFormatsWindow.buttons.accepted.connect(self.editTrackedParsers)
-        self.trackedFormatsWindow.buttons.rejected.connect(self.trackedFormatsWindow.close)
-        self.trackedFormatsWindow.show()
-
-    def editTrackedParsers(self):
-        trackedFormats = self.trackedFormatsWindow.getListedValues()
-        self.settings['FORMAT_FILES'] = trackedFormats
-        saveSettings(self.settings, 'settings')
-        self.trackedFormatsWindow.close()
-        self.graphsTabWidget.fillComboBox()
+        dialog = TrackedBalloonsWindow(self.currentDir)
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            trackedFormats = dialog.getListedValues()
+            self.settings['FORMAT_FILES'] = trackedFormats
+            saveSettings(self.settings, 'settings')
 
     def openLayoutManager(self):
         description = self.displayTabWidget.getLayoutDescription()

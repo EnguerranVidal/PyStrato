@@ -301,116 +301,74 @@ class TypeSelector(QDialog):
         return re.search(r'(.*?)\[(.*?)\]', typeName)
 
 
-class ArgumentSelectorWidget(QWidget):
-    def __init__(self, path, parent=None, typeFilter=(int, float)):
+class ArgumentSelector(QDialog):
+    def __init__(self, path, parent=None, typeFilter=(int, float), argument=None):
         super().__init__(parent)
-        self.selectedUnits = {}
-        self.selectedTypes = {}
         self.currentDir = path
-        self.typeFilter = typeFilter
-        self.formatPath = os.path.join(self.currentDir, "parsers")
-        self.databases = None
+        self.setModal(True)
         self.settings = loadSettings('settings')
-        # Set up combo box
-        self.comboBox = QComboBox()
+        self.selectedArgument, self.argumentUnit, self.databases, self.typeFilter = argument, None, None, typeFilter
+        self.setWindowTitle('Argument Selection')
+        self.formatPath = os.path.join(self.currentDir, 'parsers')
+
+        # DISPLAY & PARSER SELECTION
+        self.selectionNameLabel = QLabel()
+        self.parserComboBox = QComboBox()
         self.fillComboBox()
-        self.comboBox.currentIndexChanged.connect(self.changeComboBox)
-        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
-        # Set up buttons and label
-        self.previousButton = QPushButton()
-        self.previousButton.setStyleSheet("border: none;")
-        self.previousButton.setFlat(True)
-        self.previousButton.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-back-96.png'))
-        self.previousButton.setIconSize(QSize(20, 20))
+        self.parserComboBox.currentIndexChanged.connect(self.changeComboBox)
+        # TELEMETRY TYPE SELECTION
+        themeFolder = 'dark-theme' if not self.settings['DARK_THEME'] else 'light-theme'
+        self.telemetryTypeLabel = QLabel("Label")
+        self.telemetryTypeLabel.setAlignment(Qt.AlignCenter)
+        self.previousButton = SquareIconButton(f'sources/icons/{themeFolder}/icons8-back-96.png', flat=True)
         self.previousButton.clicked.connect(self.previousTelemetry)
-
-        self.nextButton = QPushButton()
-        self.nextButton.setStyleSheet("border: none;")
-        self.nextButton.setFlat(True)
-        self.nextButton.setIcon(QIcon(f'sources/icons/{themeFolder}/icons8-forward-96.png'))
-        self.nextButton.setIconSize(QSize(20, 20))
+        self.nextButton = SquareIconButton(f'sources/icons/{themeFolder}/icons8-forward-96.png', flat=True)
         self.nextButton.clicked.connect(self.nextTelemetry)
-        self.label = QLabel("Label")
-        self.label.setAlignment(Qt.AlignCenter)
-
-        # Set up tree widget
-        self.treeWidget = QTreeWidget()
-        self.treeWidget.setHeaderLabels([])
-        self.treeWidget.setHeaderHidden(True)
-        self.treeWidget.setColumnCount(1)
-        self.treeItems = {}
-
-        # Set up Main Layout
-        mainLayout = QVBoxLayout()
-        topRowLayout = QHBoxLayout()
-        topRowLayout.addWidget(self.comboBox)
-        mainLayout.addLayout(topRowLayout)
         secondRowLayout = QHBoxLayout()
         secondRowLayout.addWidget(self.previousButton)
-        secondRowLayout.addWidget(self.label)
+        secondRowLayout.addWidget(self.telemetryTypeLabel)
         secondRowLayout.addWidget(self.nextButton)
+        # TELEMETRY ARGUMENTS SELECTION
+        self.selectionWidget = QStackedWidget()
+        self.createTreeStructures()
+        self.setArgument()
+
+        # BOTTOM BUTTONS
+        bottomRowLayout = QHBoxLayout()
+        self.selectButton = QPushButton("Select")
+        self.cancelButton = QPushButton("Cancel")
+        self.selectButton.clicked.connect(self.accept)
+        self.cancelButton.clicked.connect(self.reject)
+        bottomRowLayout.addWidget(self.selectButton)
+        bottomRowLayout.addWidget(self.cancelButton)
+
+        # MAIN LAYOUT
+        mainLayout = QVBoxLayout()
+        mainLayout.addWidget(self.selectionNameLabel)
+        mainLayout.addWidget(self.parserComboBox)
         mainLayout.addLayout(secondRowLayout)
-        mainLayout.addWidget(self.treeWidget)
+        mainLayout.addWidget(self.selectionWidget)
+        mainLayout.addLayout(bottomRowLayout)
         self.setLayout(mainLayout)
 
-        self.changeComboBox()
+    def setArgument(self):
+        if self.selectedArgument is not None:
+            argument = self.selectedArgument.split('/')
+            database, telemetry, argument = argument[0], argument[1], argument[2:]
+            if database in list(self.databases.keys()):
+                telemetries = {telemetry.id.name: telemetry.data for telemetry in database.telemetryTypes}
+                self.selectionWidget.setCurrentIndex(list(self.databases.keys()).index(database))
+                self.selectionWidget.currentWidget().setCurrentIndex(list(telemetries.keys()).index(telemetry))
+            self.selectionNameLabel.setText(self.selectedArgument)
+        else:
+            database = self.databases[list(self.databases.keys())[0]]
+            self.selectionWidget.setCurrentIndex(0)
+            self.selectionWidget.currentWidget().setCurrentIndex(0)
+            telemetryNames = [telemetry.id.name for telemetry in database.telemetryTypes]
+            self.telemetryTypeLabel.setText(telemetryNames[0])
+            self.selectionNameLabel.setText('None')
 
-    def fillComboBox(self):
-        self.settings = loadSettings('settings')
-        files = self.settings['FORMAT_FILES']
-        if len(files) == 1 and len(files[0]) == 0:
-            files = []
-        self.databases = {}
-        for file in files:
-            path = os.path.join(self.formatPath, file)
-            name, database = os.path.basename(path), BalloonPackageDatabase(path)
-            self.databases[name] = (database, 0)
-        self.comboBox.clear()
-        names = list(self.databases.keys())
-        if len(names) != 0:
-            for name in names:
-                self.comboBox.addItem(name)
-
-    def changeComboBox(self):
-        databaseName = self.comboBox.currentText()
-        if len(databaseName) != 0:
-            database, selectedIndex = self.databases[databaseName]
-            telemetries = {telemetry.id.name: telemetry.data for telemetry in database.telemetryTypes}
-            selectedTelemetry = list(telemetries.keys())[selectedIndex]
-            self.label.setText(selectedTelemetry)
-            self.fillTreeWidget(databaseName)
-
-    def previousTelemetry(self):
-        databaseName = self.comboBox.currentText()
-        if len(databaseName) != 0:
-            database, selectedIndex = self.databases[databaseName]
-            selectedIndex -= 1
-            if selectedIndex < 0:
-                selectedIndex = len(database.telemetryTypes) - 1
-            self.databases[databaseName] = (database, selectedIndex)
-            telemetries = {telemetry.id.name: telemetry.data for telemetry in database.telemetryTypes}
-            selectedTelemetry = list(telemetries.keys())[selectedIndex]
-            self.label.setText(selectedTelemetry)
-            self.fillTreeWidget(databaseName)
-
-    def nextTelemetry(self):
-        databaseName = self.comboBox.currentText()
-        if len(databaseName) != 0:
-            database, selectedIndex = self.databases[databaseName]
-            selectedIndex += 1
-            if selectedIndex == len(database.telemetryTypes):
-                selectedIndex = 0
-            self.databases[databaseName] = (database, selectedIndex)
-            telemetries = {telemetry.id.name: telemetry.data for telemetry in database.telemetryTypes}
-            selectedTelemetry = list(telemetries.keys())[selectedIndex]
-            self.label.setText(selectedTelemetry)
-            self.fillTreeWidget(databaseName)
-
-    def fillTreeWidget(self, databaseName: str):
-        self.treeWidget.clear()
-        database, selectedIndex = self.databases[databaseName]
-        telemetryName = database.telemetryTypes[selectedIndex].id.name
-        self.selectedTypes, self.selectedUnits = database.nestedPythonTypes(telemetryName, searchedType=self.typeFilter)
+    def createTreeStructures(self):
 
         def addGrandChildren(treeItem, selectedDict):
             for childName, childValue in selectedDict.items():
@@ -428,55 +386,83 @@ class ArgumentSelectorWidget(QWidget):
                         child.setFlags(child.flags() & ~Qt.ItemIsEnabled)
             return treeItem
 
-        for name, value in self.selectedTypes.items():
-            if isinstance(value, dict):
-                item = QTreeWidgetItem(self.treeWidget, [name])
-                self.treeWidget.addTopLevelItem(item)
-                item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
-                addGrandChildren(item, value)
-            elif isinstance(value, bool):
-                item = QTreeWidgetItem(self.treeWidget, [name])
-                self.treeWidget.addTopLevelItem(item)
-                if value:
-                    item.setFlags(item.flags() & Qt.ItemIsEnabled)
-                else:
-                    item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+        for databaseName, database in self.databases.items():
+            databaseStackedWidget = QStackedWidget()
+            for telemetry in database.telemetryTypes:
+                treeWidget = QTreeWidget()
+                treeWidget.setHeaderLabels([])
+                treeWidget.setHeaderHidden(True)
+                treeWidget.setColumnCount(1)
+                treeWidget.itemSelectionChanged.connect(self.selectionMade)
+                telemetryName = telemetry.id.name
+                selectedTypes, _ = database.nestedPythonTypes(telemetryName, searchedType=self.typeFilter)
+                for name, value in selectedTypes.items():
+                    if isinstance(value, dict):
+                        item = QTreeWidgetItem(treeWidget, [name])
+                        treeWidget.addTopLevelItem(item)
+                        item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+                        addGrandChildren(item, value)
+                    elif isinstance(value, bool):
+                        item = QTreeWidgetItem(treeWidget, [name])
+                        treeWidget.addTopLevelItem(item)
+                        if value:
+                            item.setFlags(item.flags() & Qt.ItemIsEnabled)
+                        else:
+                            item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+                databaseStackedWidget.addWidget(treeWidget)
+            databaseStackedWidget.setCurrentIndex(0)
+            self.selectionWidget.addWidget(databaseStackedWidget)
 
+    def fillComboBox(self):
+        files = self.settings['FORMAT_FILES']
+        if len(files) == 1 and len(files[0]) == 0:
+            files = []
+        self.databases = {}
+        for file in files:
+            path = os.path.join(self.formatPath, file)
+            name, database = os.path.basename(path), BalloonPackageDatabase(path)
+            self.databases[name] = database
+        self.parserComboBox.clear()
+        names = list(self.databases.keys())
+        if len(names) != 0:
+            for name in names:
+                self.parserComboBox.addItem(name)
 
-class ArgumentSelector(QDialog):
-    def __init__(self, path, parent=None):
-        super().__init__(parent)
-        self.selectedArgument = None
-        self.argumentUnit = None
-        self.currentDir = path
-        self.formatPath = os.path.join(self.currentDir, 'formats')
-        # Set up label
-        self.label = QLabel("Select an argument")
+    def changeComboBox(self):
+        databaseName = self.parserComboBox.currentText()
+        currentIndex = self.parserComboBox.currentIndex()
+        if len(databaseName) != 0:
+            database = self.databases[databaseName]
+            telemetries = [telemetry.id.name for telemetry in database.telemetryTypes]
+            self.selectionWidget.setCurrentIndex(currentIndex)
+            self.telemetryTypeLabel.setText(telemetries[self.selectionWidget.currentWidget().currentIndex()])
 
-        # Set up item selection widget
-        self.itemSelectionWidget = ArgumentSelectorWidget(self.currentDir)
-        self.itemSelectionWidget.treeWidget.itemSelectionChanged.connect(self.selectionMade)
+    def previousTelemetry(self):
+        databaseName = self.parserComboBox.currentText()
+        if len(databaseName) != 0:
+            database = self.databases[databaseName]
+            selectedIndex = self.selectionWidget.currentWidget().currentIndex() - 1
+            if selectedIndex < 0:
+                selectedIndex = len(database.telemetryTypes) - 1
+            telemetries = {telemetry.id.name: telemetry.data for telemetry in database.telemetryTypes}
+            selectedTelemetry = list(telemetries.keys())[selectedIndex]
+            self.telemetryTypeLabel.setText(selectedTelemetry)
+            self.selectionWidget.currentWidget().setCurrentIndex(selectedIndex)
 
-        # Set buttons for bottom row
-        bottomRowLayout = QHBoxLayout()
-        self.selectButton = QPushButton("Select")
-        self.cancelButton = QPushButton("Cancel")
-        self.selectButton.clicked.connect(self.accept)
-        self.cancelButton.clicked.connect(self.reject)
-        bottomRowLayout.addWidget(self.selectButton)
-        bottomRowLayout.addWidget(self.cancelButton)
-
-        # Setting Up Selected Name
-        self.selectionNameLabel = QLabel()
-
-        mainLayout = QVBoxLayout()
-        mainLayout.addWidget(self.label)
-        mainLayout.addWidget(self.itemSelectionWidget)
-        mainLayout.addLayout(bottomRowLayout)
-        self.setLayout(mainLayout)
+    def nextTelemetry(self):
+        databaseName = self.parserComboBox.currentText()
+        if len(databaseName) != 0:
+            database = self.databases[databaseName]
+            selectedIndex = self.selectionWidget.currentWidget().currentIndex() + 1
+            if selectedIndex == len(database.telemetryTypes):
+                selectedIndex = 0
+            telemetries = [telemetry.id.name for telemetry in database.telemetryTypes]
+            selectedTelemetry = telemetries[selectedIndex]
+            self.telemetryTypeLabel.setText(selectedTelemetry)
+            self.selectionWidget.currentWidget().setCurrentIndex(selectedIndex)
 
     def selectionMade(self):
-        currentItem = self.itemSelectionWidget.treeWidget.currentItem()
+        currentItem = self.selectionWidget.currentWidget().currentWidget().currentItem()
 
         def getAncestors(item):
             ancestors = [item.text(0)]
@@ -491,21 +477,23 @@ class ArgumentSelector(QDialog):
                     level = level[key]
                 else:
                     return None
+            if isinstance(level, dict):
+                return None
             return level
 
         if not currentItem.isDisabled():
-            # Retrieving Data
-            database = self.itemSelectionWidget.comboBox.currentText()
-            telemetry = self.itemSelectionWidget.label.text()
+            # RETRIEVING DATA
+            database = self.parserComboBox.currentText()
+            telemetry = self.telemetryTypeLabel.text()
             itemAncestors = getAncestors(currentItem)
-            unitName = getUnit(self.itemSelectionWidget.selectedUnits, itemAncestors)
-            itemName = currentItem.text(0)
-            # Updating Value
-            self.selectionNameLabel.setText(itemName)
-            self.selectedArgument = f"{database}${telemetry}${'$'.join(itemAncestors)}"
-            print(self.selectedArgument)
+            selectedTypes, selectedUnits = self.databases[database].nestedPythonTypes(telemetry, self.typeFilter)
+            unitName = getUnit(selectedUnits, itemAncestors)
+            # UPDATING VALUE
+            self.selectedArgument = f"{database}/{telemetry}/{'/'.join(itemAncestors)}"
+            self.selectionNameLabel.setText(self.selectedArgument)
+            print(self.selectedArgument, unitName)
             if unitName is not None:
-                self.argumentUnit = self.itemSelectionWidget.databases[database][0].units[unitName][0]
+                self.argumentUnit = self.databases[database].units[unitName][0]
             else:
                 self.argumentUnit = None
 
@@ -566,77 +554,44 @@ class MessageBox(QMessageBox):
         gridLayout.addWidget(buttonBox, 1, 0, alignment=Qt.AlignCenter)
 
 
-class NewDatabaseWindow(QDialog):
-    def __init__(self, parent=None, databases=[]):
-        super().__init__(parent)
-        self.databases = databases
-        self.setWindowTitle('Create New Package')
-        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
-        self.setModal(True)
-        self.dataChanged = False
-        self.saveChanged = False
-        self.resize(400, 100)
-        # NAME ENTRY & BUTTONS
-        self.nameLabel = QLabel('Database Name :')
-        self.nameLineEdit = QLineEdit()
-        self.nameLineEdit.textChanged.connect(self.updateOkButtonState)
-        self.okButton = QPushButton('OK')
-        self.okButton.setEnabled(False)
-        self.cancelButton = QPushButton('Cancel')
-        self.okButton.clicked.connect(self.accept)
-        self.cancelButton.clicked.connect(self.reject)
-        # LAYOUT
-        buttonLayout = QHBoxLayout()
-        buttonLayout.addWidget(self.okButton)
-        buttonLayout.addWidget(self.cancelButton)
-        layout = QVBoxLayout(self)
-        layout.addWidget(self.nameLabel)
-        layout.addWidget(self.nameLineEdit)
-        layout.addLayout(buttonLayout)
-
-    def updateOkButtonState(self):
-        name = self.nameLineEdit.text()
-        validNewDatabaseName = bool(name) and name not in self.databases
-        self.okButton.setEnabled(validNewDatabaseName)
-
-
-class TrackedBalloonsWindow(QWidget):
+class TrackedBalloonsWindow(QDialog):
     def __init__(self, path):
         super().__init__()
         self.current_dir = path
-        self.format_path = os.path.join(self.current_dir, "parsers")
+        self.setModal(True)
+        self.formatPath = os.path.join(self.current_dir, "parsers")
         self.setWindowTitle('Tracked Balloons')
         self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         self.settings = loadSettings("settings")
-        # Selected Balloon List
+
+        # WIDGETS & BUTTONS
         self.selectedList = BalloonsListWidget()
         self.selectedLabel = QLabel('Tracked Formats')
-        # Trackable Balloons List
         self.availableList = BalloonsListWidget()
         self.availableLabel = QLabel('Available Formats')
-        # General Layout
-        layout = QVBoxLayout()
-        self.editorWidget = QWidget()
+        self.okButton = QPushButton('OK')
+        self.cancelButton = QPushButton('Cancel')
+        self.okButton.clicked.connect(self.accept)
+        self.cancelButton.clicked.connect(self.reject)
+        self.names = {}
+        self.populateFormats()
+
+        # MAIN LAYOUT
         editorLayout = QGridLayout()
         editorLayout.addWidget(self.selectedLabel, 0, 0)
         editorLayout.addWidget(self.selectedList, 1, 0)
         editorLayout.addWidget(self.availableLabel, 0, 1)
         editorLayout.addWidget(self.availableList, 1, 1)
-        self.editorWidget.setLayout(editorLayout)
-        layout.addWidget(self.editorWidget)
-
-        self.buttons = QDialogButtonBox()
-        self.buttons.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        self.buttons.button(QDialogButtonBox.Ok).setText("Accept")
-        layout.addWidget(self.buttons)
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(self.okButton)
+        buttonLayout.addWidget(self.cancelButton)
+        layout = QVBoxLayout(self)
+        layout.addLayout(editorLayout)
+        layout.addLayout(buttonLayout)
         self.setLayout(layout)
 
-        # Populating Names and Lists
-        self.names = {}
-        self.populateFormats()
-
     def populateFormats(self):
-        path = self.format_path
+        path = self.formatPath
         trackedFormats = self.settings['FORMAT_FILES']
         if len(trackedFormats) == 1 and len(trackedFormats[0]) == 0:
             trackedFormats = []
@@ -757,10 +712,7 @@ class AboutDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("About")
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
-
-        # Add your content here
+        # ABOUT TEXT EDIT
         aboutText = """
         <html>
         <body>
@@ -792,20 +744,19 @@ class AboutDialog(QDialog):
         </body>
         </html>
         """
-
-        text_edit = ExternalLinkTextEdit()
-        text_edit.setReadOnly(True)
-        text_edit.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        text_edit.setHtml(aboutText)
-        self.layout.addWidget(text_edit)
-
-        done_button = QPushButton("Done")
-        done_button.clicked.connect(self.accept)
-        self.layout.addWidget(done_button)
-
-        # Set fixed width and height
-        text_edit.setFixedWidth(400)
-        text_edit.setFixedHeight(500)
+        testEdit = ExternalLinkTextEdit()
+        testEdit.setReadOnly(True)
+        testEdit.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        testEdit.setHtml(aboutText)
+        testEdit.setFixedWidth(400)
+        testEdit.setFixedHeight(500)
+        doneButt = QPushButton("Done")
+        doneButt.clicked.connect(self.accept)
+        # MAIN LAYOUT
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        self.layout.addWidget(testEdit)
+        self.layout.addWidget(doneButt)
 
 
 class ExternalLinkTextEdit(QTextEdit):
@@ -832,6 +783,7 @@ class LayoutManagerDialog(QDialog):
         self.setFixedSize(600, 600)
         self.setWindowTitle('Layout Preset Selection')
         self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
+        self.settings = loadSettings('settings')
         self.currentDir = currentDir
         self.dataPath = os.path.join(self.currentDir, "data")
         self.presetPath = os.path.join(self.dataPath, 'presets')
@@ -854,14 +806,11 @@ class LayoutManagerDialog(QDialog):
         # TOP BUTTONS
         self.topButtonsWidget = QWidget()
         self.topButtonsLayout = QHBoxLayout()
-        self.renameButton = SquareIconButton('sources/icons/light-theme/icons8-rename-96.png', self.topButtonsWidget,
-                                             flat=True)
-        self.loadButton = SquareIconButton('sources/icons/light-theme/icons8-download-96.png', self.topButtonsWidget,
-                                           flat=True)
-        self.deleteButton = SquareIconButton('sources/icons/light-theme/icons8-remove-96.png', self.topButtonsWidget,
-                                             flat=True)
-        self.newButton = SquareIconButton('sources/icons/light-theme/icons8-add-new-96.png', self.topButtonsWidget,
-                                          flat=True)
+        folderTheme = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        self.renameButton = SquareIconButton(f'sources/icons/{folderTheme}/icons8-rename-96.png', self.topButtonsWidget, flat=True)
+        self.loadButton = SquareIconButton(f'sources/icons/{folderTheme}/icons8-download-96.png', self.topButtonsWidget, flat=True)
+        self.deleteButton = SquareIconButton(f'sources/icons/{folderTheme}/icons8-remove-96.png', self.topButtonsWidget, flat=True)
+        self.newButton = SquareIconButton(f'sources/icons/{folderTheme}/icons8-add-new-96.png', self.topButtonsWidget, flat=True)
         self.renameButton.setToolTip('Rename Layout')
         self.loadButton.setToolTip('Load Save')
         self.deleteButton.setToolTip('Delete Layout')
