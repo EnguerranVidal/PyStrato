@@ -296,13 +296,7 @@ class LinePropertiesEditor(QWidget):
     @staticmethod
     def createPen(line_style, width=1, color='#FF0000'):
         color = QColor(color)
-        style_dict = {
-            'Solid': Qt.SolidLine,
-            'Dash': Qt.DashLine,
-            'Dot': Qt.DotLine,
-            'DashDot': Qt.DashDotLine,
-            'DashDotDot': Qt.DashDotDotLine
-        }
+        style_dict = {'Solid': Qt.SolidLine, 'Dash': Qt.DashLine, 'Dot': Qt.DotLine, 'DashDot': Qt.DashDotLine, 'DashDotDot': Qt.DashDotDotLine}
         style = style_dict.get(line_style, None)
         if style is None:
             raise ValueError('Given line style', line_style, ' is not recognized.')
@@ -367,12 +361,3 @@ class ColorCycler:
         if inHexCode:
             return "#{:02x}{:02x}{:02x}".format(*self.CYCLE[step])
         return self.CYCLE[step]
-
-
-class SplitViewGraph(BasicDisplay):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        # TODO SPLIT VIEW 2D GRAPH
-
-# TODO MULTI-CURVES 2D GRAPH
-# TODO 3D GRAPH

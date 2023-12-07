@@ -168,64 +168,56 @@ class DisplayDockWidget(QDockWidget):
         self.setAllowedAreas(Qt.TopDockWidgetArea | Qt.LeftDockWidgetArea | Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
         self.parametersEditWindow = None
         self.setWindowTitle(name)
-        self.button = HoverButton(self.display)
-        self.button.setVisible(False)
-        self.button.clicked.connect(self.openSettings)
+        self.hoverButton = HoverButton(self.display)
+        self.hoverButton.setVisible(False)
+        self.hoverButton.clicked.connect(self.openSettings)
         layout = QVBoxLayout(self.display)
-        layout.addWidget(self.button)
+        layout.addWidget(self.hoverButton)
         self.resize(500, 500)
 
     def enterEvent(self, event):
-        # Animate the button from the top of the widget to the top right corner
-        self.button.animation.setStartValue(self.button.pos())
-        self.button.animation.setEndValue(QPoint(self.width() - self.button.width(), 0))
-        self.button.animation.start()
-        self.button.setVisible(True)
-        self.button.raise_()
+        self.hoverButton.animation.setStartValue(self.hoverButton.pos())
+        self.hoverButton.animation.setEndValue(QPoint(self.width() - self.hoverButton.width(), 0))
+        self.hoverButton.animation.start()
+        self.hoverButton.setVisible(True)
+        self.hoverButton.raise_()
 
     def leaveEvent(self, event):
-        # Animate the button back to the top of the widget
-        self.button.animation.setStartValue(self.button.pos())
-        self.button.animation.setEndValue(QPoint(self.width() - self.button.width(), -self.button.height()))
-        self.button.animation.start()
-        self.button.setVisible(False)
-        self.button.lower()
+        self.hoverButton.animation.setStartValue(self.hoverButton.pos())
+        self.hoverButton.animation.setEndValue(QPoint(self.width() - self.hoverButton.width(), -self.hoverButton.height()))
+        self.hoverButton.animation.start()
+        self.hoverButton.setVisible(False)
+        self.hoverButton.lower()
 
     def openSettings(self):
-        self.parametersEditWindow = ParameterDialog(parent=self, editWidget=self.display.settingsWidget)
-        self.display.settingsWidget.show()
-        self.parametersEditWindow.applied.connect(self.applySettingsChanges)
-        self.parametersEditWindow.accepted.connect(self.applySettingsChanges)
-        self.parametersEditWindow.show()
+        dialog = ParameterDialog(parent=self, editWidget=self.display.settingsWidget)
+        dialog.editWidget.show()
 
-    def applySettingsChanges(self):
-        # Retrieving
-        name = self.parametersEditWindow.nameEdit.text()
-        floating = self.parametersEditWindow.floatingCheckbox.isChecked()
-        moving = self.parametersEditWindow.movingCheckBox.isChecked()
-        showTitleBar = self.parametersEditWindow.showTitleCheckBox.isChecked()
-        closable = self.parametersEditWindow.closableCheckbox.isChecked()
-        self.dockingProperties = {'MOVING': moving, 'FLOATING': floating,
-                                  'CLOSABLE': closable, 'TITLEBAR': showTitleBar}
+        def applySettingsChanges(widget=None):
+            # DISPLAY DOCK WIDGET PARAMETERS
+            name = dialog.nameEdit.text()
+            floating = dialog.floatingCheckbox.isChecked()
+            moving = dialog.movingCheckBox.isChecked()
+            showTitleBar = dialog.showTitleCheckBox.isChecked()
+            closable = dialog.closableCheckbox.isChecked()
+            self.dockingProperties = {'MOVING': moving, 'FLOATING': floating, 'CLOSABLE': closable, 'TITLEBAR': showTitleBar}
+            features = QDockWidget.NoDockWidgetFeatures
+            if moving:
+                features |= QDockWidget.DockWidgetMovable
+            if closable:
+                features |= QDockWidget.DockWidgetClosable
+            if floating:
+                features |= QDockWidget.DockWidgetFloatable
+            self.setFeatures(features)
+            self.setWindowTitle(name)
+            self.setTitleBarWidget(None if showTitleBar else QWidget())
+            # DISPLAY CHANGES
+            self.display.applyChanges(widget if widget is not None else dialog.editWidget)
 
-        # Upper Layout Basic Properties
-        features = QDockWidget.NoDockWidgetFeatures
-        if moving:
-            features |= QDockWidget.DockWidgetMovable
-        if closable:
-            features |= QDockWidget.DockWidgetClosable
-        if floating:
-            features |= QDockWidget.DockWidgetFloatable
-
-        self.setFeatures(features)
-        self.setWindowTitle(name)
-        if showTitleBar:
-            self.setTitleBarWidget(None)
-        else:
-            self.setTitleBarWidget(QWidget())
-
-        # Edit Contained Display Widget
-        self.display.applyChanges(self.parametersEditWindow.editWidget)
+        dialog.applied.connect(applySettingsChanges)
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            applySettingsChanges(dialog.editWidget)
 
     def closeEvent(self, event):
         super().closeEvent(event)
@@ -233,9 +225,7 @@ class DisplayDockWidget(QDockWidget):
 
 
 class ParameterDialog(QDialog):
-    accepted = pyqtSignal()
     applied = pyqtSignal()
-    canceled = pyqtSignal()
 
     def __init__(self, parent: DisplayDockWidget = None, editWidget: Optional[BasicDisplay] = None):
         super().__init__(parent)
@@ -243,68 +233,50 @@ class ParameterDialog(QDialog):
         self.setWindowTitle('Display Settings')
         if editWidget is None:
             editWidget = QWidget(self)
-        self.editWidget = editWidget
-        propertiesLayout = QGridLayout()
 
-        # Basic Properties --------------------------------------
-        # Adding a Name Line Edit
+        # EDIT DISPLAYS
+        self.editWidget = editWidget
         nameLabel = QLabel('Display Name', self)
         self.nameEdit = QLineEdit()
         self.nameEdit.setText(parent.windowTitle())
-        propertiesLayout.addWidget(nameLabel, 0, 0, 1, 1)
-        propertiesLayout.addWidget(self.nameEdit, 0, 1, 1, 1)
-
-        # Adding Checkboxes to make the Dock Widget
-        # Floating / Closable / Movable / With a TitleBar
         titleBarShowing = parent.titleBarWidget() is None
         floatable = parent.features() & QDockWidget.DockWidgetFloatable
         movable = parent.features() & QDockWidget.DockWidgetMovable
         closable = parent.features() & QDockWidget.DockWidgetClosable
         self.floatingCheckbox = QCheckBox('Allow Floating')
-        self.floatingCheckbox.setChecked(floatable)
         self.closableCheckbox = QCheckBox('Allow Closing')
-        self.closableCheckbox.setChecked(closable)
         self.movingCheckBox = QCheckBox('Allow Moving')
-        self.movingCheckBox.setChecked(movable)
         self.showTitleCheckBox = QCheckBox('Show TitleBar')
+        self.floatingCheckbox.setChecked(floatable)
+        self.closableCheckbox.setChecked(closable)
+        self.movingCheckBox.setChecked(movable)
         self.showTitleCheckBox.setChecked(titleBarShowing)
-        propertiesLayout.addWidget(self.showTitleCheckBox, 1, 0, 1, 1)
-        propertiesLayout.addWidget(self.closableCheckbox, 1, 1, 1, 1)
-        propertiesLayout.addWidget(self.movingCheckBox, 2, 0, 1, 1)
-        propertiesLayout.addWidget(self.floatingCheckbox, 2, 1, 1, 1)
 
-        # Final Buttons Layout --------------------------------------
-        buttonLayout = QHBoxLayout()
-        # Add three buttons to the button layout
+        # BOTTOM DIALOG BUTTONS
         self.acceptButton = QPushButton("Accept")
         self.applyButton = QPushButton("Apply")
         self.cancelButton = QPushButton("Cancel")
-        self.acceptButton.clicked.connect(self.acceptedButtonClicked)
-        self.applyButton.clicked.connect(self.appliedButtonClicked)
-        self.cancelButton.clicked.connect(self.canceledButtonClicked)
+        self.acceptButton.clicked.connect(self.accept)
+        self.applyButton.clicked.connect(self.applied.emit)
+        self.cancelButton.clicked.connect(self.reject)
+
+        # MAIN LAYOUT
+        propertiesLayout = QGridLayout()
+        propertiesLayout.addWidget(nameLabel, 0, 0, 1, 1)
+        propertiesLayout.addWidget(self.nameEdit, 0, 1, 1, 1)
+        propertiesLayout.addWidget(self.showTitleCheckBox, 1, 0)
+        propertiesLayout.addWidget(self.closableCheckbox, 1, 1)
+        propertiesLayout.addWidget(self.movingCheckBox, 2, 0)
+        propertiesLayout.addWidget(self.floatingCheckbox, 2, 1)
+        buttonLayout = QHBoxLayout()
         buttonLayout.addWidget(self.acceptButton)
         buttonLayout.addWidget(self.applyButton)
         buttonLayout.addWidget(self.cancelButton)
-
-        # Add the form layout and button layout to the dialog
-        self.layout = QGridLayout()
-        self.layout.addWidget(self.nameEdit, 0, 1, 1, 1)
-        self.layout.addWidget(nameLabel, 0, 0, 1, 1)
-        self.layout.addWidget(self.editWidget, 1, 0, 1, 2)
-        self.layout.addLayout(propertiesLayout, 2, 0, 1, 2)
-        self.layout.addLayout(buttonLayout, 3, 0, 1, 2)
+        self.layout = QVBoxLayout()
+        self.layout.addLayout(propertiesLayout)
+        self.layout.addWidget(self.editWidget)
+        self.layout.addLayout(buttonLayout)
         self.setLayout(self.layout)
-
-    def acceptedButtonClicked(self):
-        self.accepted.emit()
-        self.close()
-
-    def appliedButtonClicked(self):
-        self.applied.emit()
-
-    def canceledButtonClicked(self):
-        self.canceled.emit()
-        self.close()
 
 
 class HoverButton(QPushButton):

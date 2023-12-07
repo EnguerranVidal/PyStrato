@@ -1484,8 +1484,9 @@ class PyStratoGui(QMainWindow):
         for displayTab in displayTabs:
             for dockWidget in displayTab.findChildren(QDockWidget):
                 if dockWidget.isVisible() and isinstance(dockWidget, DisplayDockWidget):
-                    dockWidget.button.setIcon(self.icons['EDIT'])
+                    dockWidget.hoverButton.setIcon(self.icons['EDIT'])
                     dockWidget.display.changeTheme()
+        # UPDATING WEATHER WIDGETS
         if self.weatherTabWidget.forecastTabDisplay:
             locationTabs = [self.weatherTabWidget.forecastTabDisplay.widget(index) for index in range(self.weatherTabWidget.forecastTabDisplay.count())]
             for locationTab in locationTabs:
