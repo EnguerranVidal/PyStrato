@@ -786,7 +786,7 @@ class LayoutManagerDialog(QDialog):
         self.settings = loadSettings('settings')
         self.currentDir = currentDir
         self.dataPath = os.path.join(self.currentDir, "data")
-        self.presetPath = os.path.join(self.dataPath, 'presets')
+        self.presetPath = os.path.join(self.dataPath, '_presets')
         self.autosavePath = os.path.join(self.presetPath, 'autosaves')
         self.examplesPath = os.path.join(self.presetPath, 'examples')
         self.currentLayout = currentLayout

@@ -114,7 +114,7 @@ class DisplayTabWidget(QMainWindow):
         for tab, tabName in zip(tabs, tabNames):
             tabDescription = {}
             for dockWidget in tab.findChildren(QDockWidget):
-                if dockWidget.isVisible():
+                if dockWidget.isVisible() and isinstance(dockWidget, DisplayDockWidget):
                     displayName = dockWidget.windowTitle()
                     dockPlacement = int(tab.dockWidgetArea(dockWidget))
                     dockGeometry = dockWidget.geometry().getRect()
@@ -124,6 +124,7 @@ class DisplayTabWidget(QMainWindow):
                         'AREA_PLACEMENT': dockPlacement,
                         'GEOMETRY': dockGeometry,
                         'DISPLAY': displayDescription,
+                        'PROPERTIES': dockWidget.dockingProperties
                     }
 
                     tabDescription[displayName] = dockDescription
@@ -217,6 +218,7 @@ class DisplayDockWidget(QDockWidget):
         dialog.applied.connect(applySettingsChanges)
         result = dialog.exec_()
         if result == QDialog.Accepted:
+            # TODO : Add Code to allow canceling feature for chanegs already applied to the display and dockwidget
             applySettingsChanges(dialog.editWidget)
 
     def closeEvent(self, event):

@@ -75,11 +75,8 @@ class PyStratoGui(QMainWindow):
         self.graphsTabList = []
         self.serialWindow = SerialWindow()
         self.serialWindow.textedit.setDisabled(True)
+        self.serialMonitorTimer = None
         self.layoutPresetWindow = None
-
-        self.serialMonitorTimer = QTimer()
-        self.serialMonitorTimer.timeout.connect(self.checkSerialMonitor)
-        self.serialMonitorTimer.start(100)
         self.newFormatWindow = None
         self.newGraphWindow = None
         self.newPlotWindow = None
@@ -752,7 +749,7 @@ class PyStratoGui(QMainWindow):
     def _initializeDisplayLayout(self):
         currentLayout = self.settings['CURRENT_LAYOUT']
         if currentLayout != '':
-            path = os.path.join(self.presetPath, f"{currentLayout}.json")
+            path = os.path.join(self.autosavePath, f"{currentLayout}.json")
             self.loadLayout(path, warning=False)
 
     def newParserTab(self):
@@ -953,7 +950,7 @@ class PyStratoGui(QMainWindow):
                 self.saveLayoutAct.setDisabled(True)
                 self.exportLayoutAct.setDisabled(True)
         else:
-            filename = os.path.join(self.presetPath, f"{self.settings['CURRENT_LAYOUT']}.json")
+            filename = os.path.join(self.autosavePath, f"{self.settings['CURRENT_LAYOUT']}.json")
             self.exportLayoutAct.setDisabled(False)
             with open(filename, "r") as file:
                 previousState = json.load(file)
@@ -1002,6 +999,9 @@ class PyStratoGui(QMainWindow):
                 self.serial.output.connect(self.onSerialOutput)
                 self.serial.progress.connect(self.newSerialData)
                 self.serial.start()
+                self.serialMonitorTimer = QTimer()
+                self.serialMonitorTimer.timeout.connect(self.checkSerialMonitor)
+                self.serialMonitorTimer.start(100)
             else:
                 cancelling = MessageBox()
                 cancelling.setWindowIcon(self.mainIcon)
@@ -1017,6 +1017,7 @@ class PyStratoGui(QMainWindow):
             self.serial.interrupt()
             self.serial = None
             time.sleep(0.5)
+            self.serialMonitorTimer.stop()
             self.serialWindow.textedit.setDisabled(True)
         self.populateToolsMenu()
 
@@ -1524,6 +1525,7 @@ class PyStratoGui(QMainWindow):
                 time.sleep(0.5)
                 self.serialMonitorTimer.stop()
                 self.settings['MAXIMIZED'] = 1 if self.isMaximized() else 0
+                self.saveLayout(autosave=True)
                 saveSettings(self.settings, 'settings')
                 for window in QApplication.topLevelWidgets():
                     window.close()
@@ -1533,6 +1535,7 @@ class PyStratoGui(QMainWindow):
                 time.sleep(0.5)
                 self.serialMonitorTimer.stop()
                 self.settings['MAXIMIZED'] = 1 if self.isMaximized() else 0
+                self.saveLayout(autosave=True)
                 saveSettings(self.settings, 'settings')
                 for window in QApplication.topLevelWidgets():
                     window.close()
@@ -1548,6 +1551,7 @@ class PyStratoGui(QMainWindow):
                 time.sleep(0.5)
                 self.serialMonitorTimer.stop()
                 self.settings['MAXIMIZED'] = 1 if self.isMaximized() else 0
+                self.saveLayout(autosave=True)
                 saveSettings(self.settings, 'settings')
                 for window in QApplication.topLevelWidgets():
                     window.close()

@@ -18,6 +18,7 @@ def main(*args):
             pyStratoGui.showNormal()
         pyStratoGui.show()
         splashScreen.close()
+        splashScreen.progressTimer.stop()
 
     splashScreen.workerFinished.connect(showPyStratoGui)
     splashScreen.show()
