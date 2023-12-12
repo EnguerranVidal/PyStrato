@@ -806,11 +806,10 @@ class LayoutManagerDialog(QDialog):
         # TOP BUTTONS
         self.topButtonsWidget = QWidget()
         self.topButtonsLayout = QHBoxLayout()
-        folderTheme = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
-        self.renameButton = SquareIconButton(f'sources/icons/{folderTheme}/icons8-rename-96.png', self.topButtonsWidget, flat=True)
-        self.loadButton = SquareIconButton(f'sources/icons/{folderTheme}/icons8-download-96.png', self.topButtonsWidget, flat=True)
-        self.deleteButton = SquareIconButton(f'sources/icons/{folderTheme}/icons8-remove-96.png', self.topButtonsWidget, flat=True)
-        self.newButton = SquareIconButton(f'sources/icons/{folderTheme}/icons8-add-new-96.png', self.topButtonsWidget, flat=True)
+        self.renameButton = QPushButton('Rename')
+        self.loadButton = QPushButton('Load')
+        self.deleteButton = QPushButton('Delete')
+        self.newButton = QPushButton('New')
         self.renameButton.setToolTip('Rename Layout')
         self.loadButton.setToolTip('Load Save')
         self.deleteButton.setToolTip('Delete Layout')
