@@ -743,8 +743,8 @@ class PyStratoGui(QMainWindow):
     def _initializeDisplayLayout(self):
         currentLayout = self.settings['CURRENT_LAYOUT']
         if currentLayout != '':
-            path = os.path.join(self.autosavePath, f"{currentLayout}.json")
-            self.loadLayout(path, warning=False)
+            path = os.path.join(self.presetPath, f"{currentLayout}.json")
+            self.loadLayout(path)
 
     def newParserTab(self):
         fullPaths = [os.path.join(self.formatPath, entry) for entry in os.listdir(self.formatPath)]
@@ -949,7 +949,7 @@ class PyStratoGui(QMainWindow):
                 self.saveLayoutAct.setDisabled(True)
                 self.exportLayoutAct.setDisabled(True)
         else:
-            filename = os.path.join(self.autosavePath, f"{self.settings['CURRENT_LAYOUT']}.json")
+            filename = os.path.join(self.presetPath, f"{self.settings['CURRENT_LAYOUT']}.json")
             self.exportLayoutAct.setDisabled(False)
             with open(filename, "r") as file:
                 previousState = json.load(file)

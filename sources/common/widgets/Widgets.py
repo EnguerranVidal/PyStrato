@@ -491,11 +491,7 @@ class ArgumentSelector(QDialog):
             # UPDATING VALUE
             self.selectedArgument = f"{database}/{telemetry}/{'/'.join(itemAncestors)}"
             self.selectionNameLabel.setText(self.selectedArgument)
-            print(self.selectedArgument, unitName)
-            if unitName is not None:
-                self.argumentUnit = self.databases[database].units[unitName][0]
-            else:
-                self.argumentUnit = None
+            self.argumentUnit = self.databases[database].units[unitName][0] if unitName is not None else None
 
 
 class SerialWindow(QWidget):

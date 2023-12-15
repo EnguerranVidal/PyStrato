@@ -1,4 +1,5 @@
 ######################## IMPORTS ########################
+import os
 from typing import Dict
 from functools import reduce
 import operator
@@ -12,6 +13,7 @@ from PyQt5.QtGui import *
 from sources.common.utilities.FileHandling import loadSettings, nameGiving
 from sources.common.widgets.Widgets import ArgumentSelector
 from sources.common.widgets.basic import BasicDisplay
+from sources.databases.balloondata import BalloonPackageDatabase
 from sources.displays.graphs import ColorEditor
 from sources.databases.units import DefaultUnitsCatalogue
 
@@ -21,6 +23,8 @@ class SingleIndicator(BasicDisplay):
     def __init__(self, path, parent=None):
         super().__init__(path, parent)
         self.textAlignment = 0
+        self.lastValue = None
+        self.argument, self.argumentUnit, self.showUnit = '', None, False
         self.catalogue = DefaultUnitsCatalogue()
         self.indicatorLabel = QLabel('')
         self.settingsWidget = SingleIndicatorEditDialog(self.currentDir, self)
@@ -29,20 +33,12 @@ class SingleIndicator(BasicDisplay):
         gridLayout.addWidget(self.indicatorLabel)
         self.setLayout(gridLayout)
 
-        self.lastValue = None
-        self.argumentUnit = None
-        self.showUnit = False
-        self.argument = ''
-
     def getDescription(self):
-        palette = self.palette()
-
         font = self.indicatorLabel.font()
         fontFamily = font.family()
         fontSize = font.pointSize()
         description = {'DISPLAY_TYPE': 'SINGLE_INDICATOR',
                        'ARGUMENT': self.argument,
-                       'ARGUMENT_UNIT': self.argumentUnit,
                        'SHOW_UNIT': int(self.showUnit),
                        'FONT_FAMILY': fontFamily,
                        'FONT_SIZE': fontSize,
@@ -50,13 +46,29 @@ class SingleIndicator(BasicDisplay):
                        }
         return description
 
+    def applyDescription(self, description):
+        self.argument = description['ARGUMENT']
+        self.showUnit = bool(description['SHOW_UNIT'])
+        font = QFont(description['FONT_FAMILY'])
+        fontSize = description['FONT_SIZE']
+        font.setPixelSize(fontSize * QFontMetricsF(font).height() / font.pointSizeF())
+        self.indicatorLabel.setAutoFillBackground(True)
+        self.indicatorLabel.setFont(font)
+        self.textAlignment = description['TEXT_PLACEMENT']
+        if self.textAlignment == 0:
+            self.indicatorLabel.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        elif self.textAlignment == 1:
+            self.indicatorLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        else:
+            self.indicatorLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.retrieveArgumentUnit(self.argument)
+        self.settingsWidget = SingleIndicatorEditDialog(self.currentDir, self)
+        self.updateContent()
+
     def applyChanges(self, editWidget):
         font = QFont(editWidget.fontModelComboBox.currentText())
         fontSize = editWidget.fontSizeSpinBox.value()
         font.setPixelSize(fontSize * QFontMetricsF(font).height() / font.pointSizeF())
-
-        self.indicatorLabel.setAutoFillBackground(True)
-        self.indicatorLabel.setFont(font)
         self.indicatorLabel.setAutoFillBackground(True)
         self.indicatorLabel.setFont(font)
         # Text Alignment
@@ -66,14 +78,13 @@ class SingleIndicator(BasicDisplay):
         elif editWidget.positionCenterButton.isChecked():
             self.indicatorLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
             self.textAlignment = 1
-        elif editWidget.positionRightButton.isChecked():
+        else:
             self.indicatorLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.textAlignment = 2
-
         self.showUnit = editWidget.unitCheckbox.isChecked()
-        self.argumentUnit = editWidget.selectedUnit
-        self.argument = editWidget.lineEdit.text()
-
+        self.argumentUnit = editWidget.argumentUnit
+        self.argument = editWidget.argumentEdit.text()
+        print(self.argumentUnit)
         self.updateContent()
 
     def updateContent(self, content=None):
@@ -105,71 +116,73 @@ class SingleIndicator(BasicDisplay):
                     displayedText += ' ' + self.argumentUnit.name
             self.indicatorLabel.setText(displayedText)
 
+    def retrieveArgumentUnit(self, argument):
+
+        def getUnit(level, keys):
+            for key in keys:
+                if key in level:
+                    level = level[key]
+                else:
+                    return None
+            if isinstance(level, dict):
+                return None
+            return level
+
+        dialog = ArgumentSelector(self.currentDir, self)
+        argument = argument.split('/')
+        database, telemetry, argument = argument[0], argument[1], argument[2:]
+        selectedTypes, selectedUnits = dialog.databases[database].nestedPythonTypes(telemetry, (int, float))
+        unitName = getUnit(selectedUnits, argument)
+        print(unitName)
+        self.argumentUnit = dialog.databases[database].units[unitName][0] if unitName is not None else None
+
 
 class SingleIndicatorEditDialog(QWidget):
     def __init__(self, path, parent: SingleIndicator = None):
         super().__init__(parent)
-        self.valueArgumentSelector = None
-        self.selectedUnit = None
+        self.argumentUnit = parent.argumentUnit
         self.currentDir = path
 
-        # Create the QLineEdit and set its placeholder text
-        self.lineEdit = QLineEdit()
-        self.lineEdit.setPlaceholderText("Enter value here")
+        # ARGUMENT DISPLAY
+        self.argumentEdit = QLineEdit()
+        self.argumentEdit.setText(parent.argument)
+        self.argumentEdit.setPlaceholderText("Enter value here")
+        self.argumentButton = QPushButton("Select value")
+        self.argumentButton.clicked.connect(self.openArgumentSelector)
+        self.valueLabel = QLabel("Value: ")
 
-        # Create the QPushButton and set its text
-        self.button = QPushButton("Select value")
-        self.button.clicked.connect(self.openArgumentSelector)
-
-        # Create the QLabel and set its text
-        self.label = QLabel("Value: ")
-
-        # Create a layout and add the QLineEdit, QPushButton, and QLabel
-        valueLayout = QHBoxLayout()
-        valueLayout.addWidget(self.label)
-        valueLayout.addWidget(self.lineEdit)
-        valueLayout.addWidget(self.button)
-
-        # CURRENT FONT & UNIT
+        # FONT & SHOWING UNIT
         currentFont = parent.indicatorLabel.font()
         currentFontSize = currentFont.pointSize()
         self.unitCheckbox = QCheckBox("Show Unit")
-
-        # Create a QSpinBox for selecting font size
+        self.unitCheckbox.setChecked(parent.showUnit)
         fontSizeLabel = QLabel("Font Size:")
         self.fontSizeSpinBox = QSpinBox()
         self.fontSizeSpinBox.setRange(8, 72)
         self.fontSizeSpinBox.setValue(currentFontSize)
         self.fontSizeSpinBox.setSingleStep(2)
+        fontModelLabel = QLabel("Font Model:")
+        self.fontModelComboBox = QFontComboBox()
+        self.fontModelComboBox.setCurrentFont(currentFont)
 
-        # --------- Positioning Buttons --------
+        # POSITIONING BUTTONS
         self.positionButtonGroup = QButtonGroup(self)
-        # LEFT
         self.positionLeftButton = QPushButton()
         self.positionLeftButton.setIcon(QIcon('sources/icons/light-theme/icons8-align-left-96.png'))
         self.positionLeftButton.setIconSize(QSize(20, 20))
         self.positionLeftButton.setCheckable(True)
-        # CENTER
         self.positionCenterButton = QPushButton()
         self.positionCenterButton.setIcon(QIcon('sources/icons/light-theme/icons8-align-center-96.png'))
         self.positionCenterButton.setIconSize(QSize(20, 20))
         self.positionCenterButton.setCheckable(True)
-        # RIGHT
         self.positionRightButton = QPushButton()
         self.positionRightButton.setIcon(QIcon('sources/icons/light-theme/icons8-align-right-96.png'))
         self.positionRightButton.setIconSize(QSize(20, 20))
         self.positionRightButton.setCheckable(True)
-        # Button Group
         self.positionButtonGroup.addButton(self.positionLeftButton)
         self.positionButtonGroup.addButton(self.positionCenterButton)
         self.positionButtonGroup.addButton(self.positionRightButton)
         self.positionButtonGroup.setExclusive(True)
-        # Position in Layout
-        positionLayout = QHBoxLayout()
-        positionLayout.addWidget(self.positionLeftButton)
-        positionLayout.addWidget(self.positionCenterButton)
-        positionLayout.addWidget(self.positionRightButton)
-        # Check Alignment
         alignment = parent.indicatorLabel.alignment()
         if alignment & Qt.AlignLeft:
             self.positionLeftButton.setChecked(True)
@@ -178,18 +191,20 @@ class SingleIndicatorEditDialog(QWidget):
         elif alignment & Qt.AlignRight:
             self.positionRightButton.setChecked(True)
 
-        # Create a QFontComboBox for selecting font model
-        fontModelLabel = QLabel("Font Model:")
-        self.fontModelComboBox = QFontComboBox()
-        self.fontModelComboBox.setCurrentFont(currentFont)
-
-        # Add the font size and font model widgets to a layout
+        # MAIN LAYOUT
+        valueLayout = QHBoxLayout()
+        valueLayout.addWidget(self.valueLabel)
+        valueLayout.addWidget(self.argumentEdit)
+        valueLayout.addWidget(self.argumentButton)
+        positionLayout = QHBoxLayout()
+        positionLayout.addWidget(self.positionLeftButton)
+        positionLayout.addWidget(self.positionCenterButton)
+        positionLayout.addWidget(self.positionRightButton)
         fontLayout = QGridLayout()
         fontLayout.addWidget(fontSizeLabel, 0, 0)
         fontLayout.addWidget(self.fontSizeSpinBox, 0, 1)
         fontLayout.addWidget(fontModelLabel, 1, 0)
         fontLayout.addWidget(self.fontModelComboBox, 1, 1)
-
         mainLayout = QVBoxLayout()
         mainLayout.addLayout(valueLayout)
         mainLayout.addWidget(self.unitCheckbox)
@@ -202,15 +217,15 @@ class SingleIndicatorEditDialog(QWidget):
         dialog = ArgumentSelector(self.currentDir, self)
         result = dialog.exec_()
         if result == QDialog.Accepted:
-            self.selectedUnit = dialog.argumentUnit
-            if self.selectedUnit is None:
+            self.argumentUnit = dialog.argumentUnit
+            if self.argumentUnit is None:
                 self.unitCheckbox.setEnabled(False)
                 self.unitCheckbox.setChecked(False)
             else:
                 self.unitCheckbox.setEnabled(True)
                 self.unitCheckbox.setChecked(True)
-            self.lineEdit.setText(dialog.selectedArgument)
-            self.lineEdit.adjustSize()
+            self.argumentEdit.setText(dialog.selectedArgument)
+            self.argumentEdit.adjustSize()
 
 
 ############################## GRID INDICATOR ##############################
