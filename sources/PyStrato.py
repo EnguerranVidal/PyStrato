@@ -12,7 +12,7 @@ from sources.SerialGS import SerialMonitor, saveParserData
 from sources.common.utilities.FileHandling import loadSearchItemsFromJson
 from sources.common.widgets.Widgets import *
 
-from sources.databases.general import DatabaseTabWidget, DatabaseEditor
+from sources.databases.general import DatabaseTabWidget, DatabaseEditor, NewDatabaseWindow
 from sources.databases.units import UnitsEditorWidget
 from sources.databases.constants import ConstantEditorWidget
 from sources.databases.configurations import ConfigsEditorWidget
@@ -21,7 +21,6 @@ from sources.databases.telemetries import TelemetryEditorWidget
 from sources.databases.telecommands import TelecommandEditorWidget
 
 from sources.displays.general import DisplayTabWidget, DisplayDockWidget
-from sources.displays.graphs import MultiCurveGraph
 from sources.weather.general import WeatherWindow
 
 
@@ -72,20 +71,9 @@ class PyStratoGui(QMainWindow):
         ##################  VARIABLES  ##################
         self.serial = None
         self.available_ports = None
-        self.packetTabList = []
-        self.graphsTabList = []
         self.serialWindow = SerialWindow()
         self.serialWindow.textedit.setDisabled(True)
-        self.layoutPresetWindow = None
-
-        self.serialMonitorTimer = QTimer()
-        self.serialMonitorTimer.timeout.connect(self.checkSerialMonitor)
-        self.serialMonitorTimer.start(100)
-        self.newFormatWindow = None
-        self.newGraphWindow = None
-        self.newPlotWindow = None
-        self.changeHeaderWindow = None
-        self.trackedFormatsWindow = None
+        self.serialMonitorTimer = None
         self.layoutAutosaveTimer = None
 
     def initializeUI(self, data=None):
@@ -115,6 +103,7 @@ class PyStratoGui(QMainWindow):
         self.icons['SAVE'] = QIcon(os.path.join(iconPath, 'icons8-save-96.png'))
         self.icons['SAVE_ALL'] = QIcon(os.path.join(iconPath, 'icons8-save-all-96.png'))
         self.icons['CLOSE_WINDOW'] = QIcon(os.path.join(iconPath, 'icons8-close-window-96.png'))
+        self.icons['ANTENNA'] = QIcon(os.path.join(iconPath, 'icons8-antenna-96.png'))
         self.icons['DOWNLOAD'] = QIcon(os.path.join(iconPath, 'icons8-download-96.png'))
         self.icons['ADD_NEW'] = QIcon(os.path.join(iconPath, 'icons8-add-new-96.png'))
         self.icons['NEGATIVE'] = QIcon(os.path.join(iconPath, 'icons8-negative-96.png'))
@@ -376,7 +365,8 @@ class PyStratoGui(QMainWindow):
         self.importParserAction.triggered.connect(self.importFormat)
         # Tracked Formats
         self.trackedParserAction = QAction('&Tracked Parsers', self)
-        self.trackedParserAction.setStatusTip('Open Tracked Parsers Selection Window')
+        self.trackedParserAction.setStatusTip('Tracked Parsers Selection')
+        self.trackedParserAction.setIcon(self.icons['ANTENNA'])
         self.trackedParserAction.triggered.connect(self.openTrackedParsers)
         # Exit
         self.exitAct = QAction(QIcon('exit.png'), '&Exit', self)
@@ -754,7 +744,7 @@ class PyStratoGui(QMainWindow):
         currentLayout = self.settings['CURRENT_LAYOUT']
         if currentLayout != '':
             path = os.path.join(self.presetPath, f"{currentLayout}.json")
-            self.loadLayout(path, warning=False)
+            self.loadLayout(path)
 
     def newParserTab(self):
         fullPaths = [os.path.join(self.formatPath, entry) for entry in os.listdir(self.formatPath)]
@@ -762,7 +752,7 @@ class PyStratoGui(QMainWindow):
         dialog = NewDatabaseWindow(databases=databases)
         result = dialog.exec_()
         if result == QDialog.Accepted:
-            name = self.newFormatWindow.nameLineEdit.text()
+            name = dialog.nameLineEdit.text()
             self.packetTabWidget.newParser(name)
 
     def openParserTab(self):
@@ -814,59 +804,59 @@ class PyStratoGui(QMainWindow):
         self.populateFileMenu()
 
     def openTrackedParsers(self):
-        self.trackedFormatsWindow = TrackedBalloonsWindow(self.currentDir)
-        self.trackedFormatsWindow.buttons.accepted.connect(self.editTrackedParsers)
-        self.trackedFormatsWindow.buttons.rejected.connect(self.trackedFormatsWindow.close)
-        self.trackedFormatsWindow.show()
-
-    def editTrackedParsers(self):
-        trackedFormats = self.trackedFormatsWindow.getListedValues()
-        self.settings['FORMAT_FILES'] = trackedFormats
-        saveSettings(self.settings, 'settings')
-        self.trackedFormatsWindow.close()
-        self.graphsTabWidget.fillComboBox()
+        dialog = TrackedBalloonsWindow(self.currentDir)
+        result = dialog.exec_()
+        if result == QDialog.Accepted:
+            trackedFormats = dialog.getListedValues()
+            self.settings['FORMAT_FILES'] = trackedFormats
+            saveSettings(self.settings, 'settings')
 
     def openLayoutManager(self):
         description = self.displayTabWidget.getLayoutDescription()
-        self.layoutPresetWindow = LayoutManagerDialog(self.currentDir, description, currentLayout=self.settings['CURRENT_LAYOUT'])
-        self.layoutPresetWindow.loadSignal.connect(self.loadLayout)
-        self.layoutPresetWindow.exec_()
-        self.layoutPresetWindow = None
+        dialog = LayoutManagerDialog(self.currentDir, description, currentLayout=self.settings['CURRENT_LAYOUT'])
+        dialog.loadSignal.connect(self.loadLayout)
+        dialog.exec_()
 
-    def loadLayout(self, filePath: str, warning=True):
+    def loadLayout(self, filePath: str):
         with open(filePath, "r") as file:
             description = json.load(file)
         self.displayTabWidget.applyLayoutDescription(description)
-        self.settings['CURRENT_LAYOUT'] = os.path.splitext(os.path.basename(filePath))[0]
-        saveSettings(self.settings, 'settings')
+        pattern = r"autosave_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.json"
+        if re.match(pattern, os.path.basename(filePath)) is None:
+            self.settings['CURRENT_LAYOUT'] = os.path.splitext(os.path.basename(filePath))[0]
+            saveSettings(self.settings, 'settings')
+        else:
+            self.settings['CURRENT_LAYOUT'] = ''
+            saveSettings(self.settings, 'settings')
 
     def saveLayout(self, autosave=False):
         # SAVING LAYOUT PRESET
         displayedLayout = self.displayTabWidget.getLayoutDescription()
         currentLayout = self.settings['CURRENT_LAYOUT']
-        # AUTOMATIC AUTOSAVE WITHOUT ANY CURRENT LAYOUT
-        if autosave:
-            current_datetime = datetime.now()
-            timestamp = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
-            filename = os.path.join(self.autosavePath, f"autosave_{timestamp}.json")
-            autoItems = os.listdir(self.autosavePath)
-            autoSaves = [item for item in autoItems if os.path.isfile(os.path.join(self.autosavePath, item))]
-            # REMOVING OLD AUTOSAVES
-            overflow = len(autoSaves) - int(self.settings['MAXIMUM_AUTOSAVES'])
-            if overflow > 0:
-                for i in range(overflow):
-                    fileToDelete = os.path.join(self.autosavePath, autoSaves[i])
-                    os.remove(fileToDelete)
-            with open(filename, "w") as file:
-                json.dump(displayedLayout, file)
-        # MANUAL SAVE WITH SAVE AS
-        elif not autosave and currentLayout == '':
-            self.saveLayoutAs()
-        # MANUAL SAVE INTO CURRENTLY LOADED SAVE
-        else:
-            filename = os.path.join(self.presetPath, f"{currentLayout}.json")
-            with open(filename, "w") as file:
-                json.dump(displayedLayout, file)
+        if displayedLayout != {}:
+            # AUTOMATIC AUTOSAVE WITHOUT ANY CURRENT LAYOUT
+            if autosave:
+                current_datetime = datetime.now()
+                timestamp = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+                filename = os.path.join(self.autosavePath, f"autosave_{timestamp}.json")
+                autoItems = os.listdir(self.autosavePath)
+                autoSaves = [item for item in autoItems if os.path.isfile(os.path.join(self.autosavePath, item))]
+                # REMOVING OLD AUTOSAVES
+                overflow = len(autoSaves) - int(self.settings['MAXIMUM_AUTOSAVES'])
+                if overflow > 0:
+                    for i in range(overflow):
+                        fileToDelete = os.path.join(self.autosavePath, autoSaves[i])
+                        os.remove(fileToDelete)
+                with open(filename, "w") as file:
+                    json.dump(displayedLayout, file)
+            # MANUAL SAVE WITH SAVE AS
+            elif not autosave and currentLayout == '':
+                self.saveLayoutAs()
+            # MANUAL SAVE INTO CURRENTLY LOADED SAVE
+            else:
+                filename = os.path.join(self.presetPath, f"{currentLayout}.json")
+                with open(filename, "w") as file:
+                    json.dump(displayedLayout, file)
 
     def saveLayoutAs(self):
         layoutDescription = self.displayTabWidget.getLayoutDescription()
@@ -1008,6 +998,9 @@ class PyStratoGui(QMainWindow):
                 self.serial.output.connect(self.onSerialOutput)
                 self.serial.progress.connect(self.newSerialData)
                 self.serial.start()
+                self.serialMonitorTimer = QTimer()
+                self.serialMonitorTimer.timeout.connect(self.checkSerialMonitor)
+                self.serialMonitorTimer.start(100)
             else:
                 cancelling = MessageBox()
                 cancelling.setWindowIcon(self.mainIcon)
@@ -1023,6 +1016,7 @@ class PyStratoGui(QMainWindow):
             self.serial.interrupt()
             self.serial = None
             time.sleep(0.5)
+            self.serialMonitorTimer.stop()
             self.serialWindow.textedit.setDisabled(True)
         self.populateToolsMenu()
 
@@ -1454,6 +1448,7 @@ class PyStratoGui(QMainWindow):
         self.saveAllParserAction.setIcon(self.icons['SAVE_ALL'])
         self.closeParserAction.setIcon(self.icons['CLOSE_WINDOW'])
         self.importParserAction.setIcon(self.icons['DOWNLOAD'])
+        self.trackedParserAction.setIcon(self.icons['ANTENNA'])
         self.addUnitAct.setIcon(self.icons['ADD_NEW'])
         self.removeUnitAct.setIcon(self.icons['NEGATIVE'])
         self.addConstantAct.setIcon(self.icons['ADD_NEW'])
@@ -1490,10 +1485,12 @@ class PyStratoGui(QMainWindow):
         for displayTab in displayTabs:
             for dockWidget in displayTab.findChildren(QDockWidget):
                 if dockWidget.isVisible() and isinstance(dockWidget, DisplayDockWidget):
-                    dockWidget.button.setIcon(self.icons['EDIT'])
+                    dockWidget.hoverButton.setIcon(self.icons['EDIT'])
                     dockWidget.display.changeTheme()
+        # UPDATING WEATHER WIDGETS
         if self.weatherTabWidget.forecastTabDisplay:
-            locationTabs = [self.weatherTabWidget.forecastTabDisplay.widget(index) for index in range(self.weatherTabWidget.forecastTabDisplay.count())]
+            nbLocations = self.weatherTabWidget.forecastTabDisplay.count()
+            locationTabs = [self.weatherTabWidget.forecastTabDisplay.widget(index) for index in range(nbLocations)]
             for locationTab in locationTabs:
                 locationTab.scrollableDayWidget.changeTheme()
                 locationTab.observationDisplay.changeTheme()
@@ -1527,8 +1524,8 @@ class PyStratoGui(QMainWindow):
                 self.saveAllParserTab()
                 self.stopSerial()
                 time.sleep(0.5)
-                self.serialMonitorTimer.stop()
                 self.settings['MAXIMIZED'] = 1 if self.isMaximized() else 0
+                self.saveLayout(autosave=True)
                 saveSettings(self.settings, 'settings')
                 for window in QApplication.topLevelWidgets():
                     window.close()
@@ -1536,8 +1533,8 @@ class PyStratoGui(QMainWindow):
             elif reply == QMessageBox.Discard:
                 self.stopSerial()
                 time.sleep(0.5)
-                self.serialMonitorTimer.stop()
                 self.settings['MAXIMIZED'] = 1 if self.isMaximized() else 0
+                self.saveLayout(autosave=True)
                 saveSettings(self.settings, 'settings')
                 for window in QApplication.topLevelWidgets():
                     window.close()
@@ -1551,8 +1548,8 @@ class PyStratoGui(QMainWindow):
             if reply == QMessageBox.Yes:
                 self.stopSerial()
                 time.sleep(0.5)
-                self.serialMonitorTimer.stop()
                 self.settings['MAXIMIZED'] = 1 if self.isMaximized() else 0
+                self.saveLayout(autosave=True)
                 saveSettings(self.settings, 'settings')
                 for window in QApplication.topLevelWidgets():
                     window.close()

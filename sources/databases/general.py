@@ -113,4 +113,36 @@ class DatabaseTabWidget(QTabWidget):
         pass
 
 
+class NewDatabaseWindow(QDialog):
+    def __init__(self, parent=None, databases=[]):
+        super().__init__(parent)
+        self.databases = databases
+        self.setWindowTitle('Create New Package')
+        self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
+        self.setModal(True)
+        self.dataChanged = False
+        self.saveChanged = False
+        self.resize(400, 100)
+        # NAME ENTRY & BUTTONS
+        self.nameLabel = QLabel('Database Name :')
+        self.nameLineEdit = QLineEdit()
+        self.nameLineEdit.textChanged.connect(self.updateOkButtonState)
+        self.okButton = QPushButton('OK')
+        self.okButton.setEnabled(False)
+        self.cancelButton = QPushButton('Cancel')
+        self.okButton.clicked.connect(self.accept)
+        self.cancelButton.clicked.connect(self.reject)
+        # LAYOUT
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(self.okButton)
+        buttonLayout.addWidget(self.cancelButton)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.nameLabel)
+        layout.addWidget(self.nameLineEdit)
+        layout.addLayout(buttonLayout)
+
+    def updateOkButtonState(self):
+        name = self.nameLineEdit.text()
+        validNewDatabaseName = bool(name) and name not in self.databases
+        self.okButton.setEnabled(validNewDatabaseName)
 

@@ -28,4 +28,7 @@ class BasicDisplay(QWidget):
 
     @staticmethod
     def getDescription():
-        return {'TYPE': 'BASIC_DISPLAY'}
+        return {'DISPLAY_TYPE': 'BASIC_DISPLAY'}
+
+    def applyDescription(self, description):
+        pass

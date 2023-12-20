@@ -200,13 +200,14 @@ class ForecastTabWidget(QTabWidget):
 
     def updateTabData(self, index):
         if isInternetAvailable() and len(self.locations) != 0:
-            name, state, country = self.locations[index]['name'], self.locations[index]['state'], self.locations[index]['country']
-            observationData = getObservationWeatherData(name, state, country, self.apiKey)
-            forecastDataHours = get5Day3HoursForecastWeatherData(name, state, country, self.apiKey)
-            pollutionData = getAirPollutionData(name, state, country, self.apiKey)
-            widget = self.widget(index)
-            widget.updateWeatherData(observationData, pollutionData, forecastDataHours)
-            self.dataTimers[index] = time.time()
+            if time.time() - self.dataTimers[index] > 600:
+                name, state, country = self.locations[index]['name'], self.locations[index]['state'], self.locations[index]['country']
+                observationData = getObservationWeatherData(name, state, country, self.apiKey)
+                forecastDataHours = get5Day3HoursForecastWeatherData(name, state, country, self.apiKey)
+                pollutionData = getAirPollutionData(name, state, country, self.apiKey)
+                widget = self.widget(index)
+                widget.updateWeatherData(observationData, pollutionData, forecastDataHours)
+                self.dataTimers[index] = time.time()
         elif not isInternetAvailable():
             self.noInternet.emit()
 
@@ -238,8 +239,7 @@ class MapDialog(QDialog):
         topLayout.addWidget(self.searchBar, 1)
 
         # GPS LOCATION BUTTON
-        self.gpsButton = SquareIconButton(os.path.join(self.iconPath, 'light-theme/icons8-my-location-96.png'),
-                                          flat=True)
+        self.gpsButton = SquareIconButton(os.path.join(self.iconPath, 'light-theme/icons8-my-location-96.png'), flat=True)
         self.gpsButton.setToolTip('Show Your Location')
         self.gpsButton.clicked.connect(self.useGpsLocation)
         topLayout.addWidget(self.gpsButton)
@@ -260,8 +260,7 @@ class MapDialog(QDialog):
 
     def findClosestCity(self, latitude, longitude):
         self.citiesDataFrame['distance'] = ((self.citiesDataFrame['coord'].apply(lambda x: x['lat']) - latitude) ** 2 +
-                                            (self.citiesDataFrame['coord'].apply(
-                                                lambda x: x['lon']) - longitude) ** 2) ** 0.5
+                                            (self.citiesDataFrame['coord'].apply(lambda x: x['lon']) - longitude) ** 2) ** 0.5
         closestCityIndex = self.citiesDataFrame['distance'].idxmin()
         cityData = self.citiesDataFrame.loc[closestCityIndex]
         return cityData
