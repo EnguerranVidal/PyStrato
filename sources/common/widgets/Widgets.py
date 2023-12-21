@@ -317,7 +317,7 @@ class ArgumentSelector(QDialog):
         self.fillComboBox()
         self.parserComboBox.currentIndexChanged.connect(self.changeComboBox)
         # TELEMETRY TYPE SELECTION
-        themeFolder = 'dark-theme' if not self.settings['DARK_THEME'] else 'light-theme'
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
         self.telemetryTypeLabel = QLabel("Label")
         self.telemetryTypeLabel.setAlignment(Qt.AlignCenter)
         self.previousButton = SquareIconButton(f'sources/icons/{themeFolder}/icons8-back-96.png', flat=True)

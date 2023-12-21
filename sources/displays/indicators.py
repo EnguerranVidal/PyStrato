@@ -51,7 +51,7 @@ class SingleIndicator(BasicDisplay):
         self.showUnit = bool(description['SHOW_UNIT'])
         font = QFont(description['FONT_FAMILY'])
         fontSize = description['FONT_SIZE']
-        font.setPixelSize(fontSize * QFontMetricsF(font).height() / font.pointSizeF())
+        font.setPointSize(fontSize)
         self.indicatorLabel.setAutoFillBackground(True)
         self.indicatorLabel.setFont(font)
         self.textAlignment = description['TEXT_PLACEMENT']
@@ -69,7 +69,7 @@ class SingleIndicator(BasicDisplay):
     def applyChanges(self, editWidget):
         font = QFont(editWidget.fontModelComboBox.currentText())
         fontSize = editWidget.fontSizeSpinBox.value()
-        font.setPixelSize(fontSize * QFontMetricsF(font).height() / font.pointSizeF())
+        font.setPointSize(fontSize)
         self.indicatorLabel.setAutoFillBackground(True)
         self.indicatorLabel.setFont(font)
         # Text Alignment
@@ -280,7 +280,6 @@ class GridIndicator(BasicDisplay):
         self.settingsWidget = GridIndicatorEditDialog(self.currentDir, self)
 
     def fillGrid(self, editWidget=None):
-        # TODO : Careful about Labeled indicator Deletion here
         if editWidget is None:
             editWidget = self.settingsWidget
         # Removing Old Widgets
@@ -343,7 +342,6 @@ class GridIndicatorEditDialog(QWidget):
         # LABEL EDITORS
         for row in range(self.nbRows):
             for column in range(self.nbColumns):
-                print(row, column)
                 indicator: LabeledIndicator = parent.labelGridLayout.itemAtPosition(row, column).widget()
                 editor = LabelEditor(self.currentDir, indicator.title(), indicator)
                 editor.goBackToGrid.connect(self.openGridEditor)
@@ -446,6 +444,9 @@ class LabeledIndicator(QGroupBox):
         self.setTitle(name)
         self.parentWidget = parent
         self.label = QLabel()
+        font = self.label.font()
+        font.setPointSize(8)
+        self.label.setFont(font)
         layout = QVBoxLayout()
         layout.addWidget(self.label)
         self.setLayout(layout)
@@ -453,11 +454,9 @@ class LabeledIndicator(QGroupBox):
     def applyEditorSettings(self, labelEditor):
         font = QFont(labelEditor.fontModelComboBox.currentText())
         fontSize = labelEditor.fontSizeSpinBox.value()
-        font.setPixelSize(fontSize * QFontMetricsF(font).height() / font.pointSizeF())
+        font.setPointSize(fontSize)
         self.label.setAutoFillBackground(True)
         self.label.setFont(font)
-
-        # Text Alignment
         if labelEditor.positionLeftButton.isChecked():
             self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             self.textAlignment = 0
@@ -467,7 +466,6 @@ class LabeledIndicator(QGroupBox):
         elif labelEditor.positionRightButton.isChecked():
             self.label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.textAlignment = 2
-
         self.showUnit = labelEditor.unitCheckbox.isChecked()
         self.argumentUnit = labelEditor.argumentUnit
         self.argument = labelEditor.argumentEdit.text()
@@ -508,7 +506,7 @@ class LabeledIndicator(QGroupBox):
         self.showUnit = bool(description['SHOW_UNIT'])
         font = QFont(description['FONT_FAMILY'])
         fontSize = description['FONT_SIZE']
-        font.setPixelSize(fontSize * QFontMetricsF(font).height() / font.pointSizeF())
+        font.setPointSize(fontSize)
         self.label.setAutoFillBackground(True)
         self.label.setFont(font)
         self.textAlignment = description['TEXT_PLACEMENT']
@@ -564,7 +562,7 @@ class LabelEditor(QWidget):
         currentFont = indicator.label.font() if self.indicator is not None else label.font()
         currentFontSize = currentFont.pointSize()
         self.unitCheckbox = QCheckBox("Show Unit")
-        self.unitCheckbox.setChecked(indicator.showUnit)
+        self.unitCheckbox.setChecked(indicator.showUnit if self.indicator is not None else False)
         fontSizeLabel = QLabel("Font Size:")
         self.fontSizeSpinBox = QSpinBox()
         self.fontSizeSpinBox.setRange(8, 72)
