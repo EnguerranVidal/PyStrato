@@ -32,3 +32,6 @@ class BasicDisplay(QWidget):
 
     def applyDescription(self, description):
         pass
+
+    def generateSettingsWidget(self):
+        self.settingsWidget = QWidget()

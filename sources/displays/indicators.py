@@ -14,7 +14,6 @@ from sources.common.utilities.FileHandling import loadSettings, nameGiving
 from sources.common.widgets.Widgets import ArgumentSelector
 from sources.common.widgets.basic import BasicDisplay
 from sources.databases.balloondata import BalloonPackageDatabase
-from sources.displays.graphs import ColorEditor
 from sources.databases.units import DefaultUnitsCatalogue
 
 
@@ -65,6 +64,9 @@ class SingleIndicator(BasicDisplay):
             self.retrieveArgumentUnit(self.argument)
         self.settingsWidget = SingleIndicatorEditDialog(self.currentDir, self)
         self.updateContent()
+
+    def generateSettingsWidget(self):
+        self.settingsWidget = SingleIndicatorEditDialog(self.currentDir, self)
 
     def applyChanges(self, editWidget):
         font = QFont(editWidget.fontModelComboBox.currentText())
@@ -277,6 +279,9 @@ class GridIndicator(BasicDisplay):
                 indicator.applyDescription(indicatorDescription)
                 self.indicators[(i, j)] = indicator
                 self.labelGridLayout.addWidget(self.indicators[(i, j)], i, j, 1, 1)
+        self.settingsWidget = GridIndicatorEditDialog(self.currentDir, self)
+
+    def generateSettingsWidget(self):
         self.settingsWidget = GridIndicatorEditDialog(self.currentDir, self)
 
     def fillGrid(self, editWidget=None):

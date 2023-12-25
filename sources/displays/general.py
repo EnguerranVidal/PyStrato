@@ -191,6 +191,7 @@ class DisplayDockWidget(QDockWidget):
         self.hoverButton.lower()
 
     def openSettings(self):
+        self.display.generateSettingsWidget()
         dialog = ParameterDialog(parent=self, editWidget=self.display.settingsWidget)
         dialog.editWidget.show()
 
