@@ -76,10 +76,10 @@ class MultiCurveGraph(BasicDisplay):
                 pen = pg.mkPen(color=color, width=thickness, style=style)
                 argumentX, argumentY = curve['ARGUMENTS']
                 argumentXMapping, argumentYMapping = argumentX.split('/'), argumentY.split('/')
-                if argumentXMapping != [''] and argumentYMapping != ['']:  # Both arguments are defined.
+                if argumentXMapping != [''] and argumentYMapping != ['']:
                     valueX = reduce(operator.getitem, argumentXMapping, self.content.storage)
                     valueY = reduce(operator.getitem, argumentYMapping, self.content.storage)
-                    if len(valueX) > 1 and len(valueY) > 1:
+                    if len(valueX) == len(valueY) and len(valueX) > 1:
                         self.plotWidget.plot(valueX, valueY, pen=pen, name=curve['LEGEND'])
                     self.legendItem = self.plotWidget.addLegend()
         if self.showLegend:
@@ -108,26 +108,26 @@ class MultiCurveGraphEditDialog(QWidget):
         self.showLegendCheckBox.stateChanged.connect(self.showLegendState)
 
         # CURVE EDITORS & BUTTONS
-        buttonArrayLayout = QHBoxLayout()
         self.addCurveButton = QPushButton('Add Curve')
-        self.addCurveButton.clicked.connect(self.addNewCurve)
         self.removeCurveButton = QPushButton('Remove Curve')
+        self.addCurveButton.clicked.connect(self.addNewCurve)
         self.removeCurveButton.clicked.connect(self.removeExistingCurve)
-        buttonArrayLayout.addWidget(self.addCurveButton)
-        buttonArrayLayout.addWidget(self.removeCurveButton)
         self.tabWidget = QTabWidget(self)
         self.tabWidget.setMovable(True)
         self.curveEditorsWidget = QWidget()
-        curveEditorLayout = QGridLayout()
-        curveEditorLayout.addWidget(self.addCurveButton, 0, 0, 1, 1)
-        curveEditorLayout.addWidget(self.removeCurveButton, 0, 1, 1, 1)
-        curveEditorLayout.addWidget(self.tabWidget, 1, 0, 2, 2)
-        self.curveEditorsWidget.setLayout(curveEditorLayout)
         self.centralWidget.addWidget(self.curveEditorsWidget)
         for curve in parent.curveProperties:
             self.addNewCurve(curve)
 
         # MAIN LAYOUT
+        buttonArrayLayout = QHBoxLayout()
+        buttonArrayLayout.addWidget(self.addCurveButton)
+        buttonArrayLayout.addWidget(self.removeCurveButton)
+        curveEditorLayout = QGridLayout()
+        curveEditorLayout.addWidget(self.addCurveButton, 0, 0, 1, 1)
+        curveEditorLayout.addWidget(self.removeCurveButton, 0, 1, 1, 1)
+        curveEditorLayout.addWidget(self.tabWidget, 1, 0, 2, 2)
+        self.curveEditorsWidget.setLayout(curveEditorLayout)
         layout = QVBoxLayout()
         layout.addWidget(self.centralWidget)
         layout.addWidget(self.showLegendCheckBox)
@@ -148,7 +148,7 @@ class MultiCurveGraphEditDialog(QWidget):
             names = [self.tabWidget.widget(i).name for i in range(self.tabWidget.count())]
             name = nameGiving(names, 'Curve', startingIndex=1, firstName=False)
             lineColor = self.colorCycler.next(0, inHexCode=True) if count == 0 else self.colorCycler.next(inHexCode=True)
-            properties = {'NAME': name, 'THICKNESS': 2, 'COLOR': lineColor, 'STYLE': 'Solid', 'ARGUMENTS': ['', '']}
+            properties = {'NAME': name, 'THICKNESS': 2, 'COLOR': lineColor, 'STYLE': 'Solid', 'ARGUMENTS': ['', ''], 'LEGEND': ''}
         curveEditor = CurveEditor(self.currentDir, properties, legend=self.showLegendCheckBox.isChecked())
         self.tabWidget.addTab(curveEditor, properties['NAME'])
         self.tabWidget.widget(count).nameChange.connect(self.changeTabNames)

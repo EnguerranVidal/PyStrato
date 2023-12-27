@@ -119,14 +119,12 @@ class DisplayTabWidget(QMainWindow):
                     dockPlacement = int(tab.dockWidgetArea(dockWidget))
                     dockGeometry = dockWidget.geometry().getRect()
                     displayDescription = dockWidget.widget().getDescription()
-
                     dockDescription = {
                         'AREA_PLACEMENT': dockPlacement,
                         'GEOMETRY': dockGeometry,
                         'DISPLAY': displayDescription,
                         'PROPERTIES': dockWidget.dockingProperties
                     }
-
                     tabDescription[displayName] = dockDescription
 
             description[tabName] = tabDescription
@@ -134,12 +132,10 @@ class DisplayTabWidget(QMainWindow):
         return description
 
     def applyLayoutDescription(self, description: dict):
-        dockAreas = {1: Qt.LeftDockWidgetArea, 2: Qt.RightDockWidgetArea,
-                     4: Qt.TopDockWidgetArea, 8: Qt.BottomDockWidgetArea}
+        self.tabWidget.clear()
+        dockAreas = {1: Qt.LeftDockWidgetArea, 2: Qt.RightDockWidgetArea, 4: Qt.TopDockWidgetArea, 8: Qt.BottomDockWidgetArea}
         displayOptions = {'SINGLE_INDICATOR': SingleIndicator, 'GRID_INDICATOR': GridIndicator,
                           'MULTI_CURVE_GRAPH': MultiCurveGraph, 'BASIC_DISPLAY': BasicDisplay}
-        self.tabWidget.clear()
-
         for i, (tabName, tabContents) in enumerate(description.items()):
             self.addNewTab(name=tabName)
             tabWidget = self.tabWidget.widget(i)

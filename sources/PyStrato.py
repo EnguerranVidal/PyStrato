@@ -40,7 +40,7 @@ class PyStratoGui(QMainWindow):
         self.autosavePath = os.path.join(self.presetPath, 'autosaves')
         self.examplesPath = os.path.join(self.presetPath, 'examples')
 
-        # Main Window Settings
+        # MAIN SETTINGS AND STATUSBAR
         self.setGeometry(200, 200, 1000, 500)
         self.setWindowTitle('PyStrato')
         self.setWindowIcon(self.mainIcon)
@@ -51,24 +51,19 @@ class PyStratoGui(QMainWindow):
         else:
             qdarktheme.setup_theme('light')
         self.icons = {}
-        # FPS in StatusBar
         self.lastUpdate = time.perf_counter()
         self.avgFps = 0.0
         self.fpsLabel = QLabel('Fps : ---')
         self.fpsLabel.setStyleSheet('border: 0;')
         self.statusBar().addPermanentWidget(self.fpsLabel)
-        # Date&Time in StatusBar
         self.datetime = QDateTime.currentDateTime()
         self.dateLabel = QLabel(self.datetime.toString('dd.MM.yyyy  hh:mm:ss'))
         self.dateLabel.setStyleSheet('border: 0;')
         self.statusBar().addPermanentWidget(self.dateLabel)
-        # Status Bar Message and Timer
         self.statusBar().showMessage('Ready')
         self.statusDateTimer = QTimer()
         self.statusDateTimer.timeout.connect(self.updateStatus)
         self.statusDateTimer.start(1000)
-
-        ##################  VARIABLES  ##################
         self.serial = None
         self.available_ports = None
         self.serialWindow = SerialWindow()
@@ -78,7 +73,7 @@ class PyStratoGui(QMainWindow):
 
     def initializeUI(self, data=None):
         self.loadingData = data
-        # Initialize Interface
+        # INTERFACE
         self._checkEnvironment()
         self._generateTabs()
         self._createIcons()
@@ -87,17 +82,16 @@ class PyStratoGui(QMainWindow):
         self._createToolBars()
         self._initializeDisplayLayout()
 
-        # Populate Menus
+        # MENUS POPULATING
         self.populateFileMenu()
         self.populateToolsMenu()
         self.populateLayoutMenu()
-
         if self.settings['LAYOUT_AUTOSAVE']:
             self.startupAutosave()
 
     def _createIcons(self):
-        theme = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
-        iconPath = os.path.join(self.currentDir, f'sources/icons/{theme}')
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        iconPath = os.path.join(self.currentDir, f'sources/icons/{themeFolder}')
         self.icons['NEW_WINDOW'] = QIcon(os.path.join(iconPath, 'icons8-new-window-96.png'))
         self.icons['OPEN_IN_BROWSER'] = QIcon(os.path.join(iconPath, 'icons8-open-in-browser-96.png'))
         self.icons['SAVE'] = QIcon(os.path.join(iconPath, 'icons8-save-96.png'))
@@ -153,15 +147,16 @@ class PyStratoGui(QMainWindow):
     def _createToolBars(self):
         ########### DATABASES ###########
         self.databasesToolBar = QToolBar('Database', self)
-        self.databasesToolBar.addAction(self.newParserAction)
-        self.databasesToolBar.addAction(self.openParserAction)
-        self.databasesToolBar.addAction(self.saveParserAction)
+        self.databasesToolBar.addAction(self.newParserAct)
+        self.databasesToolBar.addAction(self.openParserAct)
+        self.databasesToolBar.addAction(self.saveParserAct)
         self.databasesToolBar.addSeparator()
 
         ########### DISPLAYS ###########
         self.displaysToolBar = QToolBar('Display', self)
         self.displaysToolBar.addAction(self.newDisplayTabAct)
         self.displaysToolBar.addAction(self.closeDisplayTabAct)
+        self.displaysToolBar.addAction(self.trackedParserAct)
         self.displaysToolBar.addSeparator()
         # INDICATORS
         indicatorToolButton = QToolButton()
@@ -327,47 +322,47 @@ class PyStratoGui(QMainWindow):
     def _createActions(self):
         ########### FORMATS ###########
         # New Format
-        self.newParserAction = QAction('&New Parser', self)
-        self.newParserAction.setStatusTip('Create New Parser')
-        self.newParserAction.setIcon(self.icons['NEW_WINDOW'])
-        self.newParserAction.setShortcut('Ctrl+N')
-        self.newParserAction.triggered.connect(self.newParserTab)
+        self.newParserAct = QAction('&New Parser', self)
+        self.newParserAct.setStatusTip('Create New Parser')
+        self.newParserAct.setIcon(self.icons['NEW_WINDOW'])
+        self.newParserAct.setShortcut('Ctrl+N')
+        self.newParserAct.triggered.connect(self.newParserTab)
         # Open Format
-        self.openParserAction = QAction('&Open', self)
-        self.openParserAction.setStatusTip('Open Parser')
-        self.openParserAction.setIcon(self.icons['OPEN_IN_BROWSER'])
-        self.openParserAction.setShortcut('Ctrl+O')
-        self.openParserAction.triggered.connect(self.openParserTab)
+        self.openParserAct = QAction('&Open', self)
+        self.openParserAct.setStatusTip('Open Parser')
+        self.openParserAct.setIcon(self.icons['OPEN_IN_BROWSER'])
+        self.openParserAct.setShortcut('Ctrl+O')
+        self.openParserAct.triggered.connect(self.openParserTab)
         # Save Format
-        self.saveParserAction = QAction('&Save', self)
-        self.saveParserAction.setStatusTip('Save Parser')
-        self.saveParserAction.setIcon(self.icons['SAVE'])
-        self.saveParserAction.setShortcut('Ctrl+S')
-        self.saveParserAction.triggered.connect(self.saveParserTab)
+        self.saveParserAct = QAction('&Save', self)
+        self.saveParserAct.setStatusTip('Save Parser')
+        self.saveParserAct.setIcon(self.icons['SAVE'])
+        self.saveParserAct.setShortcut('Ctrl+S')
+        self.saveParserAct.triggered.connect(self.saveParserTab)
         # Save As Format
-        self.saveAsParserAction = QAction('&Save As', self)
-        self.saveAsParserAction.setStatusTip('Save Parser As...')
-        self.saveAsParserAction.triggered.connect(self.saveAsParserTab)
+        self.saveAsParserAct = QAction('&Save As', self)
+        self.saveAsParserAct.setStatusTip('Save Parser As...')
+        self.saveAsParserAct.triggered.connect(self.saveAsParserTab)
         # Save All Formats
-        self.saveAllParserAction = QAction('&Save All', self)
-        self.saveAllParserAction.setStatusTip('Save All Parsers')
-        self.saveAllParserAction.setIcon(self.icons['SAVE_ALL'])
-        self.saveAllParserAction.triggered.connect(self.saveAllParserTab)
+        self.saveAllParserAct = QAction('&Save All', self)
+        self.saveAllParserAct.setStatusTip('Save All Parsers')
+        self.saveAllParserAct.setIcon(self.icons['SAVE_ALL'])
+        self.saveAllParserAct.triggered.connect(self.saveAllParserTab)
         # Close Format
-        self.closeParserAction = QAction('&Close', self)
-        self.closeParserAction.setStatusTip('Close Current Parser')
-        self.closeParserAction.setIcon(self.icons['CLOSE_WINDOW'])
-        self.closeParserAction.triggered.connect(self.closeParserTab)
+        self.closeParserAct = QAction('&Close', self)
+        self.closeParserAct.setStatusTip('Close Current Parser')
+        self.closeParserAct.setIcon(self.icons['CLOSE_WINDOW'])
+        self.closeParserAct.triggered.connect(self.closeParserTab)
         # Import Format
-        self.importParserAction = QAction('&Import Parser', self)
-        self.importParserAction.setStatusTip('Import Parser')
-        self.importParserAction.setIcon(self.icons['DOWNLOAD'])
-        self.importParserAction.triggered.connect(self.importFormat)
+        self.importParserAct = QAction('&Import Parser', self)
+        self.importParserAct.setStatusTip('Import Parser')
+        self.importParserAct.setIcon(self.icons['DOWNLOAD'])
+        self.importParserAct.triggered.connect(self.importFormat)
         # Tracked Formats
-        self.trackedParserAction = QAction('&Tracked Parsers', self)
-        self.trackedParserAction.setStatusTip('Tracked Parsers Selection')
-        self.trackedParserAction.setIcon(self.icons['ANTENNA'])
-        self.trackedParserAction.triggered.connect(self.openTrackedParsers)
+        self.trackedParserAct = QAction('&Tracked Parsers', self)
+        self.trackedParserAct.setStatusTip('Tracked Parsers Selection')
+        self.trackedParserAct.setIcon(self.icons['ANTENNA'])
+        self.trackedParserAct.triggered.connect(self.openTrackedParsers)
         # Exit
         self.exitAct = QAction(QIcon('exit.png'), '&Exit', self)
         self.exitAct.setShortcut('Ctrl+Q')
@@ -591,22 +586,22 @@ class PyStratoGui(QMainWindow):
 
         ###  FILE MENU  ###
         self.fileMenu = self.menubar.addMenu('&File')
-        self.fileMenu.addAction(self.newParserAction)
-        self.fileMenu.addAction(self.openParserAction)
+        self.fileMenu.addAction(self.newParserAct)
+        self.fileMenu.addAction(self.openParserAct)
         self.recentMenu = QMenu('&Recent', self)
         self.recentMenu.aboutToShow.connect(self.populateRecentMenu)
 
         self.fileMenu.addMenu(self.recentMenu)
         self.fileMenu.addSeparator()
-        self.fileMenu.addAction(self.saveParserAction)
-        self.fileMenu.addAction(self.saveAsParserAction)
-        self.fileMenu.addAction(self.saveAllParserAction)
+        self.fileMenu.addAction(self.saveParserAct)
+        self.fileMenu.addAction(self.saveAsParserAct)
+        self.fileMenu.addAction(self.saveAllParserAct)
         self.fileMenu.addSeparator()
-        self.fileMenu.addAction(self.closeParserAction)
+        self.fileMenu.addAction(self.closeParserAct)
         self.fileMenu.addSeparator()
         self.manageFormatsMenu = QMenu('&Manage Formats', self)
-        self.manageFormatsMenu.addAction(self.importParserAction)
-        self.manageFormatsMenu.addAction(self.trackedParserAction)
+        self.manageFormatsMenu.addAction(self.importParserAct)
+        self.manageFormatsMenu.addAction(self.trackedParserAct)
         self.fileMenu.addMenu(self.manageFormatsMenu)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.exitAct)
@@ -804,7 +799,7 @@ class PyStratoGui(QMainWindow):
         self.populateFileMenu()
 
     def openTrackedParsers(self):
-        dialog = TrackedBalloonsWindow(self.currentDir)
+        dialog = TrackedParsersWindow(self.currentDir)
         result = dialog.exec_()
         if result == QDialog.Accepted:
             trackedFormats = dialog.getListedValues()
@@ -1100,16 +1095,16 @@ class PyStratoGui(QMainWindow):
         self.packetTabWidget.unsavedChanges = anyDatabaseChanges
         # SAVE AND CLOSE ACTIONS
         if not self.packetTabWidget.databases:
-            self.saveParserAction.setDisabled(True)
-            self.saveAllParserAction.setDisabled(True)
-            self.saveAsParserAction.setDisabled(True)
-            self.closeParserAction.setDisabled(True)
+            self.saveParserAct.setDisabled(True)
+            self.saveAllParserAct.setDisabled(True)
+            self.saveAsParserAct.setDisabled(True)
+            self.closeParserAct.setDisabled(True)
 
         else:
-            self.saveParserAction.setDisabled(not currentDatabaseChanges)
-            self.saveAsParserAction.setDisabled(not currentDatabaseChanges)
-            self.saveAllParserAction.setDisabled(not anyDatabaseChanges)
-            self.closeParserAction.setDisabled(False)
+            self.saveParserAct.setDisabled(not currentDatabaseChanges)
+            self.saveAsParserAct.setDisabled(not currentDatabaseChanges)
+            self.saveAllParserAct.setDisabled(not anyDatabaseChanges)
+            self.closeParserAct.setDisabled(False)
 
     def populateRecentMenu(self):
         self.recentMenu.clear()
@@ -1442,13 +1437,13 @@ class PyStratoGui(QMainWindow):
         self.locationSearchBar.changeTheme()
         # UPDATING ICONS
         self._createIcons()
-        self.newParserAction.setIcon(self.icons['NEW_WINDOW'])
-        self.openParserAction.setIcon(self.icons['OPEN_IN_BROWSER'])
-        self.saveParserAction.setIcon(self.icons['SAVE'])
-        self.saveAllParserAction.setIcon(self.icons['SAVE_ALL'])
-        self.closeParserAction.setIcon(self.icons['CLOSE_WINDOW'])
-        self.importParserAction.setIcon(self.icons['DOWNLOAD'])
-        self.trackedParserAction.setIcon(self.icons['ANTENNA'])
+        self.newParserAct.setIcon(self.icons['NEW_WINDOW'])
+        self.openParserAct.setIcon(self.icons['OPEN_IN_BROWSER'])
+        self.saveParserAct.setIcon(self.icons['SAVE'])
+        self.saveAllParserAct.setIcon(self.icons['SAVE_ALL'])
+        self.closeParserAct.setIcon(self.icons['CLOSE_WINDOW'])
+        self.importParserAct.setIcon(self.icons['DOWNLOAD'])
+        self.trackedParserAct.setIcon(self.icons['ANTENNA'])
         self.addUnitAct.setIcon(self.icons['ADD_NEW'])
         self.removeUnitAct.setIcon(self.icons['NEGATIVE'])
         self.addConstantAct.setIcon(self.icons['ADD_NEW'])

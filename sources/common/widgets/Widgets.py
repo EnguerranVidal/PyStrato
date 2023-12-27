@@ -550,15 +550,16 @@ class MessageBox(QMessageBox):
         gridLayout.addWidget(buttonBox, 1, 0, alignment=Qt.AlignCenter)
 
 
-class TrackedBalloonsWindow(QDialog):
+class TrackedParsersWindow(QDialog):
     def __init__(self, path):
         super().__init__()
-        self.current_dir = path
         self.setModal(True)
-        self.formatPath = os.path.join(self.current_dir, "parsers")
-        self.setWindowTitle('Tracked Balloons')
+        self.setFixedSize(600, 600)
+        self.setWindowTitle('Tracked Parsers')
         self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         self.settings = loadSettings("settings")
+        self.current_dir = path
+        self.parserPath = os.path.join(self.current_dir, "parsers")
 
         # WIDGETS & BUTTONS
         self.selectedList = BalloonsListWidget()
@@ -587,7 +588,7 @@ class TrackedBalloonsWindow(QDialog):
         self.setLayout(layout)
 
     def populateFormats(self):
-        path = self.formatPath
+        path = self.parserPath
         trackedFormats = self.settings['FORMAT_FILES']
         if len(trackedFormats) == 1 and len(trackedFormats[0]) == 0:
             trackedFormats = []
@@ -789,6 +790,7 @@ class LayoutManagerDialog(QDialog):
         self.layoutDescription = layoutDescription
         if self.currentLayout is None or self.currentLayout == '':
             self.currentLayout = 'None'
+        # LABELS
         self.layoutLabel = QLabel("Current Layout : ")
         self.selectedLabel = QLabel("Selected Layout : ")
         self.currentLayoutLabel = QLabel(self.currentLayout)
