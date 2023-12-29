@@ -558,14 +558,14 @@ class TrackedParsersWindow(QDialog):
         self.setWindowTitle('Tracked Parsers')
         self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
         self.settings = loadSettings("settings")
-        self.current_dir = path
-        self.parserPath = os.path.join(self.current_dir, "parsers")
+        self.currentDir = path
+        self.parserPath = os.path.join(self.currentDir, "parsers")
 
         # WIDGETS & BUTTONS
         self.selectedList = BalloonsListWidget()
-        self.selectedLabel = QLabel('Tracked Formats')
+        self.selectedLabel = QLabel('Tracked Parsers')
         self.availableList = BalloonsListWidget()
-        self.availableLabel = QLabel('Available Formats')
+        self.availableLabel = QLabel('Available Parsers')
         self.okButton = QPushButton('OK')
         self.cancelButton = QPushButton('Cancel')
         self.okButton.clicked.connect(self.accept)
