@@ -155,6 +155,9 @@ class BalloonPackageDatabase(CommunicationDatabase):
     def path(self) -> str:
         return self._path
 
+    def setPath(self, path: str):
+        self._path = path
+
     def save(self, dataDirectory: str):
         with TemporaryDirectory() as tempDirPath:
             self._saveUnits(os.path.join(tempDirPath, 'units.csv'))
