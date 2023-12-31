@@ -317,7 +317,7 @@ class ArgumentSelector(QDialog):
         self.fillComboBox()
         self.parserComboBox.currentIndexChanged.connect(self.changeComboBox)
         # TELEMETRY TYPE SELECTION
-        themeFolder = 'dark-theme' if not self.settings['DARK_THEME'] else 'light-theme'
+        themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
         self.telemetryTypeLabel = QLabel("Label")
         self.telemetryTypeLabel.setAlignment(Qt.AlignCenter)
         self.previousButton = SquareIconButton(f'sources/icons/{themeFolder}/icons8-back-96.png', flat=True)
@@ -550,83 +550,64 @@ class MessageBox(QMessageBox):
         gridLayout.addWidget(buttonBox, 1, 0, alignment=Qt.AlignCenter)
 
 
-class TrackedBalloonsWindow(QDialog):
+class TrackedParsersDialog(QDialog):
     def __init__(self, path):
         super().__init__()
-        self.current_dir = path
         self.setModal(True)
-        self.formatPath = os.path.join(self.current_dir, "parsers")
-        self.setWindowTitle('Tracked Balloons')
+        self.setFixedSize(300, 600)
+        self.setWindowTitle('Tracked Parsers')
         self.setWindowIcon(QIcon('sources/icons/PyStrato.png'))
-        self.settings = loadSettings("settings")
-
-        # WIDGETS & BUTTONS
-        self.selectedList = BalloonsListWidget()
-        self.selectedLabel = QLabel('Tracked Formats')
-        self.availableList = BalloonsListWidget()
-        self.availableLabel = QLabel('Available Formats')
-        self.okButton = QPushButton('OK')
-        self.cancelButton = QPushButton('Cancel')
-        self.okButton.clicked.connect(self.accept)
-        self.cancelButton.clicked.connect(self.reject)
+        self.currentDir = path
         self.names = {}
-        self.populateFormats()
+        self.settings = loadSettings("settings")
+        self.parserPath = os.path.join(self.currentDir, "parsers")
 
-        # MAIN LAYOUT
-        editorLayout = QGridLayout()
-        editorLayout.addWidget(self.selectedLabel, 0, 0)
-        editorLayout.addWidget(self.selectedList, 1, 0)
-        editorLayout.addWidget(self.availableLabel, 0, 1)
-        editorLayout.addWidget(self.availableList, 1, 1)
-        buttonLayout = QHBoxLayout()
-        buttonLayout.addWidget(self.okButton)
-        buttonLayout.addWidget(self.cancelButton)
-        layout = QVBoxLayout(self)
-        layout.addLayout(editorLayout)
-        layout.addLayout(buttonLayout)
-        self.setLayout(layout)
+        # WIDGETS & DONE BUTTON
+        self.parserScrollArea = QScrollArea()
+        self.parserScrollArea.setWidgetResizable(True)
+        self.parserWidget = QWidget()
+        self.parserLayout = QVBoxLayout()
+        self.parserWidget.setLayout(self.parserLayout)
+        self.parserScrollArea.setWidget(self.parserWidget)
+        self.doneButton = QPushButton("Done")
+        self.doneButton.clicked.connect(self.accept)
+        self.doneButton.setDefault(True)
 
-    def populateFormats(self):
-        path = self.formatPath
+        # CREATE PARSER BUTTONS
+        self.parserButtons = []
+        path = self.parserPath
         trackedFormats = self.settings['FORMAT_FILES']
         if len(trackedFormats) == 1 and len(trackedFormats[0]) == 0:
             trackedFormats = []
-        availableFormats = [directory for directory in os.listdir(path) if os.path.isdir(os.path.join(path, directory))]
-        # Get NAMES for later uses
+        availableFormats = [os.path.join(path, directory) for directory in os.listdir(path) if os.path.isdir(os.path.join(path, directory))]
         for directory in availableFormats:
-            self.names[os.path.basename(directory)] = directory
-        for directory in trackedFormats:
-            if directory in availableFormats:
-                availableFormats.remove(directory)
-        # Fill both lists
-        for directory in trackedFormats:
-            self.selectedList.addItem(os.path.basename(directory))
-        for directory in availableFormats:
-            self.availableList.addItem(os.path.basename(directory))
+            parserName = os.path.basename(directory)
+            self.names[parserName] = directory
+            database = BalloonPackageDatabase(directory)
+            nbTelemetry, nbTelecommand = len(database.telemetryTypes), len(database.telecommandTypes)
+            modificationTime = os.path.getmtime(os.path.join(directory, 'telemetry.csv'))
+            modificationTimeFormatted = time.ctime(modificationTime)
+            button = ThreeLineButton(parserName, f"Last Modified : {modificationTimeFormatted}",
+                                     f"Telemetries : {nbTelemetry}, Telecommands : {nbTelecommand}")
+            button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.parserLayout.addWidget(button)
+            button.setCheckable(True)
+            if directory in trackedFormats:
+                button.setChecked(True)
+            self.parserButtons.append(button)
 
-    def getListedValues(self):
-        trackedFormats = []
-        for i in range(self.selectedList.count()):
-            item = self.selectedList.item(i)
-            trackedFormats.append(self.names[item.text()])
-        return trackedFormats
+        # MAIN LAYOUT
+        mainLayout = QVBoxLayout()
+        mainLayout.addWidget(self.parserScrollArea)
+        mainLayout.addWidget(self.doneButton)
+        self.setLayout(mainLayout)
 
-
-class BalloonsListWidget(QListWidget):
-    def __init__(self):
-        super(QListWidget, self).__init__()
-        self.setAcceptDrops(True)
-        self.setDragEnabled(True)
-        self.setDragDropOverwriteMode(False)
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.setDefaultDropAction(Qt.MoveAction)
-
-    def dropEvent(self, event):
-        source = event.source()
-        items = source.selectedItems()
-        for i in items:
-            source.takeItem(source.indexFromItem(i).row())
-            self.addItem(i)
+    def returnTrackedParsers(self):
+        trackedParsers = []
+        for button, path in zip(self.parserButtons, list(self.names.values())):
+            if button.isChecked():
+                trackedParsers.append(path)
+        return trackedParsers
 
 
 class TwoLineButton(QPushButton):
@@ -789,6 +770,7 @@ class LayoutManagerDialog(QDialog):
         self.layoutDescription = layoutDescription
         if self.currentLayout is None or self.currentLayout == '':
             self.currentLayout = 'None'
+        # LABELS
         self.layoutLabel = QLabel("Current Layout : ")
         self.selectedLabel = QLabel("Selected Layout : ")
         self.currentLayoutLabel = QLabel(self.currentLayout)
@@ -822,16 +804,6 @@ class LayoutManagerDialog(QDialog):
         self.buttonGroup = QButtonGroup()
         self.buttonGroup.buttonClicked.connect(self.onSaveButtonClicked)
         self.userButtons, self.autoButtons = None, None
-
-        # Test Button
-        # TODO : REMOVE THIS BUTTON
-        self.emptyButton = QPushButton('Empty')
-        self.emptyButton.clicked.connect(self.emptyTabs)
-        self.topButtonsLayout.addWidget(self.emptyButton)
-
-        self.refillButton = QPushButton('Refill')
-        self.refillButton.clicked.connect(self.refreshSaveTab)
-        self.topButtonsLayout.addWidget(self.refillButton)
 
         self.topButtonsLayout.addWidget(self.newButton)
         self.topButtonsLayout.addWidget(self.loadButton)
