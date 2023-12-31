@@ -801,10 +801,10 @@ class PyStratoGui(QMainWindow):
         self.populateFileMenu()
 
     def openTrackedParsers(self):
-        dialog = TrackedParsersWindow(self.currentDir)
+        dialog = TrackedParsersDialog(self.currentDir)
         result = dialog.exec_()
         if result == QDialog.Accepted:
-            trackedFormats = dialog.getListedValues()
+            trackedFormats = dialog.returnTrackedParsers()
             self.settings['FORMAT_FILES'] = trackedFormats
             saveSettings(self.settings, 'settings')
 
