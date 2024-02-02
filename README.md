@@ -4,7 +4,7 @@
 ___
 
  [![HitCount](https://hits.dwyl.com/EnguerranVidal/PyStrato.svg?style=flat)](http://hits.dwyl.com/EnguerranVidal/PyStrato) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![GitHub watchers](https://badgen.net/github/watchers/EnguerranVidal/PyStrato/)](https://GitHub.com/EnguerranVidal/PyStrato/watchers/) [![GitHub stars](https://badgen.net/github/stars/EnguerranVidal/PyStrato)](https://GitHub.com/EnguerranVidal/PyStrato/stargazers/) [![GitHub commits](https://badgen.net/github/commits/EnguerranVidal/PyStrato)](https://github.com/EnguerranVidal/PyStrato/) [![GitHub branches](https://badgen.net/github/branches/EnguerranVidal/PyStrato)](https://github.com/EnguerranVidal/PyStrato/)
-  [![wakatime](https://wakatime.com/badge/github/EnguerranVidal/PyGroundStation.svg)](https://wakatime.com/badge/github/EnguerranVidal/PyGroundStation) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
+  [![wakatime](https://wakatime.com/badge/github/EnguerranVidal/PyStrato.svg)](https://wakatime.com/badge/github/EnguerranVidal/PyStrato) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 
 
 ## ABOUT THE PROJECT
