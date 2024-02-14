@@ -111,6 +111,7 @@ class PyStratoGui(QMainWindow):
         self.icons['FULL_SCREEN'] = QIcon(os.path.join(iconPath, 'icons8-full-screen-96.png'))
         self.icons['FOUR_SQUARES'] = QIcon(os.path.join(iconPath, 'icons8-four-squares-96.png'))
         self.icons['COMBO_CHART'] = QIcon(os.path.join(iconPath, 'icons8-combo-chart-96.png'))
+        self.icons['CUBE'] = QIcon(os.path.join(iconPath, 'icons8-cube-96.png'))
         self.icons['PLAY'] = QIcon(os.path.join(iconPath, 'icons8-play-96.png'))
         self.icons['STOP'] = QIcon(os.path.join(iconPath, 'icons8-stop-96.png'))
         self.icons['MONITOR'] = QIcon(os.path.join(iconPath, 'icons8-monitor-96.png'))
@@ -166,6 +167,7 @@ class PyStratoGui(QMainWindow):
         self.displaysToolBar.addAction(self.newSimpleIndicatorAct)
         self.displaysToolBar.addAction(self.newGridIndicatorAct)
         self.displaysToolBar.addAction(self.newMultiCurveAct)
+        self.displaysToolBar.addAction(self.newVtkDisplayAct)
         # RUN / STOP
         self.displaysToolBar.addSeparator()
         self.displaysToolBar.addAction(self.runSerialAct)
@@ -527,6 +529,11 @@ class PyStratoGui(QMainWindow):
         self.newMultiCurveAct.setIcon(self.icons['COMBO_CHART'])
         self.newMultiCurveAct.setStatusTip('Add New MultiCurve Graph')
         self.newMultiCurveAct.triggered.connect(self.displayTabWidget.addMultiCurveGraph)
+        # Add VTK Display
+        self.newVtkDisplayAct = QAction('&Vtk Display', self)
+        self.newVtkDisplayAct.setIcon(self.icons['CUBE'])
+        self.newVtkDisplayAct.setStatusTip('Add New Vtk Display')
+        self.newVtkDisplayAct.triggered.connect(self.displayTabWidget.addVtkDisplay)
 
         ########### TOOLS ###########
         # Run Serial
@@ -616,11 +623,10 @@ class PyStratoGui(QMainWindow):
         self.indicatorMenu = QMenu('&Indicators')
         self.indicatorMenu.addAction(self.newSimpleIndicatorAct)
         self.indicatorMenu.addAction(self.newGridIndicatorAct)
-        # Graphs
-        self.graphsMenu = QMenu('&Graphs')
-        self.graphsMenu.addAction(self.newMultiCurveAct)
         self.displayMenu.addMenu(self.indicatorMenu)
-        self.displayMenu.addMenu(self.graphsMenu)
+        # Others
+        self.displayMenu.addAction(self.newMultiCurveAct)
+        self.displayMenu.addAction(self.newVtkDisplayAct)
         self.insertMenu.addMenu(self.displayMenu)
 
         ###  WINDOW MENU  ###
@@ -1472,6 +1478,7 @@ class PyStratoGui(QMainWindow):
         self.newSimpleIndicatorAct.setIcon(self.icons['FULL_SCREEN'])
         self.newGridIndicatorAct.setIcon(self.icons['FOUR_SQUARES'])
         self.newMultiCurveAct.setIcon(self.icons['COMBO_CHART'])
+        self.newVtkDisplayAct.setIcon(self.icons['CUBE'])
         self.runSerialAct.setIcon(self.icons['PLAY'])
         self.stopSerialAct.setIcon(self.icons['STOP'])
         self.openMonitorAct.setIcon(self.icons['MONITOR'])
