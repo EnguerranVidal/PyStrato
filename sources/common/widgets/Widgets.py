@@ -700,7 +700,7 @@ class AboutDialog(QDialog):
         <p align="justify">Key Features:</p>
         <ul>
         <li><strong>Real-time telemetry data visualization :</strong>
-        Visualize information in real_time through several diagram types and plots.</li>
+        Visualize information in real_time through several graphical display types and plots.</li>
         <li><strong>Telemetry Parser Editing :</strong> 
         Set up the <a href='https://ecom.readthedocs.io/en/latest/index.html'>Ecom</a> database parser as you wish.</li>
         <li><strong>Weather Forecast :</strong> 
