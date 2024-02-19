@@ -21,10 +21,13 @@ class VtkDisplay(BasicDisplay):
         self.content, self.settings = None, loadSettings('settings')
 
         # VTK DISPLAY WIDGET
-        self.vtkMesh = None
         self.meshFilePath = ''
+        self.vtkMesh, self.viewedMesh = None, None
         self.vtkDisplay = QtInteractor(self)
         self.vtkDisplay.set_background('black' if self.settings['DARK_THEME'] else 'white')
+        self.axes = self.vtkDisplay.add_axes(color='white'if self.settings['DARK_THEME'] else 'black')
+
+        # MAIN LAYOUT
         layout = QVBoxLayout(self)
         layout.addWidget(self.vtkDisplay)
         self.settingsWidget = VtkDisplayEditDialog(self.currentDir, self)
@@ -39,7 +42,7 @@ class VtkDisplay(BasicDisplay):
             self.meshFilePath = ''
         else:
             self.vtkMesh = pv.read(self.meshFilePath)
-            self.vtkDisplay.add_mesh(self.vtkMesh)
+            self.viewedMesh = self.vtkDisplay.add_mesh(self.vtkMesh)
         self.settingsWidget = VtkDisplayEditDialog(self.currentDir, self)
 
     def applyChanges(self, editWidget):
@@ -57,6 +60,8 @@ class VtkDisplay(BasicDisplay):
     def changeTheme(self):
         self.settings = loadSettings('settings')
         self.vtkDisplay.set_background('black' if self.settings['DARK_THEME'] else 'white')
+        self.vtkDisplay.remove_actor(self.axes)
+        self.axes = self.vtkDisplay.add_axes(color='white' if self.settings['DARK_THEME'] else 'black')
         self.settingsWidget.changeTheme(darkTheme=self.settings['DARK_THEME'])
 
     def generateSettingsWidget(self):
@@ -95,3 +100,20 @@ class VtkDisplayEditDialog(QWidget):
         themeFolder = 'dark-theme' if darkTheme else 'light-theme'
         meshPixMap = QPixmap(f'sources/icons/{themeFolder}/icons8-file-explorer-96.png').scaled(25, 25)
         self.meshSelectionButton.setIcon(QIcon(meshPixMap))
+
+
+class AxisButton(QPushButton):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Set the icon and icon size
+        self.settings = loadSettings('settings')
+        buttonTheme = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
+        self.setIcon(QIcon(f'sources/icons/{buttonTheme}/icons8-axis-96.png'))
+        self.setIconSize(QSize(25, 25))
+
+    def setIconSize(self, size):
+        super().setIconSize(size)
+        self.setFixedSize(size)
+
+    def sizeHint(self):
+        return self.iconSize()

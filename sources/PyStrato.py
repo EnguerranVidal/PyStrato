@@ -1228,7 +1228,6 @@ class PyStratoGui(QMainWindow):
         self.baudMenu.setTitle('&Baud    ' + action.text())
         self.settings["SELECTED_BAUD"] = action.text()
         saveSettings(self.settings, "settings")
-        # Restart Serial Connection if on
         if self.serial is not None:
             self.stopSerial()
             self.startSerial()
