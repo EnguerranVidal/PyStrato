@@ -91,9 +91,8 @@ class SingleIndicator(BasicDisplay):
 
     def updateContent(self, content=None):
         self.generalSettings = loadSettings('settings')
-        # If content is there, retrieve the Argument
         argumentMapping = self.argument.split('/')
-        if argumentMapping != ['']:  # There is an argument in the parameters
+        if argumentMapping != ['']:
             if content is None:
                 value = ''
             else:

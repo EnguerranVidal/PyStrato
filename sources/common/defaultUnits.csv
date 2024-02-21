@@ -28,8 +28,8 @@ Pascal,Pa,Pressure,Pressure,"pascal, pa"
 Bar,bar,Pressure,Pressure,
 Millibar,mbar,Pressure,Pressure,"millibar, hectopascal, Hectopascal"
 Pound per square inch,psi,Pressure,Pressure,pound per square inch
-Degree,deg,Angle,Angle,"degree, degrees"
-Radian,rad,Angle,Angle,"radian, radians"
+Degree,deg,Angle,Angle,"degree, degrees, degs"
+Radian,rad,Angle,Angle,"radian, radians, rads"
 Degree per second,deg/s,Angular Speed,Angular Speed,"dps, degree per second"
 Radian per second,rad/s,Angular Speed,Angular Speed,"rps, radian per second"
 Revolution per minute,rpm,Angular Speed,Angular Speed,revolution per minute

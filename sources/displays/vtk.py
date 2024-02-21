@@ -1,7 +1,9 @@
 ######################## IMPORTS ########################
 import os
+from functools import reduce
 import pyvista as pv
 from pyvistaqt import QtInteractor
+import operator
 
 # ------------------- PyQt Modules -------------------- #
 from PyQt5.QtWidgets import *
@@ -12,6 +14,7 @@ from PyQt5.QtGui import *
 from sources.common.utilities.FileHandling import loadSettings
 from sources.common.widgets.Widgets import ArgumentSelector
 from sources.common.widgets.basic import BasicDisplay
+from sources.databases.units import DefaultUnitsCatalogue
 
 
 ######################## CLASSES ########################
@@ -19,12 +22,13 @@ class VtkDisplay(BasicDisplay):
     def __init__(self, path, parent=None):
         super().__init__(path, parent)
         self.content, self.settings = None, loadSettings('settings')
+        self.catalogue = DefaultUnitsCatalogue()
 
         # VTK DISPLAY WIDGET
         self.meshFilePath = ''
         self.vtkMesh, self.viewedMesh = None, None
         self.vtkDisplay = QtInteractor(self)
-        self.rotation = {'SET_ROTATION': False, 'ROTATION_TYPE': 'EULER', 'ARGUMENTS': ['', '', '']}
+        self.rotation = {'SET_ROTATION': False, 'ROTATION_TYPE': 'EULER', 'ARGUMENTS': [''] * 7, 'UNITS': [None] * 7}
         self.vtkDisplay.set_background('black' if self.settings['DARK_THEME'] else 'white')
         self.axes = self.vtkDisplay.add_axes(color='white'if self.settings['DARK_THEME'] else 'black')
 
@@ -34,7 +38,8 @@ class VtkDisplay(BasicDisplay):
         self.settingsWidget = VtkDisplayEditDialog(self.currentDir, self)
 
     def getDescription(self):
-        displayDescription = {'DISPLAY_TYPE': 'VTK_DISPLAY', 'MESH_PATH': self.meshFilePath, 'ROTATION': self.rotation}
+        rotation = {key: value for key, value in self.rotation.items() if key != 'UNITS'}
+        displayDescription = {'DISPLAY_TYPE': 'VTK_DISPLAY', 'MESH_PATH': self.meshFilePath, 'ROTATION': rotation}
         return displayDescription
 
     def applyDescription(self, description):
@@ -46,6 +51,7 @@ class VtkDisplay(BasicDisplay):
             self.viewedMesh = self.vtkDisplay.add_mesh(self.vtkMesh)
         self.settingsWidget = VtkDisplayEditDialog(self.currentDir, self)
         self.rotation = description['ROTATION']
+        self.retrieveArgumentUnits()
 
     def applyChanges(self, editWidget):
         editWidget = self.settingsWidget
@@ -58,12 +64,28 @@ class VtkDisplay(BasicDisplay):
                          'ARGUMENTS': [editWidget.rollEdit.text(), editWidget.pitchEdit.text(),
                                        editWidget.yawEdit.text(), editWidget.qwEdit.text(),
                                        editWidget.qxEdit.text(), editWidget.qyEdit.text(),
-                                       editWidget.qzEdit.text()]}
+                                       editWidget.qzEdit.text()],
+                         'UNITS': editWidget.argumentUnits}
+        self.updateContent()
 
     def updateContent(self, content=None):
         self.generalSettings = loadSettings('settings')
         if content is not None:
             self.content = content
+            if self.rotation['ROTATION_TYPE'] == 'EULER' and self.rotation['SET_ROTATION']:
+                roll, pitch, yaw = self.rotation['ARGUMENTS'][0], self.rotation['ARGUMENTS'][1], self.rotation['ARGUMENTS'][2]
+                rollMapping, pitchMapping, yawMapping = roll.split('/'), pitch.split('/'), yaw.split('/')
+                valueRoll = reduce(operator.getitem, rollMapping, content.storage)
+                valuePitch = reduce(operator.getitem, pitchMapping, content.storage)
+                valueYaw = reduce(operator.getitem, yawMapping, content.storage)
+            elif self.rotation['ROTATION_TYPE'] == 'QUATERNION' and self.rotation['SET_ROTATION']:
+                qW, qX = self.rotation['ARGUMENTS'][3], self.rotation['ARGUMENTS'][4]
+                qY, qZ = self.rotation['ARGUMENTS'][5], self.rotation['ARGUMENTS'][6]
+                qwMapping, qxMapping, qyMapping, qzMapping = qW.split('/'), qX.split('/'), qY.split('/'), qZ.split('/')
+                valueQw = reduce(operator.getitem, qwMapping, content.storage)
+                valueQx = reduce(operator.getitem, qxMapping, content.storage)
+                valueQy = reduce(operator.getitem, qyMapping, content.storage)
+                valueQz = reduce(operator.getitem, qzMapping, content.storage)
 
     def changeTheme(self):
         self.settings = loadSettings('settings')
@@ -75,11 +97,37 @@ class VtkDisplay(BasicDisplay):
     def generateSettingsWidget(self):
         self.settingsWidget = VtkDisplayEditDialog(self.currentDir, self)
 
+    def retrieveArgumentUnits(self, arguments=None):
+        argumentUnits = []
+        if arguments is None:
+            arguments = self.rotation['ARGUMENTS']
+
+        def getUnit(level, keys):
+            for key in keys:
+                if key in level:
+                    level = level[key]
+                else:
+                    return None
+            if isinstance(level, dict):
+                return None
+            return level
+
+        dialog = ArgumentSelector(self.currentDir, self)
+        for i, argument in enumerate(arguments):
+
+            argument = argument.split('/')
+            database, telemetry, argument = argument[0], argument[1], argument[2:]
+            selectedTypes, selectedUnits = dialog.databases[database].nestedPythonTypes(telemetry, (int, float))
+            unitName = getUnit(selectedUnits, argument)
+            argumentUnits[i] = dialog.databases[database].units[unitName][0] if unitName is not None else None
+        self.rotation['UNITS'] = argumentUnits
+
 
 class VtkDisplayEditDialog(QWidget):
     def __init__(self, path, parent: VtkDisplay):
         super().__init__(parent)
         self.settings = loadSettings('settings')
+        self.argumentUnits = parent.rotation['UNITS']
         themeFolder = 'dark-theme' if self.settings['DARK_THEME'] else 'light-theme'
         meshPixMap = QPixmap(f'sources/icons/{themeFolder}/icons8-file-explorer-96.png').scaled(25, 25)
         selectionButtonPixmap = QPixmap(f'sources/icons/{themeFolder}/icons8-add-database-96.png').scaled(25, 25)
@@ -179,6 +227,7 @@ class VtkDisplayEditDialog(QWidget):
         dialog = ArgumentSelector(self.currentDir, self)
         result = dialog.exec_()
         if result == QMessageBox.Accepted:
+            self.argumentUnits[0] = dialog.argumentUnit
             self.rollEdit.setText(dialog.selectedArgument)
             self.rollEdit.adjustSize()
 
@@ -186,6 +235,7 @@ class VtkDisplayEditDialog(QWidget):
         dialog = ArgumentSelector(self.currentDir, self)
         result = dialog.exec_()
         if result == QMessageBox.Accepted:
+            self.argumentUnits[1] = dialog.argumentUnit
             self.pitchEdit.setText(dialog.selectedArgument)
             self.pitchEdit.adjustSize()
 
@@ -193,6 +243,7 @@ class VtkDisplayEditDialog(QWidget):
         dialog = ArgumentSelector(self.currentDir, self)
         result = dialog.exec_()
         if result == QMessageBox.Accepted:
+            self.argumentUnits[2] = dialog.argumentUnit
             self.yawEdit.setText(dialog.selectedArgument)
             self.yawEdit.adjustSize()
 
@@ -200,6 +251,7 @@ class VtkDisplayEditDialog(QWidget):
         dialog = ArgumentSelector(self.currentDir, self)
         result = dialog.exec_()
         if result == QMessageBox.Accepted:
+            self.argumentUnits[3] = dialog.argumentUnit
             self.qwEdit.setText(dialog.selectedArgument)
             self.qwEdit.adjustSize()
 
@@ -207,6 +259,7 @@ class VtkDisplayEditDialog(QWidget):
         dialog = ArgumentSelector(self.currentDir, self)
         result = dialog.exec_()
         if result == QMessageBox.Accepted:
+            self.argumentUnits[4] = dialog.argumentUnit
             self.qxEdit.setText(dialog.selectedArgument)
             self.qxEdit.adjustSize()
 
@@ -214,6 +267,7 @@ class VtkDisplayEditDialog(QWidget):
         dialog = ArgumentSelector(self.currentDir, self)
         result = dialog.exec_()
         if result == QMessageBox.Accepted:
+            self.argumentUnits[5] = dialog.argumentUnit
             self.qyEdit.setText(dialog.selectedArgument)
             self.qyEdit.adjustSize()
 
@@ -221,6 +275,7 @@ class VtkDisplayEditDialog(QWidget):
         dialog = ArgumentSelector(self.currentDir, self)
         result = dialog.exec_()
         if result == QMessageBox.Accepted:
+            self.argumentUnits[6] = dialog.argumentUnit
             self.qzEdit.setText(dialog.selectedArgument)
             self.qzEdit.adjustSize()
 
