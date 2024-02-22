@@ -11,7 +11,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.utilities.FileHandling import loadSettings
+from sources.common.utilities.fileSystem import loadSettings
 from sources.common.widgets.Widgets import ArgumentSelector
 from sources.common.widgets.basic import BasicDisplay
 from sources.databases.units import DefaultUnitsCatalogue

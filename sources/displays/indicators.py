@@ -10,10 +10,9 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.utilities.FileHandling import loadSettings, nameGiving
+from sources.common.utilities.fileSystem import loadSettings, nameGiving
 from sources.common.widgets.Widgets import ArgumentSelector
 from sources.common.widgets.basic import BasicDisplay
-from sources.databases.balloondata import BalloonPackageDatabase
 from sources.databases.units import DefaultUnitsCatalogue
 
 

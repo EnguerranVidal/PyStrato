@@ -3,7 +3,7 @@
 from PyQt5.QtWidgets import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.utilities.FileHandling import loadSettings
+from sources.common.utilities.fileSystem import loadSettings
 from sources.databases.units import DefaultUnitsCatalogue
 
 

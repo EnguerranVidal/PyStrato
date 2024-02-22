@@ -8,7 +8,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.utilities.FileHandling import loadSettings, nameGiving
+from sources.common.utilities.fileSystem import loadSettings, nameGiving
 from sources.common.widgets.Widgets import ContentStorage
 from sources.common.widgets.basic import BasicDisplay
 from sources.displays.graphs import MultiCurveGraph

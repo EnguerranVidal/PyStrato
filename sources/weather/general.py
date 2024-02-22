@@ -8,8 +8,8 @@ import folium
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 # --------------------- Sources ----------------------- #
-from sources.common.utilities.FileHandling import loadSettings, saveSettings
-from sources.common.utilities.Functions import isInternetAvailable
+from sources.common.utilities.fileSystem import loadSettings, saveSettings
+from sources.common.utilities.misc import isInternetAvailable
 from sources.common.widgets.Widgets import SearchBar, SquareIconButton
 from sources.weather.openweathermap import *
 

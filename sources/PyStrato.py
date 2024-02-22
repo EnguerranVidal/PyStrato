@@ -10,7 +10,7 @@ from PyQt5.QtCore import QDateTime, QThread
 
 # --------------------- Sources ----------------------- #
 from sources.SerialGS import SerialMonitor, saveParserData
-from sources.common.utilities.FileHandling import loadSearchItemsFromJson
+from sources.common.utilities.fileSystem import loadSearchItemsFromJson
 from sources.common.widgets.Widgets import *
 
 from sources.databases.general import DatabaseTabWidget, DatabaseEditor, NewDatabaseWindow

@@ -1,3 +1,4 @@
+######################## IMPORTS ########################
 import dataclasses
 import os
 import csv
@@ -10,9 +11,11 @@ import time
 from ecom.database import Unit, Configuration
 from ecom.datatypes import TypeInfo, DefaultValueInfo, EnumType
 
+# --------------------- Sources ----------------------- #
 from sources.databases.balloondata import BalloonPackageDatabase
 
 
+######################## FUNCTIONS ########################
 def nameGiving(nameList: list, baseName: str = '', parentheses=False, firstName=True, startingIndex=0):
     i = startingIndex
     if firstName:
