@@ -57,9 +57,11 @@ python main.py
 ## FUTURE ROADMAP
 ___
 - [x] Revamping Ecom Database Editing
-- [ ] Add Working Display Layout Saving
-- [ ] Revamping Displays
-- [ ] Add Balloon Trajectory Model
+- [x] Add Working Display Layout Saving
+- [x] Add Dark Theme 
+- [x] Revamping Displays
+- [ ] Add Balloon Trajectory Model Simulation
+- [ ] Add Vtk 3D Models Real-Time Rotation 
 - [ ] Add 3D Plots
 - [ ] Add Telecommand sending
 
