@@ -12,6 +12,7 @@ from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
 from sources.common.utilities.fileSystem import loadSettings
+from sources.common.utilities.rotations import quaternionToEuler321
 from sources.common.widgets.Widgets import ArgumentSelector
 from sources.common.widgets.basic import BasicDisplay
 from sources.databases.units import DefaultUnitsCatalogue
@@ -86,6 +87,7 @@ class VtkDisplay(BasicDisplay):
                 valueQx = reduce(operator.getitem, qxMapping, content.storage)
                 valueQy = reduce(operator.getitem, qyMapping, content.storage)
                 valueQz = reduce(operator.getitem, qzMapping, content.storage)
+                valueRoll, valuePitch, valueYaw = quaternionToEuler321(valueQw, valueQx, valueQy, valueQz, degrees=True)
 
     def changeTheme(self):
         self.settings = loadSettings('settings')

@@ -11,10 +11,12 @@ def eulerToQuaternion321(roll, pitch, yaw):
     return qW, qX, qY, qZ
 
 
-def quaternionToEuler321(qW, qX, qY, qZ):
+def quaternionToEuler321(qW, qX, qY, qZ, degrees=False):
     roll = np.arctan2(2 * (qW * qX + qY * qZ), 1 - 2 * (qX ** 2 + qY * qX))
     pitch = 2 * np.arctan2(np.sqrt(1 + 2 * (qW * qY - qX * qZ)), np.sqrt(1 - 2 * (qW * qY - qX * qZ))) - np.pi / 2
     yaw = np.arctan2(2 * (qW * qZ + qX * qY), 1 - 2 * (qY ** 2 + qZ ** 2))
+    if degrees:
+        roll, pitch, yaw = np.degrees(pitch), np.degrees(roll), np.degrees(yaw)
     return roll, pitch, yaw
 
 
