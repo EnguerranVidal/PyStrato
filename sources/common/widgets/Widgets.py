@@ -14,7 +14,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.utilities.FileHandling import loadSettings, saveSettings, nameGiving, getModificationDate
+from sources.common.utilities.fileSystem import loadSettings, saveSettings, nameGiving, getModificationDate
 from sources.databases.balloondata import BalloonPackageDatabase
 
 
@@ -375,12 +375,12 @@ class ArgumentSelector(QDialog):
                 if isinstance(childValue, dict):
                     child = QTreeWidgetItem(treeItem, [childName])
                     treeItem.addChild(child)
-                    child.setFlags(child.flags() & ~Qt.ItemIsEnabled)
+                    child.setFlags(child.flags() & Qt.ItemIsEnabled)
                     addGrandChildren(child, childValue)
                 elif isinstance(childValue, bool):
                     child = QTreeWidgetItem(treeItem, [childName])
                     treeItem.addChild(child)
-                    if value:
+                    if childValue:
                         child.setFlags(child.flags() & Qt.ItemIsEnabled)
                     else:
                         child.setFlags(child.flags() & ~Qt.ItemIsEnabled)
@@ -400,7 +400,7 @@ class ArgumentSelector(QDialog):
                     if isinstance(value, dict):
                         item = QTreeWidgetItem(treeWidget, [name])
                         treeWidget.addTopLevelItem(item)
-                        item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+                        item.setFlags(item.flags() & Qt.ItemIsEnabled)
                         addGrandChildren(item, value)
                     elif isinstance(value, bool):
                         item = QTreeWidgetItem(treeWidget, [name])
@@ -481,7 +481,7 @@ class ArgumentSelector(QDialog):
                 return None
             return level
 
-        if not currentItem.isDisabled():
+        if not currentItem.isDisabled() and currentItem.childCount() == 0:
             # RETRIEVING DATA
             database = self.parserComboBox.currentText()
             telemetry = self.telemetryTypeLabel.text()

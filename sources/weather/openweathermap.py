@@ -13,9 +13,9 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.utilities.Functions import getTextHeight
+from sources.common.utilities.misc import getTextHeight
 from sources.common.widgets.Widgets import ArrowWidget, ScrollableWidget
-from sources.common.utilities.FileHandling import loadSettings
+from sources.common.utilities.fileSystem import loadSettings
 
 
 ######################## CLASSES ########################

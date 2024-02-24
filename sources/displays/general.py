@@ -8,10 +8,11 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.utilities.FileHandling import loadSettings, nameGiving
+from sources.common.utilities.fileSystem import loadSettings, nameGiving
 from sources.common.widgets.Widgets import ContentStorage
 from sources.common.widgets.basic import BasicDisplay
 from sources.displays.graphs import MultiCurveGraph
+from sources.displays.vtk import VtkDisplay
 from sources.displays.indicators import SingleIndicator, GridIndicator
 
 
@@ -107,6 +108,15 @@ class DisplayTabWidget(QMainWindow):
         newDockWidget = DisplayDockWidget(newIndicatorName, widget=MultiCurveGraph(path=self.currentDir))
         currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
 
+    def addVtkDisplay(self):
+        if self.tabWidget.count() == 0:
+            self.addNewTab()
+        currentTabWidget = self.tabWidget.currentWidget()
+        widgetNames = [dock.windowTitle() for dock in currentTabWidget.findChildren(QDockWidget) if dock.isVisible()]
+        newDisplayName = nameGiving(widgetNames, baseName='Display', firstName=False)
+        newDockWidget = DisplayDockWidget(newDisplayName, widget=VtkDisplay(path=self.currentDir))
+        currentTabWidget.addDockWidget(self.areaCycler.next(), newDockWidget)
+
     def getLayoutDescription(self):
         tabs = [self.tabWidget.widget(index) for index in range(self.tabWidget.count())]
         tabNames = [self.tabWidget.tabText(index) for index in range(self.tabWidget.count())]
@@ -135,7 +145,8 @@ class DisplayTabWidget(QMainWindow):
         self.tabWidget.clear()
         dockAreas = {1: Qt.LeftDockWidgetArea, 2: Qt.RightDockWidgetArea, 4: Qt.TopDockWidgetArea, 8: Qt.BottomDockWidgetArea}
         displayOptions = {'SINGLE_INDICATOR': SingleIndicator, 'GRID_INDICATOR': GridIndicator,
-                          'MULTI_CURVE_GRAPH': MultiCurveGraph, 'BASIC_DISPLAY': BasicDisplay}
+                          'MULTI_CURVE_GRAPH': MultiCurveGraph, 'VTK_DISPLAY': VtkDisplay,
+                          'BASIC_DISPLAY': BasicDisplay}
         for i, (tabName, tabContents) in enumerate(description.items()):
             self.addNewTab(name=tabName)
             tabWidget = self.tabWidget.widget(i)
@@ -209,13 +220,12 @@ class DisplayDockWidget(QDockWidget):
             self.setFeatures(features)
             self.setWindowTitle(name)
             self.setTitleBarWidget(None if showTitleBar else QWidget())
-            # DISPLAY CHANGES
             self.display.applyChanges(widget if widget is not None else dialog.editWidget)
 
         dialog.applied.connect(applySettingsChanges)
         result = dialog.exec_()
         if result == QDialog.Accepted:
-            # TODO : Add Code to allow canceling feature for chanegs already applied to the display and dockwidget
+            # TODO : Add Code to allow canceling feature for changes already applied to the display and dockwidget
             applySettingsChanges(dialog.editWidget)
 
     def closeEvent(self, event):

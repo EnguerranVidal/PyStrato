@@ -16,7 +16,7 @@ from sources.databases.configurations import ConfigsEditorWidget
 from sources.databases.sharedtypes import SharedTypesEditorWidget
 from sources.databases.telemetries import TelemetryEditorWidget
 from sources.databases.telecommands import TelecommandEditorWidget
-from sources.common.utilities.FileHandling import loadSettings
+from sources.common.utilities.fileSystem import loadSettings
 
 
 ######################## CLASSES ########################

@@ -9,7 +9,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 # --------------------- Sources ----------------------- #
-from sources.common.utilities.FileHandling import loadSettings, nameGiving
+from sources.common.utilities.fileSystem import loadSettings, nameGiving
 from sources.common.widgets.Widgets import ArgumentSelector
 from sources.common.widgets.basic import BasicDisplay
 
@@ -161,10 +161,10 @@ class MultiCurveGraphEditDialog(QWidget):
             selectionButtonPixmap = QPixmap(f'sources/icons/{themeFolder}/icons8-add-database-96.png').scaled(25, 25)
             xPixMap = QPixmap(f'sources/icons/{themeFolder}/icons8-x-coordinate-96.png').scaled(25, 25)
             yPixMap = QPixmap(f'sources/icons/{themeFolder}/icons8-y-coordinate-96.png').scaled(25, 25)
-            curveEditor.lineProperties.labelEditX.setPixmap(xPixMap)
-            curveEditor.lineProperties.labelEditY.setPixmap(yPixMap)
-            curveEditor.lineProperties.buttonSelectorX.setIcon(QIcon(selectionButtonPixmap))
-            curveEditor.lineProperties.buttonSelectorY.setIcon(QIcon(selectionButtonPixmap))
+            curveEditor.labelEditX.setPixmap(xPixMap)
+            curveEditor.labelEditY.setPixmap(yPixMap)
+            curveEditor.buttonSelectorX.setIcon(QIcon(selectionButtonPixmap))
+            curveEditor.buttonSelectorY.setIcon(QIcon(selectionButtonPixmap))
 
     def removeExistingCurve(self):
         currentIndex = self.tabWidget.currentIndex()
@@ -210,10 +210,10 @@ class CurveEditor(QWidget):
         selectionButtonPixmap = QPixmap(f'sources/icons/{themeFolder}/icons8-add-database-96.png').scaled(25, 25)
         xPixMap = QPixmap(f'sources/icons/{themeFolder}/icons8-x-coordinate-96.png').scaled(25, 25)
         yPixMap = QPixmap(f'sources/icons/{themeFolder}/icons8-y-coordinate-96.png').scaled(25, 25)
-        labelEditX = QLabel()
-        labelEditX.setPixmap(xPixMap)
-        labelEditY = QLabel()
-        labelEditY.setPixmap(yPixMap)
+        self.labelEditX = QLabel()
+        self.labelEditX.setPixmap(xPixMap)
+        self.labelEditY = QLabel()
+        self.labelEditY.setPixmap(yPixMap)
         self.buttonSelectorX = QPushButton()
         self.buttonSelectorY = QPushButton()
         self.buttonSelectorX.setIcon(QIcon(selectionButtonPixmap))
@@ -234,10 +234,10 @@ class CurveEditor(QWidget):
         mainLayout = QGridLayout()
         mainLayout.addWidget(nameLabel, 0, 0, 1, 1)
         mainLayout.addWidget(self.nameEdit, 0, 1, 1, 1)
-        mainLayout.addWidget(labelEditX, 1, 0)
+        mainLayout.addWidget(self.labelEditX, 1, 0)
         mainLayout.addWidget(self.lineEditX, 1, 1)
         mainLayout.addWidget(self.buttonSelectorX, 1, 2)
-        mainLayout.addWidget(labelEditY, 2, 0)
+        mainLayout.addWidget(self.labelEditY, 2, 0)
         mainLayout.addWidget(self.lineEditY, 2, 1)
         mainLayout.addWidget(self.buttonSelectorY, 2, 2)
         mainLayout.addWidget(self.lineProperties, 3, 0, 1, 3)
