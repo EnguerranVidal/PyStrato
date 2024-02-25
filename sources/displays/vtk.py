@@ -13,7 +13,7 @@ from PyQt5.QtGui import *
 # --------------------- Sources ----------------------- #
 from sources.common.utilities.fileSystem import loadSettings
 from sources.common.utilities.rotations import quaternionToEuler321
-from sources.common.widgets.Widgets import ArgumentSelector
+from sources.common.widgets.Widgets import ArgumentSelector, ContentStorage
 from sources.common.widgets.basic import BasicDisplay
 from sources.databases.units import DefaultUnitsCatalogue
 
@@ -29,9 +29,9 @@ class VtkDisplay(BasicDisplay):
         self.meshFilePath = ''
         self.vtkMesh, self.viewedMesh = None, None
         self.vtkDisplay = QtInteractor(self)
-        self.rotation = {'SET_ROTATION': False, 'ROTATION_TYPE': 'EULER', 'ARGUMENTS': [''] * 7, 'UNITS': [None] * 7}
+        self.rotation = {'SET_ROTATION': False, 'ROTATION_TYPE': 'EULER', 'ARGUMENTS': [None] * 7, 'UNITS': [None] * 7}
         self.vtkDisplay.set_background('black' if self.settings['DARK_THEME'] else 'white')
-        self.axes = self.vtkDisplay.add_axes(color='white'if self.settings['DARK_THEME'] else 'black')
+        self.axes = self.vtkDisplay.add_axes(color='white' if self.settings['DARK_THEME'] else 'black')
 
         # MAIN LAYOUT
         layout = QVBoxLayout(self)
@@ -57,37 +57,59 @@ class VtkDisplay(BasicDisplay):
     def applyChanges(self, editWidget):
         editWidget = self.settingsWidget
         self.meshFilePath = editWidget.meshFileEdit.text()
-        if os.path.exists(self.meshFilePath):
+        if os.path.exists(self.meshFilePath) and os.path.isfile(self.meshFilePath):
             self.vtkMesh = pv.read(self.meshFilePath)
             self.vtkDisplay.add_mesh(self.vtkMesh)
+        rollArgument = editWidget.rollEdit.text()
+        pitchArgument = editWidget.pitchEdit.text()
+        yawArgument = editWidget.yawEdit.text()
+        qwArgument, qxArgument = editWidget.qwEdit.text(), editWidget.qxEdit.text()
+        qyArgument, qzArgument = editWidget.qyEdit.text(), editWidget.qzEdit.text()
+        print(rollArgument, pitchArgument, yawArgument)
+        print(qwArgument, qxArgument, qyArgument, qzArgument)
         self.rotation = {'SET_ROTATION': editWidget.rotationCheckbox.isChecked(),
                          'ROTATION_TYPE': 'EULER' if editWidget.rotationTypeComboBox.currentIndex() == 0 else 'QUATERNION',
-                         'ARGUMENTS': [editWidget.rollEdit.text(), editWidget.pitchEdit.text(),
-                                       editWidget.yawEdit.text(), editWidget.qwEdit.text(),
-                                       editWidget.qxEdit.text(), editWidget.qyEdit.text(),
-                                       editWidget.qzEdit.text()],
+                         'ARGUMENTS': [rollArgument if rollArgument != '' else None,
+                                       pitchArgument if pitchArgument != '' else None,
+                                       yawArgument if yawArgument != '' else None,
+                                       qwArgument if qwArgument != '' else None,
+                                       qxArgument if qxArgument != '' else None,
+                                       qyArgument if qyArgument != '' else None,
+                                       qzArgument if qzArgument != '' else None],
                          'UNITS': editWidget.argumentUnits}
+        print(self.rotation)
         self.updateContent()
 
-    def updateContent(self, content=None):
+    def updateContent(self, content: ContentStorage = None):
         self.generalSettings = loadSettings('settings')
-        if content is not None:
+        if content is not None and self.vtkMesh is not None:
             self.content = content
             if self.rotation['ROTATION_TYPE'] == 'EULER' and self.rotation['SET_ROTATION']:
                 roll, pitch, yaw = self.rotation['ARGUMENTS'][0], self.rotation['ARGUMENTS'][1], self.rotation['ARGUMENTS'][2]
                 rollMapping, pitchMapping, yawMapping = roll.split('/'), pitch.split('/'), yaw.split('/')
-                valueRoll = reduce(operator.getitem, rollMapping, content.storage)
-                valuePitch = reduce(operator.getitem, pitchMapping, content.storage)
-                valueYaw = reduce(operator.getitem, yawMapping, content.storage)
+                valueRoll = content.retrieveStoredContent(rollMapping)
+                valuePitch = content.retrieveStoredContent(pitchMapping)
+                valueYaw = content.retrieveStoredContent(yawMapping)
+                print(valueRoll, valuePitch, valueYaw)
             elif self.rotation['ROTATION_TYPE'] == 'QUATERNION' and self.rotation['SET_ROTATION']:
                 qW, qX = self.rotation['ARGUMENTS'][3], self.rotation['ARGUMENTS'][4]
                 qY, qZ = self.rotation['ARGUMENTS'][5], self.rotation['ARGUMENTS'][6]
                 qwMapping, qxMapping, qyMapping, qzMapping = qW.split('/'), qX.split('/'), qY.split('/'), qZ.split('/')
-                valueQw = reduce(operator.getitem, qwMapping, content.storage)
-                valueQx = reduce(operator.getitem, qxMapping, content.storage)
-                valueQy = reduce(operator.getitem, qyMapping, content.storage)
-                valueQz = reduce(operator.getitem, qzMapping, content.storage)
+                valueQw = content.retrieveStoredContent(qwMapping)
+                valueQx = content.retrieveStoredContent(qxMapping)
+                valueQy = content.retrieveStoredContent(qyMapping)
+                valueQz = content.retrieveStoredContent(qzMapping)
+                print(valueQw, valueQx, valueQy, valueQz)
                 valueRoll, valuePitch, valueYaw = quaternionToEuler321(valueQw, valueQx, valueQy, valueQz, degrees=True)
+            else:
+                return
+            if len(self.content) > 1:
+                self.vtkMesh.rotate_x(-valueRoll[-2])
+                self.vtkMesh.rotate_y(-valuePitch[-2])
+                self.vtkMesh.rotate_z(-valueYaw[-2])
+            self.vtkMesh.rotate_x(valueRoll[-1])
+            self.vtkMesh.rotate_y(valuePitch[-1])
+            self.vtkMesh.rotate_z(valueYaw[-1])
 
     def changeTheme(self):
         self.settings = loadSettings('settings')
@@ -116,12 +138,15 @@ class VtkDisplay(BasicDisplay):
 
         dialog = ArgumentSelector(self.currentDir, self)
         for i, argument in enumerate(arguments):
-
-            argument = argument.split('/')
-            database, telemetry, argument = argument[0], argument[1], argument[2:]
-            selectedTypes, selectedUnits = dialog.databases[database].nestedPythonTypes(telemetry, (int, float))
-            unitName = getUnit(selectedUnits, argument)
-            argumentUnits[i] = dialog.databases[database].units[unitName][0] if unitName is not None else None
+            if argument is not None:
+                argument = argument.split('/')
+                print(argument)
+                database, telemetry, argument = argument[0], argument[1], argument[2:]
+                selectedTypes, selectedUnits = dialog.databases[database].nestedPythonTypes(telemetry, (int, float))
+                unitName = getUnit(selectedUnits, argument)
+                argumentUnits.append(dialog.databases[database].units[unitName][0] if unitName is not None else None)
+            else:
+                argumentUnits.append(None)
         self.rotation['UNITS'] = argumentUnits
 
 
@@ -147,9 +172,12 @@ class VtkDisplayEditDialog(QWidget):
         self.eulerFrame = QFrame()
         self.eulerFrame.setEnabled(parent.rotation['SET_ROTATION'])
         rollLabel, pitchLabel, yawLabel = QLabel('Roll: '), QLabel('Pitch:'), QLabel('Yaw:  ')
-        self.rollEdit = QLineEdit(parent.rotation['ARGUMENTS'][0])
-        self.pitchEdit = QLineEdit(parent.rotation['ARGUMENTS'][1])
-        self.yawEdit = QLineEdit(parent.rotation['ARGUMENTS'][2])
+        rollArgument = parent.rotation['ARGUMENTS'][0]
+        pitchArgument = parent.rotation['ARGUMENTS'][0]
+        yawArgument = parent.rotation['ARGUMENTS'][0]
+        self.rollEdit = QLineEdit(rollArgument if rollArgument is None else '')
+        self.pitchEdit = QLineEdit(pitchArgument if pitchArgument is None else '')
+        self.yawEdit = QLineEdit(yawArgument if yawArgument is None else '')
         self.rollButton, self.pitchButton, self.yawButton = QPushButton(), QPushButton(), QPushButton()
         self.rollButton.setIcon(QIcon(selectionButtonPixmap))
         self.pitchButton.setIcon(QIcon(selectionButtonPixmap))
@@ -204,12 +232,12 @@ class VtkDisplayEditDialog(QWidget):
 
         # MESH FILE ROTATION
         self.rotationCheckbox = QCheckBox('Add Rotation')
-        self.rotationCheckbox.stateChanged.connect(self.toggleRotation)
-        self.rotationCheckbox.setChecked(parent.rotation['SET_ROTATION'])
-        self.rotationTypeComboBox = QComboBox()
+        self.rotationTypeComboBox = QComboBox(self)
         self.rotationTypeComboBox.addItems(['Euler Angles', 'Quaternion'])
-        self.rotationTypeComboBox.setEnabled(parent.rotation['SET_ROTATION'])
+        self.rotationCheckbox.stateChanged.connect(self.toggleRotation)
         self.rotationTypeComboBox.currentIndexChanged.connect(self.showRotationFrame)
+        self.rotationCheckbox.setChecked(parent.rotation['SET_ROTATION'])
+        self.rotationTypeComboBox.setEnabled(parent.rotation['SET_ROTATION'])
 
         # MAIN LAYOUT
         mainLayout = QGridLayout(self)
@@ -222,7 +250,8 @@ class VtkDisplayEditDialog(QWidget):
         mainLayout.addWidget(self.quaternionFrame, 2, 0, 1, 3)
 
         # SETTING RIGHT EDITION FRAME
-        self.rotationTypeComboBox.setCurrentText('Euler Angles' if parent.rotation['ROTATION_TYPE'] == 'EULER' else 'Quaternion')
+        self.rotationTypeComboBox.setCurrentText(
+            'Euler Angles' if parent.rotation['ROTATION_TYPE'] == 'EULER' else 'Quaternion')
         self.showRotationFrame(0 if parent.rotation['ROTATION_TYPE'] == 'EULER' else 1)
 
     def openArgumentSelectorRoll(self):
