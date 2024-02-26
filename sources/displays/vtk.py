@@ -65,8 +65,6 @@ class VtkDisplay(BasicDisplay):
         yawArgument = editWidget.yawEdit.text()
         qwArgument, qxArgument = editWidget.qwEdit.text(), editWidget.qxEdit.text()
         qyArgument, qzArgument = editWidget.qyEdit.text(), editWidget.qzEdit.text()
-        print(rollArgument, pitchArgument, yawArgument)
-        print(qwArgument, qxArgument, qyArgument, qzArgument)
         self.rotation = {'SET_ROTATION': editWidget.rotationCheckbox.isChecked(),
                          'ROTATION_TYPE': 'EULER' if editWidget.rotationTypeComboBox.currentIndex() == 0 else 'QUATERNION',
                          'ARGUMENTS': [rollArgument if rollArgument != '' else None,
@@ -77,7 +75,6 @@ class VtkDisplay(BasicDisplay):
                                        qyArgument if qyArgument != '' else None,
                                        qzArgument if qzArgument != '' else None],
                          'UNITS': editWidget.argumentUnits}
-        print(self.rotation)
         self.updateContent()
 
     def updateContent(self, content: ContentStorage = None):
@@ -140,7 +137,6 @@ class VtkDisplay(BasicDisplay):
         for i, argument in enumerate(arguments):
             if argument is not None:
                 argument = argument.split('/')
-                print(argument)
                 database, telemetry, argument = argument[0], argument[1], argument[2:]
                 selectedTypes, selectedUnits = dialog.databases[database].nestedPythonTypes(telemetry, (int, float))
                 unitName = getUnit(selectedUnits, argument)
@@ -173,11 +169,11 @@ class VtkDisplayEditDialog(QWidget):
         self.eulerFrame.setEnabled(parent.rotation['SET_ROTATION'])
         rollLabel, pitchLabel, yawLabel = QLabel('Roll: '), QLabel('Pitch:'), QLabel('Yaw:  ')
         rollArgument = parent.rotation['ARGUMENTS'][0]
-        pitchArgument = parent.rotation['ARGUMENTS'][0]
-        yawArgument = parent.rotation['ARGUMENTS'][0]
-        self.rollEdit = QLineEdit(rollArgument if rollArgument is None else '')
-        self.pitchEdit = QLineEdit(pitchArgument if pitchArgument is None else '')
-        self.yawEdit = QLineEdit(yawArgument if yawArgument is None else '')
+        pitchArgument = parent.rotation['ARGUMENTS'][1]
+        yawArgument = parent.rotation['ARGUMENTS'][2]
+        self.rollEdit = QLineEdit(rollArgument if rollArgument is not None else '')
+        self.pitchEdit = QLineEdit(pitchArgument if pitchArgument is not None else '')
+        self.yawEdit = QLineEdit(yawArgument if yawArgument is not None else '')
         self.rollButton, self.pitchButton, self.yawButton = QPushButton(), QPushButton(), QPushButton()
         self.rollButton.setIcon(QIcon(selectionButtonPixmap))
         self.pitchButton.setIcon(QIcon(selectionButtonPixmap))
@@ -201,10 +197,14 @@ class VtkDisplayEditDialog(QWidget):
         self.quaternionFrame = QFrame()
         self.eulerFrame.setEnabled(parent.rotation['SET_ROTATION'])
         qwLabel, qxLabel, qyLabel, qzLabel = QLabel('W: '), QLabel('X: '), QLabel('Y: '), QLabel('Z: ')
-        self.qwEdit = QLineEdit(parent.rotation['ARGUMENTS'][3])
-        self.qxEdit = QLineEdit(parent.rotation['ARGUMENTS'][4])
-        self.qyEdit = QLineEdit(parent.rotation['ARGUMENTS'][5])
-        self.qzEdit = QLineEdit(parent.rotation['ARGUMENTS'][6])
+        qwArgument = parent.rotation['ARGUMENTS'][3]
+        qxArgument = parent.rotation['ARGUMENTS'][4]
+        qyArgument = parent.rotation['ARGUMENTS'][5]
+        qzArgument = parent.rotation['ARGUMENTS'][6]
+        self.qwEdit = QLineEdit(qwArgument if qwArgument is not None else '')
+        self.qxEdit = QLineEdit(qxArgument if qxArgument is not None else '')
+        self.qyEdit = QLineEdit(qyArgument if qyArgument is not None else '')
+        self.qzEdit = QLineEdit(qzArgument if qzArgument is not None else '')
         self.qwButton, self.qxButton = QPushButton(), QPushButton()
         self.qyButton, self.qzButton = QPushButton(), QPushButton()
         self.qwButton.setIcon(QIcon(selectionButtonPixmap))

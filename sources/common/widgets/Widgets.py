@@ -51,11 +51,20 @@ class ContentStorage:
 
     def retrieveStoredContent(self, keys):
         currentLevel = self.storage
+
+        def getSubArgument(data, keyList):
+            for key in keyList:
+                data = data[key]
+            return data
+
         try:
-            for key in keys:
-                currentLevel = currentLevel[key]
-            return currentLevel
+            database, telemetry, argument = keys[0], keys[1], keys[2]
+            content = self.storage[database][telemetry][argument]
+            if len(keys) > 3:
+                content = [getSubArgument(data, keys[3:]) for data in content]
+            return content
         except (KeyError, TypeError):
+            print(type(currentLevel))
             return None
 
 
