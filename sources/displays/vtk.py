@@ -87,7 +87,6 @@ class VtkDisplay(BasicDisplay):
                 valueRoll = content.retrieveStoredContent(rollMapping)
                 valuePitch = content.retrieveStoredContent(pitchMapping)
                 valueYaw = content.retrieveStoredContent(yawMapping)
-                print(valueRoll, valuePitch, valueYaw)
             elif self.rotation['ROTATION_TYPE'] == 'QUATERNION' and self.rotation['SET_ROTATION']:
                 qW, qX = self.rotation['ARGUMENTS'][3], self.rotation['ARGUMENTS'][4]
                 qY, qZ = self.rotation['ARGUMENTS'][5], self.rotation['ARGUMENTS'][6]
@@ -96,17 +95,16 @@ class VtkDisplay(BasicDisplay):
                 valueQx = content.retrieveStoredContent(qxMapping)
                 valueQy = content.retrieveStoredContent(qyMapping)
                 valueQz = content.retrieveStoredContent(qzMapping)
-                print(valueQw, valueQx, valueQy, valueQz)
                 valueRoll, valuePitch, valueYaw = quaternionToEuler321(valueQw, valueQx, valueQy, valueQz, degrees=True)
             else:
                 return
-            if len(self.content) > 1:
-                self.vtkMesh.rotate_x(-valueRoll[-2])
-                self.vtkMesh.rotate_y(-valuePitch[-2])
-                self.vtkMesh.rotate_z(-valueYaw[-2])
-            self.vtkMesh.rotate_x(valueRoll[-1])
-            self.vtkMesh.rotate_y(valuePitch[-1])
-            self.vtkMesh.rotate_z(valueYaw[-1])
+            if len(valueRoll) > 1:
+                self.viewedMesh.rotate_x(-valueRoll[-2])
+                self.viewedMesh.rotate_y(-valuePitch[-2])
+                self.viewedMesh.rotate_z(-valueYaw[-2])
+            self.viewedMesh.rotate_x(valueRoll[-1])
+            self.viewedMesh.rotate_y(valuePitch[-1])
+            self.viewedMesh.rotate_z(valueYaw[-1])
 
     def changeTheme(self):
         self.settings = loadSettings('settings')

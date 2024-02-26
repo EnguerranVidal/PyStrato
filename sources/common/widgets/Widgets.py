@@ -50,7 +50,6 @@ class ContentStorage:
             packageStorage[key].append(value)
 
     def retrieveStoredContent(self, keys):
-        currentLevel = self.storage
 
         def getSubArgument(data, keyList):
             for key in keyList:
@@ -64,7 +63,6 @@ class ContentStorage:
                 content = [getSubArgument(data, keys[3:]) for data in content]
             return content
         except (KeyError, TypeError):
-            print(type(currentLevel))
             return None
 
 
