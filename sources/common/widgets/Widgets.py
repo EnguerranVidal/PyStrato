@@ -27,11 +27,12 @@ class ContentStorage:
 
     def fill(self):
         self.settings = loadSettings('settings')
-        paths = self.settings['FORMAT_FILES']
-        for path in paths:
-            path = os.path.join(self.currentDir, 'parsers', path)
+        formatFiles = self.settings['FORMAT_FILES']
+        for formatFile in formatFiles:
+            path = os.path.join(self.currentDir, 'parsers')
             if os.path.isdir(path):
-                name, database = os.path.basename(path), BalloonPackageDatabase(path)
+                formatPath = os.path.join(path, formatFile)
+                name, database = os.path.basename(formatPath), BalloonPackageDatabase(formatPath)
                 self.storage[name] = {
                     telemetryType.id.name: {
                         dataPoint.name: []
@@ -40,10 +41,29 @@ class ContentStorage:
                     for telemetryType in database.telemetryTypes
                 }
 
+    def __len__(self):
+        return len(list(self.storage.keys()))
+
     def append(self, content):
         packageStorage = self.storage[content['parser']][content['type']]
         for key, value in content['data'].items():
             packageStorage[key].append(value)
+
+    def retrieveStoredContent(self, keys):
+
+        def getSubArgument(data, keyList):
+            for key in keyList:
+                data = data[key]
+            return data
+
+        try:
+            database, telemetry, argument = keys[0], keys[1], keys[2]
+            content = self.storage[database][telemetry][argument]
+            if len(keys) > 3:
+                content = [getSubArgument(data, keys[3:]) for data in content]
+            return content
+        except (KeyError, TypeError):
+            return None
 
 
 class TypeSelector(QDialog):
@@ -489,7 +509,7 @@ class ArgumentSelector(QDialog):
             selectedTypes, selectedUnits = self.databases[database].nestedPythonTypes(telemetry, self.typeFilter)
             unitName = getUnit(selectedUnits, itemAncestors)
             # UPDATING VALUE
-            self.selectedArgument = f"{database}/{telemetry}/{'/'.join(itemAncestors)}"
+            self.selectedArgument = f"{database}/{telemetry}/{'/'.join(itemAncestors[::-1])}"
             self.selectionNameLabel.setText(self.selectedArgument)
             self.argumentUnit = self.databases[database].units[unitName][0] if unitName is not None else None
 

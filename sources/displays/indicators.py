@@ -95,7 +95,7 @@ class SingleIndicator(BasicDisplay):
             if content is None:
                 value = ''
             else:
-                value = reduce(operator.getitem, argumentMapping, content.storage)
+                value = content.retrieveStoredContent(argumentMapping)
             if len(value) > 0:
                 displayedText = str(value[-1])
                 self.lastValue = value[-1]
@@ -310,10 +310,8 @@ class GridIndicator(BasicDisplay):
         self.updateContent()
 
     def updateContent(self, content=None):
-        rows = self.settingsWidget.rowSpinBox.value()
-        columns = self.settingsWidget.columnSpinBox.value()
-        for i in range(rows):
-            for j in range(columns):
+        for i in range(self.nbRows):
+            for j in range(self.nbColumns):
                 self.indicators[(i, j)].updateLabelContent(content)
 
 
@@ -482,7 +480,7 @@ class LabeledIndicator(QGroupBox):
             if content is None:
                 value = ''
             else:
-                value = reduce(operator.getitem, argumentMapping, content.storage)
+                value = content.retrieveStoredContent(argumentMapping)
             if len(value) > 0:
                 displayedText = str(value[-1])
                 self.lastValue = value[-1]

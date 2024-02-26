@@ -77,8 +77,8 @@ class MultiCurveGraph(BasicDisplay):
                 argumentX, argumentY = curve['ARGUMENTS']
                 argumentXMapping, argumentYMapping = argumentX.split('/'), argumentY.split('/')
                 if argumentXMapping != [''] and argumentYMapping != ['']:
-                    valueX = reduce(operator.getitem, argumentXMapping, self.content.storage)
-                    valueY = reduce(operator.getitem, argumentYMapping, self.content.storage)
+                    valueX = content.retrieveStoredContent(argumentXMapping)
+                    valueY = content.retrieveStoredContent(argumentYMapping)
                     if len(valueX) == len(valueY) and len(valueX) > 1:
                         self.plotWidget.plot(valueX, valueY, pen=pen, name=curve['LEGEND'])
                     self.legendItem = self.plotWidget.addLegend()

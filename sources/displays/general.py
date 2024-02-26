@@ -78,8 +78,9 @@ class DisplayTabWidget(QMainWindow):
         currentIndex = self.tabWidget.currentIndex()
         if currentIndex != -1:
             tab = self.tabWidget.widget(currentIndex)
-            for widget in tab.findChildren(QDockWidget):
-                widget.display.updateContent(self.content)
+            for dock in tab.findChildren(QDockWidget):
+                if dock.isVisible():
+                    dock.display.updateContent(self.content)
 
     def addSimpleIndicator(self):
         if self.tabWidget.count() == 0:
@@ -229,6 +230,7 @@ class DisplayDockWidget(QDockWidget):
             applySettingsChanges(dialog.editWidget)
 
     def closeEvent(self, event):
+        del self.display
         super().closeEvent(event)
         del self
 
