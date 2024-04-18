@@ -61,7 +61,7 @@ ___
 - [x] Add Dark Theme 
 - [x] Revamping Displays
 - [ ] Add Balloon Trajectory Model Simulation
-- [ ] Add Vtk 3D Models Real-Time Rotation 
+- [x] Add Vtk 3D Models Real-Time Rotation 
 - [ ] Add 3D Plots
 - [ ] Add Telecommand sending
 
