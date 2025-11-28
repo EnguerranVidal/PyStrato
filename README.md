@@ -1,5 +1,5 @@
 <a name="readme-top"></a>
-<img src="https://raw.githubusercontent.com/EnguerranVidal/PyStrato/main/sources/icons/SplashScreen.png" alt="Your Image Alt Text" style="width: 100%; height: auto;"/>
+<img src="https://raw.githubusercontent.com/EnguerranVidal/PyStrato/main/src/icons/SplashScreen.png" alt="Your Image Alt Text" style="width: 100%; height: auto;"/>
 
 ___
 
